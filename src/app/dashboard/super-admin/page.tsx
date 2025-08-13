@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { 
   DollarSign, 
   TrendingUp,
@@ -133,9 +133,21 @@ const recentActivity = [
   { id: 5, action: "Support ticket resolved", user: "City Center Inn", time: "1 day ago", avatar: "CC", type: "info" },
 ];
 
+
+
+
 export default function Dashboard() {
+  type HotelType = {
+    id: string;
+    name: string;
+    status: string;
+    plan?: string;
+    tenant_id?: string;
+    [key: string]: unknown; // fallback for extra fields
+  };
   const [selectedPeriod, setSelectedPeriod] = useState("monthly");
   const [selectedPlan, setSelectedPlan] = useState("All");
+  const [hotelsData, setHotelsData] = useState<HotelType[]>([]);
 
   const currentData = overviewData[selectedPeriod as keyof typeof overviewData];
   const currentChartData = chartData[selectedPeriod as keyof typeof chartData];
@@ -143,6 +155,34 @@ export default function Dashboard() {
   const filteredHotels = hotels.filter(hotel =>
     selectedPlan === "All" || hotel.plan === selectedPlan
   );
+  
+const getHotelsData = async () => {
+  try {
+    const res = await fetch("/api/super-admin/hotels");
+    if (!res.ok) {
+      throw new Error("Failed to fetch hotels");
+    }
+    const data = await res.json();
+    console.log("Fetched hotels data:", data);
+    return Array.isArray(data.hotels) ? data.hotels : [];
+  } catch (error) {
+    console.error("Error fetching hotels:", error);
+    return [];
+  }
+};
+
+
+useEffect(() => {
+  getHotelsData().then(data => setHotelsData(data));
+}, []);
+
+const stats = {
+  total: hotelsData.length,
+  active: hotelsData.filter(h => h.status === "active").length,
+  trial: hotelsData.filter(h => h.status === "trial").length,
+  suspended: hotelsData.filter(h => h.status === "suspended").length,
+};
+
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -252,7 +292,7 @@ export default function Dashboard() {
                 <Building className="h-5 w-5 text-[var(--color-primary)]" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-[var(--color-foreground)]">{currentData.activeHotels}</div>
+                <div className="text-3xl font-bold text-[var(--color-foreground)]"> {stats.active}</div>
                 <div className="flex items-center text-xs text-[var(--color-muted-foreground)] mt-1">
                   <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
                   <span className="font-medium">+8.2%</span> from last {selectedPeriod.slice(0, -2)}

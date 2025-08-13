@@ -145,7 +145,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
               <div className="flex items-center space-x-3">
                 <Avatar>
                   <AvatarImage
-                    src={user?.image || "/default-logo.png"}
+                    src={user?.image || "/images/user.png"}
                     alt={user?.name || "User"}
                   />
                 </Avatar>
