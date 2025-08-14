@@ -46,3 +46,11 @@ export const hotelUpdateSchema = z.object({
     plan: z.enum(["free", "standard"]),
     status: z.enum(["active", "trial", "suspended", "expired"])
 })
+
+export const staffSchema = z.object({
+    name: z.string().min(1, "name is required!"),
+    email: z.email("Provide valid email address"),
+    phone: z.string().optional(),
+    password:z.string().min(9,"password must be 9 words"),
+    role: z.enum(["manager", "waiter"])
+})

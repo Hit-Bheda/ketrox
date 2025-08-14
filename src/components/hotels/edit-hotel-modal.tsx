@@ -39,7 +39,6 @@ export default function UpdateHotelModal({ open, onOpenChange, onSubmit }: Updat
             id: initialData?.id || "",
             name: "",
             email: "",
-            password: "",
             logoUrl: "",
             ownerName: "",
             ownerPhone: "",

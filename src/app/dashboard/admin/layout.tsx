@@ -30,6 +30,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { signOut } from "@/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -143,6 +144,13 @@ const sidebarItems = [
   { icon: MessageSquare, label: "Messages", path: "/dashboard/admin/messages", badge: 3 },
   { icon: Settings, label: "Settings", path: "/dashboard/admin/settings" },
 ];
+
+const handleLogout = async () => {
+  // Implement logout logic here
+  console.log("Logging out...");
+  await signOut();
+  window.location.href = "/";
+};
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
@@ -261,7 +269,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex items-center space-x-3">
               <Avatar>
                 <AvatarImage
-                  src={user?.image || "/default-logo.png"}
+                  src={user?.image || "/images/user.png"}
                   alt={user?.name || "User"}
                 />
               </Avatar>
@@ -313,7 +321,9 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Logout */}
           <div className="p-4 border-t border-sidebar-border">
-            <button className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg transition-colors">
+            <button className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg transition-colors"
+            onClick={handleLogout}
+            >
               <LogOut className="w-5 h-5" />
               <span>Log Out</span>
             </button>
