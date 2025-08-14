@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Plus,
   Search,
@@ -25,18 +25,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -49,9 +49,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import AddTableDialog from "@/components/table/add-table-modal";
 
-// Realistic table data
-const tablesData = [
+// Table state (dynamic)
+const initialTables = [
   {
     id: 1,
     number: "T001",
@@ -65,119 +66,37 @@ const tablesData = [
     bookingsToday: 3,
     averageTime: "1h 20m"
   },
-  {
-    id: 2,
-    number: "T002", 
-    name: "Corner Booth",
-    capacity: 6,
-    location: "Main Dining",
-    status: "occupied",
-    currentBooking: "7:30 PM - Michael Chen (6 guests)",
-    nextBooking: "9:00 PM - Emma Wilson (4 guests)",
-    revenue: 3275.50,
-    bookingsToday: 4,
-    averageTime: "1h 45m"
-  },
-  {
-    id: 3,
-    number: "T003",
-    name: "Garden View",
-    capacity: 2,
-    location: "Patio",
-    status: "reserved",
-    currentBooking: null,
-    nextBooking: "8:30 PM - David Brown (2 guests)",
-    revenue: 1825.25,
-    bookingsToday: 5,
-    averageTime: "55m"
-  },
-  {
-    id: 4,
-    number: "T004",
-    name: "Chef's Table",
-    capacity: 8,
-    location: "Private Room",
-    status: "available",
-    currentBooking: null,
-    nextBooking: "Tomorrow 7:00 PM - Anniversary Dinner",
-    revenue: 4125.00,
-    bookingsToday: 1,
-    averageTime: "2h 30m"
-  },
-  {
-    id: 5,
-    number: "T005",
-    name: "Bar Counter",
-    capacity: 3,
-    location: "Bar Area",
-    status: "occupied",
-    currentBooking: "7:45 PM - Alex Murphy (2 guests)",
-    nextBooking: null,
-    revenue: 875.50,
-    bookingsToday: 6,
-    averageTime: "45m"
-  },
-  {
-    id: 6,
-    number: "T006",
-    name: "Fireplace",
-    capacity: 4,
-    location: "Main Dining",
-    status: "maintenance",
-    currentBooking: null,
-    nextBooking: null,
-    revenue: 0,
-    bookingsToday: 0,
-    averageTime: "0m"
-  },
-  {
-    id: 7,
-    number: "T007",
-    name: "Terrace",
-    capacity: 6,
-    location: "Outdoor",
-    status: "available",
-    currentBooking: null,
-    nextBooking: "9:15 PM - Birthday Party (6 guests)",
-    revenue: 2675.25,
-    bookingsToday: 2,
-    averageTime: "1h 15m"
-  },
-  {
-    id: 8,
-    number: "T008",
-    name: "VIP Booth",
-    capacity: 8,
-    location: "VIP Section",
-    status: "reserved",
-    currentBooking: null,
-    nextBooking: "8:00 PM - Business Dinner (8 guests)",
-    revenue: 5250.75,
-    bookingsToday: 2,
-    averageTime: "2h 10m"
-  }
+
 ];
 
 const locations = ["Main Dining", "Patio", "Private Room", "Bar Area", "Outdoor", "VIP Section"];
 const capacities = [2, 3, 4, 6, 8];
 
 export default function Tables() {
+  const [tenantId, setTenantId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|; )tenantId=([^;]*)/);
+    if (match) {
+      setTenantId(decodeURIComponent(match[1]));
+    }
+  }, []);
+  const [tables, setTables] = useState(initialTables);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
-  const [selectedTable, setSelectedTable] = useState<typeof tablesData[0] | null>(null);
+  const [selectedTable, setSelectedTable] = useState<typeof initialTables[0] | null>(null);
   const [qrCodeData, setQrCodeData] = useState<string>("");
   const qrCodeRef = useRef<HTMLDivElement>(null);
-  
+
   // Form state for add table modal
   const [tableForm, setTableForm] = useState({
     number: "",
     name: "",
-    capacity: 4,
-    location: "Main Dining",
+    capacity: 2,
     notes: ""
   });
 
@@ -190,12 +109,12 @@ export default function Tables() {
     notes: ""
   });
 
-  const filteredTables = tablesData.filter(table => {
+  const filteredTables = tables.filter(table => {
     const matchesSearch = table.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         table.name.toLowerCase().includes(searchTerm.toLowerCase());
+      table.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || table.status === statusFilter;
     const matchesLocation = locationFilter === "all" || table.location === locationFilter;
-    
+
     return matchesSearch && matchesStatus && matchesLocation;
   });
 
@@ -229,19 +148,46 @@ export default function Tables() {
     }
   };
 
-  const handleAddTable = () => {
-    console.log("Adding table:", tableForm);
-    setShowAddModal(false);
-    setTableForm({
-      number: "",
-      name: "",
-      capacity: 4,
-      location: "Main Dining",
-      notes: ""
-    });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+
+
+
+  const handleAddTable = async () => {
+    if (!tenantId) {
+      setError("Tenant ID not found. Please login again.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/hotel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...tableForm, tenantId })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to add table");
+      } else {
+        setTables(prev => [...prev, data.table]);
+        setShowAddModal(false);
+        setTableForm({
+          number: "",
+          name: "",
+          capacity: 2,
+          notes: ""
+        });
+      }
+    } catch (err) {
+      setError("Network error");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleBookTable = (table: typeof tablesData[0]) => {
+  const handleBookTable = (table: typeof initialTables[0]) => {
     setSelectedTable(table);
     setShowBookingModal(true);
   };
@@ -263,7 +209,7 @@ export default function Tables() {
     // In a real app, this would update the backend
   };
 
-  const generateQRCode = async (table: typeof tablesData[0]) => {
+  const generateQRCode = async (table: typeof initialTables[0]) => {
     try {
       // Generate QR code for table link - would be actual domain in production
       const tableURL = `https://restaurant.com/table/${table.id}`;
@@ -293,17 +239,17 @@ export default function Tables() {
   };
 
   const handlePrint = useReactToPrint({
-     contentRef:qrCodeRef
+    contentRef: qrCodeRef
   });
 
   const stats = {
-    total: tablesData.length,
-    available: tablesData.filter(t => t.status === "available").length,
-    occupied: tablesData.filter(t => t.status === "occupied").length,
-    reserved: tablesData.filter(t => t.status === "reserved").length,
-    maintenance: tablesData.filter(t => t.status === "maintenance").length,
-    totalRevenue: tablesData.reduce((sum, table) => sum + table.revenue, 0),
-    totalBookings: tablesData.reduce((sum, table) => sum + table.bookingsToday, 0)
+    total: tables.length,
+    available: tables.filter(t => t.status === "available").length,
+    occupied: tables.filter(t => t.status === "occupied").length,
+    reserved: tables.filter(t => t.status === "reserved").length,
+    maintenance: tables.filter(t => t.status === "maintenance").length,
+    totalRevenue: tables.reduce((sum, table) => sum + table.revenue, 0),
+    totalBookings: tables.reduce((sum, table) => sum + table.bookingsToday, 0)
   };
 
   return (
@@ -373,7 +319,7 @@ export default function Tables() {
               <CardTitle className="text-card-foreground">Table Management</CardTitle>
               <CardDescription>Manage restaurant tables, capacity, and bookings</CardDescription>
             </div>
-            <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+            {/* <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
               <DialogTrigger asChild>
                 <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   <Plus className="w-4 h-4 mr-2" />
@@ -390,7 +336,7 @@ export default function Tables() {
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="table-number" className="text-foreground">Table Number</Label>
+                      <Label htmlFor="table-number" className="text-foreground mb-2">Table Number</Label>
                       <Input
                         id="table-number"
                         value={tableForm.number}
@@ -400,7 +346,7 @@ export default function Tables() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="table-name" className="text-foreground">Table Name</Label>
+                      <Label htmlFor="table-name" className="text-foreground mb-2">Table Name</Label>
                       <Input
                         id="table-name"
                         value={tableForm.name}
@@ -413,7 +359,7 @@ export default function Tables() {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="table-capacity" className="text-foreground">Capacity</Label>
+                      <Label htmlFor="table-capacity" className="text-foreground mb-2">Capacity</Label>
                       <Select value={tableForm.capacity.toString()} onValueChange={(value) => setTableForm({...tableForm, capacity: parseInt(value)})}>
                         <SelectTrigger className="bg-background border-input text-foreground">
                           <SelectValue />
@@ -425,23 +371,10 @@ export default function Tables() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label htmlFor="table-location" className="text-foreground">Location</Label>
-                      <Select value={tableForm.location} onValueChange={(value) => setTableForm({...tableForm, location: value})}>
-                        <SelectTrigger className="bg-background border-input text-foreground">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border text-popover-foreground">
-                          {locations.map((location) => (
-                            <SelectItem key={location} value={location}>{location}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </div>
                   
                   <div>
-                    <Label htmlFor="table-notes" className="text-foreground">Notes</Label>
+                    <Label htmlFor="table-notes" className="text-foreground mb-2">Notes</Label>
                     <Textarea
                       id="table-notes"
                       value={tableForm.notes}
@@ -460,10 +393,17 @@ export default function Tables() {
                   </Button>
                 </DialogFooter>
               </DialogContent>
-            </Dialog>
+            </Dialog> */}
+            <Button
+              onClick={() => setShowAddModal(true)}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <Plus className="w-4 h-4" />
+              Add Table
+            </Button>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           {/* Filters Row */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -504,8 +444,8 @@ export default function Tables() {
           {/* Tables Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredTables.map((table) => (
-              <Card 
-                key={table.id} 
+              <Card
+                key={table.id}
                 className="hover:shadow-lg transition-all duration-300 bg-card border-1 "
               >
                 <CardHeader className="pb-3">
@@ -524,14 +464,14 @@ export default function Tables() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-popover border-border text-popover-foreground">
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => handleBookTable(table)}
                           className="focus:bg-accent focus:text-accent-foreground"
                         >
                           <Calendar className="w-4 h-4 mr-2" />
                           Book Table
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => generateQRCode(table)}
                           className="focus:bg-accent focus:text-accent-foreground"
                         >
@@ -542,14 +482,14 @@ export default function Tables() {
                           <Edit className="w-4 h-4 mr-2" />
                           Edit Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => changeTableStatus(table.id, 'available')}
                           className="focus:bg-accent focus:text-accent-foreground"
                         >
                           <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
                           Mark Available
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => changeTableStatus(table.id, 'maintenance')}
                           className="focus:bg-accent focus:text-accent-foreground"
                         >
@@ -565,7 +505,7 @@ export default function Tables() {
                   </div>
                   <p className="text-sm font-medium text-muted-foreground">{table.name}</p>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center space-x-1 text-muted-foreground">
@@ -577,21 +517,21 @@ export default function Tables() {
                       <span>{table.location}</span>
                     </div>
                   </div>
-                  
+
                   {table.currentBooking && (
                     <div className="p-2 bg-blue-500/10 rounded-md border border-blue-500/20">
                       <p className="text-xs font-medium text-blue-700 dark:text-blue-300">Current Booking:</p>
                       <p className="text-xs text-muted-foreground">{table.currentBooking}</p>
                     </div>
                   )}
-                  
+
                   {table.nextBooking && (
                     <div className="p-2 bg-amber-500/10 rounded-md border border-amber-500/20">
                       <p className="text-xs font-medium text-amber-700 dark:text-amber-300">Next Booking:</p>
                       <p className="text-xs text-muted-foreground">{table.nextBooking}</p>
                     </div>
                   )}
-                  
+
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
                       <p className="font-medium text-card-foreground">${table.revenue.toLocaleString()}</p>
@@ -615,8 +555,8 @@ export default function Tables() {
             <div className="text-center py-8">
               <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No tables found matching your criteria.</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="mt-4 border-border text-foreground hover:bg-accent"
                 onClick={() => {
                   setSearchTerm("");
@@ -648,19 +588,19 @@ export default function Tables() {
                 <Input
                   id="customer-name"
                   value={bookingForm.customerName}
-                  onChange={(e) => setBookingForm({...bookingForm, customerName: e.target.value})}
+                  onChange={(e) => setBookingForm({ ...bookingForm, customerName: e.target.value })}
                   placeholder="John Doe"
                   className="bg-background border-input text-foreground"
                 />
               </div>
               <div>
                 <Label htmlFor="guests" className="text-foreground">Number of Guests</Label>
-                <Select value={bookingForm.guests.toString()} onValueChange={(value) => setBookingForm({...bookingForm, guests: parseInt(value)})}>
+                <Select value={bookingForm.guests.toString()} onValueChange={(value) => setBookingForm({ ...bookingForm, guests: parseInt(value) })}>
                   <SelectTrigger className="bg-background border-input text-foreground">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border-border text-popover-foreground">
-                    {Array.from({length: selectedTable?.capacity || 8}, (_, i) => i + 1).map((num) => (
+                    {Array.from({ length: selectedTable?.capacity || 8 }, (_, i) => i + 1).map((num) => (
                       <SelectItem key={num} value={num.toString()}>{num} {num === 1 ? 'guest' : 'guests'}</SelectItem>
                     ))}
                   </SelectContent>
@@ -675,7 +615,7 @@ export default function Tables() {
                   id="booking-date"
                   type="date"
                   value={bookingForm.date}
-                  onChange={(e) => setBookingForm({...bookingForm, date: e.target.value})}
+                  onChange={(e) => setBookingForm({ ...bookingForm, date: e.target.value })}
                   className="bg-background border-input text-foreground"
                 />
               </div>
@@ -685,7 +625,7 @@ export default function Tables() {
                   id="booking-time"
                   type="time"
                   value={bookingForm.time}
-                  onChange={(e) => setBookingForm({...bookingForm, time: e.target.value})}
+                  onChange={(e) => setBookingForm({ ...bookingForm, time: e.target.value })}
                   className="bg-background border-input text-foreground"
                 />
               </div>
@@ -696,7 +636,7 @@ export default function Tables() {
               <Textarea
                 id="booking-notes"
                 value={bookingForm.notes}
-                onChange={(e) => setBookingForm({...bookingForm, notes: e.target.value})}
+                onChange={(e) => setBookingForm({ ...bookingForm, notes: e.target.value })}
                 placeholder="Dietary restrictions, special occasion, etc..."
                 className="bg-background border-input text-foreground"
               />
@@ -704,14 +644,14 @@ export default function Tables() {
           </div>
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowBookingModal(false)}
               className="border-border text-foreground hover:bg-accent"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleCreateBooking}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
@@ -761,22 +701,22 @@ export default function Tables() {
           </div>
 
           <DialogFooter className="flex gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowQRModal(false)}
               className="border-border text-foreground hover:bg-accent"
             >
               Close
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={downloadQRCode}
               className="border-border text-foreground hover:bg-accent"
             >
               <Download className="w-4 h-4 mr-2" />
               Download
             </Button>
-            <Button 
+            <Button
               onClick={handlePrint}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
@@ -786,6 +726,15 @@ export default function Tables() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+        <AddTableDialog
+        showAddModal={showAddModal}
+        setShowAddModal={setShowAddModal}
+        tableForm={tableForm}
+        setTableForm={setTableForm}
+        capacities={capacities}
+        handleAddTable={handleAddTable}
+      />
     </div>
   );
 }

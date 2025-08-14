@@ -1,3 +1,4 @@
+
 import {
     pgTable,
     text,
@@ -10,6 +11,7 @@ export const user = pgTable("user", {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
+    phone: text("phone"),
     emailVerified: boolean("email_verified")
         .$defaultFn(() => false)
         .notNull(),
@@ -19,6 +21,9 @@ export const user = pgTable("user", {
     role: text("role", {
         enum: ["super-admin", "admin", "manager", "waiter"]
     }).notNull().default("waiter"),
+    status: text("status", { enum: ["active", "inactive"] })
+        .notNull()
+        .default("active"),
     createdAt: timestamp("created_at")
         .$defaultFn(() => /* @__PURE__ */ new Date())
         .notNull(),
@@ -86,4 +91,15 @@ export const tenants = pgTable('tenants', {
     status: text('status', { enum: ["active", "trial", "suspended", "expired"] }).notNull().default("active"),
     created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
+});
+
+export const table = pgTable("table", {
+    id: text("id").primaryKey(),
+    number: text("number").notNull(),
+    name: text("name").notNull(),
+    capacity: text("capacity").notNull(),
+    notes: text("notes"),
+    tenantId: text("tenant_id").notNull().references(() => tenants.id),
+    createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+    updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });

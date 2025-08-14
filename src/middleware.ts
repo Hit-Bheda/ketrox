@@ -23,10 +23,13 @@ export async function middleware(request: NextRequest) {
     }
 
     const role = session.user.role;
-    const user=session.user
-    console.log("fsdfdd",user);
-    
-    console.log("Session data:", role);
+    const user = session.user;
+    const tenantId = user.tenant_id;
+    // Set tenantId as a cookie for frontend access
+    const response = NextResponse.next();
+    if (tenantId) {
+      response.cookies.set("tenantId", tenantId, { path: "/", httpOnly: false });
+    }
 
     // Define role-based paths
     const rolePaths: Record<string, string> = {
@@ -49,6 +52,7 @@ export async function middleware(request: NextRequest) {
       console.log(`Redirecting ${role} to:`, targetPath);
       return NextResponse.redirect(new URL(targetPath, request.url));
     }
+    return response;
   } catch (error) {
     console.error("Middleware error:", error);
     return NextResponse.redirect(new URL("/unauthorized", request.url));

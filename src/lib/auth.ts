@@ -29,6 +29,15 @@ export const auth = betterAuth({
       tenant_id: {
         type: "string",
         required: false,
+      },
+    phone:{
+      type:"string",
+      required: false
+    },
+    active: { 
+        type: "boolean",
+        default: false,
+        required: false
       }
     }
   },

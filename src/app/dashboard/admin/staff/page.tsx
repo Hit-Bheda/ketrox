@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus,
   Search,
@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/table";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -57,8 +58,13 @@ import { staffSchema } from "@/schemas";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
+import UpdateStaffModal from "@/components/staff/edit-staff-modal";
+import Image from "next/image";
+import { AvatarImage } from "@radix-ui/react-avatar";
 
-// Realistic staff data
+
+
 const staffData = [
   {
     id: 1,
@@ -189,22 +195,74 @@ const staffData = [
 ];
 
 const roles = ["manager", "waiter"];
-// const shifts = ["Morning", "Evening", "Night"];
+
 
 export default function Staff() {
+  async function deleteStaff(id: string) {
+    try {
+      const res = await fetch("/api/admin/hotel", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Error deleting staff");
+      toast.success("Staff deleted successfully!");
+      await getStaffList();
+    } catch (err: unknown) {
+      const errorMessage = typeof err === "object" && err !== null && "message" in err ? (err as { message?: string }).message : "Failed to delete staff";
+      toast.error(errorMessage || "Failed to delete staff");
+    }
+  }
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<typeof staffData[0] | null>(null);
-  type StaffFormData = z.infer<typeof staffSchema>;
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+
+  async function updateStaff(data: Partial<StaffType> & { id: number }) {
+    const res = await fetch("/api/admin/hotel", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const result = await res.json();
+    if (!res.ok) {
+      throw new Error(result.error || "Error updating staff");
+    }
+    return result;
+  }
+
+  const handleUpdateStaff = async (data: StaffFormData) => {
+    if (!selectedStaff) return;
+    try {
+      const payload = { ...data, id: selectedStaff.id };
+      await updateStaff(payload);
+      toast.success("Staff updated successfully!");
+      setShowUpdateModal(false);
+      setSelectedStaff(null);
+      await getStaffList();
+    } catch (error: unknown) {
+      const errorMessage = typeof error === "object" && error !== null && "message" in error ? (error as { message?: string }).message : "Failed to update staff";
+      toast.error(errorMessage || "Failed to update staff");
+      console.error("Error updating staff:", error);
+    }
+  };
+  type StaffFormData = z.infer<typeof staffSchema> & { status?: "active" | "inactive" };
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  type StaffType = typeof staffData[0];
+  const [staffList, setStaffList] = useState<StaffType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
 
   const {
     register,
     handleSubmit,
     control,
     reset,
+    clearErrors,
     formState: { errors },
   } = useForm<StaffFormData>({
     resolver: zodResolver(staffSchema),
@@ -214,57 +272,20 @@ export default function Staff() {
       phone: "",
       password: "",
       role: "waiter",
+
     },
   });
 
-  // Form state for add staff modal
-  const [staffForm, setStaffForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    role: "waiter",
-  });
-
-  const filteredStaff = staffData.filter(staff => {
-    const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      staff.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "all" || staff.role === roleFilter;
-    const matchesStatus = statusFilter === "all" || staff.status === statusFilter;
-
-    return matchesSearch && matchesRole && matchesStatus;
-  });
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case "Manager":
-        return "bg-primary text-primary-foreground";
-      case "Waiter":
-        return "bg-chart-3 text-foreground";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  };
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-chart-3 text-foreground";
+        return "bg-green-500 text-white border-green-600";
       case "inactive":
-        return "bg-muted text-muted-foreground";
+        return "bg-red-500 text-white border-red-600";
       default:
-        return "bg-muted text-muted-foreground";
+        return "bg-gray-300 text-gray-800 border-gray-400";
     }
-  };
-
-  const handleAddStaff = () => {
-    console.log("Adding staff:", staffForm);
-    setShowAddModal(false);
-    setStaffForm({
-      name: "",
-      email: "",
-      phone: "",
-      role: "Waiter",
-    });
   };
 
   const handleEditPermissions = (staff: typeof staffData[0]) => {
@@ -273,35 +294,115 @@ export default function Staff() {
   };
 
   const stats = {
-    total: staffData.length,
-    active: staffData.filter(s => s.status === "active").length,
-    managers: staffData.filter(s => s.role === "Manager").length,
-    waiters: staffData.filter(s => s.role === "Waiter").length
+    total: staffList.length,
+    active: staffList.filter(s => s.status === "active").length,
+    inactive: staffList.filter(s => s.status === "inactive").length,
+    managers: staffList.filter(s => s.role === "manager").length,
+    waiters: staffList.filter(s => s.role === "waiter").length
   };
 
-  const onSubmit = async (data: StaffFormData) => {
+  async function getStaffList() {
     try {
       const res = await fetch("/api/admin/hotel", {
-        method: "POST",
+        method: "GET",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
       });
 
       const result = await res.json();
+      console.log("staffffff", result);
 
       if (!res.ok) {
-        console.error(result.error || "Error creating staff");
-        return;
+        throw new Error(result.error || "Failed to fetch staff");
       }
 
-      // success
-      console.log("Staff created:", result);
-      reset();
-      setShowAddModal(false);
+      setStaffList(result.staff);
     } catch (error) {
-      console.error("Error submitting staff form:", error);
+      console.error("Error fetching staff:", error);
+    } finally {
+      setIsLoading(false);
     }
+  }
+
+  useEffect(() => {
+    getStaffList();
+  }, []);
+
+  async function createStaff(staffData: StaffFormData) {
+    const res = await fetch("/api/admin/hotel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(staffData),
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      throw new Error(result.error || "Error creating staff");
+    }
+
+    return result;
+  }
+
+  const onSubmit = async (data: StaffFormData) => {
+    setIsSubmitting(true);
+    try {
+      const result = await createStaff(data);
+      toast.success("Staff added successfully!");
+      reset();
+      clearErrors();
+      setShowAddModal(false);
+      await getStaffList();
+      console.log("Staff created:", result);
+    }
+    catch (error: unknown) {
+      const errorMessage = typeof error === "object" && error !== null && "message" in error ? (error as { message?: string }).message : "Failed to add staff"; toast.error(errorMessage || "Failed to add staff"); console.error("Error submitting staff form:", error);
+    } finally { setIsSubmitting(false); }
   };
+
+
+  useEffect(() => {
+    if (!showAddModal) {
+      reset();
+      clearErrors();
+    }
+  }, [showAddModal, reset, clearErrors]);
+
+  async function toggleStaffStatus(id: string, currentStatus: string) {
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
+
+    try {
+      const res = await fetch("/api/admin/hotel", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Error updating status");
+
+      toast.success(`Staff ${newStatus === "active" ? "activated" : "deactivated"} successfully`);
+      await getStaffList();
+    } catch (err: unknown) {
+      const errorMessage =
+        typeof err === "object" && err !== null && "message" in err
+          ? (err as { message?: string }).message
+          : "Failed to update staff status";
+      toast.error(errorMessage || "Failed to update staff status");
+    }
+  }
+
+
+  function getRoleBadgeColor(role: string) {
+    switch (role) {
+      case "manager":
+        return "bg-amber-500 text-white";
+      case "waiter":
+        return "bg-violet-500 text-white";
+      default:
+        return "bg-rose-500 text-white";
+    }
+  }
+
 
   return (
 
@@ -330,6 +431,17 @@ export default function Staff() {
 
         <Card className="hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Inactive</CardTitle>
+            <UserX className="h-4 w-4 text-chart-3" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-chart-3">{stats.inactive}</div>
+          </CardContent>
+        </Card>
+
+
+        <Card className="hover:shadow-lg transition-all duration-300">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Managers</CardTitle>
             <Shield className="h-4 w-4 text-primary" />
           </CardHeader>
@@ -337,16 +449,6 @@ export default function Staff() {
             <div className="text-2xl font-bold text-primary">{stats.managers}</div>
           </CardContent>
         </Card>
-
-        {/* <Card className="hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Chefs</CardTitle>
-              <Shield className="h-4 w-4 text-secondary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-secondary">{stats.chefs}</div>
-            </CardContent>
-          </Card> */}
 
         <Card className="hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -456,10 +558,19 @@ export default function Staff() {
                   </div>
 
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowAddModal(false)}>
-                      Cancel
+                    <DialogClose asChild>
+                      <Button
+                        variant="outline"
+                        disabled={isSubmitting}
+                      >
+                        Cancel
+                      </Button>
+                    </DialogClose>
+
+
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Adding..." : "Add Staff Member"}
                     </Button>
-                    <Button type="submit">Add Staff Member</Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -503,123 +614,136 @@ export default function Staff() {
             </Select>
           </div>
 
+
           {/* Staff Table */}
           <div className="rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Staff Member</TableHead>
+                  <TableHead>Phone Number</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Shift</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Last Active</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStaff.map((staff) => (
-                  <TableRow key={staff.id} className="hover:bg-accent transition-colors">
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-primary text-primary-foreground">{staff.avatar}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{staff.name}</p>
-                          <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                            <Mail className="w-3 h-3" />
-                            <span>{staff.email}</span>
-                          </div>
-                          <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                            <Phone className="w-3 h-3" />
-                            <span>{staff.phone}</span>
+                {staffList
+                  .filter((staff) =>
+                    roleFilter === "all" || staff.role.toLowerCase() === roleFilter.toLowerCase()
+                  )
+                  .map((staff) => (
+                    <TableRow key={staff.id} className="hover:bg-accent hover:rounded-full transition-colors">
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          {/* <Avatar className="h-10 w-10">
+    <AvatarFallback className="bg-primary text-primary-foreground">
+      {staff.avatar}
+    </AvatarFallback>
+  </Avatar> */}
+                          <Avatar className="h-10 w-10 border-1 border-white">
+                            <AvatarImage
+                              src={"/images/user.png"}
+                              alt={staff?.name || "User"}
+                            />
+                          </Avatar>
+
+                          <div>
+                            <p className="font-medium">{staff.name}</p>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getRoleBadgeColor(staff.role)}>
-                        {staff.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span>{staff.shift}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getStatusBadgeColor(staff.status)}>
-                        {staff.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">{staff.lastActive}</span>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="hover:bg-accent">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditPermissions(staff)}>
-                            <Shield className="w-4 h-4 mr-2" />
-                            Edit Permissions
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            {staff.status === "active" ? (
-                              <>
-                                <UserX className="w-4 h-4 mr-2" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="w-4 h-4 mr-2" />
-                                Activate
-                              </>
+                      </TableCell>
+                      <TableCell>
+                        <span>{staff.phone}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span>{staff.email}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getRoleBadgeColor(staff.role)}>
+                          {staff.role}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge variant="outline" className={getStatusBadgeColor(staff.status)}>
+                          {staff.status === "active" ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="hover:bg-accent">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditPermissions(staff)}>
+                              <Shield className="w-4 h-4 mr-2" />
+                              Edit Permissions
+                            </DropdownMenuItem>
+                            {(staff.role.toLowerCase() === "manager" || staff.role.toLowerCase() === "waiter") && (
+                              <DropdownMenuItem onClick={() => { setSelectedStaff(staff); setShowUpdateModal(true); }}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Details
+                              </DropdownMenuItem>
                             )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Remove
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                            <DropdownMenuItem
+                              onClick={() => toggleStaffStatus(staff.id.toString(), staff.status)}
+                            >
+                              {staff.status === "active" ? (
+                                <>
+                                  <UserX className="w-4 h-4 mr-2" />
+                                  Deactivate
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="w-4 h-4 mr-2" />
+                                  Activate
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => deleteStaff(staff.id.toString())}>
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </div>
 
-          {filteredStaff.length === 0 && (
-            <div className="text-center py-8">
-              <Shield className="w-12 h-12 text-muted mx-auto mb-4" />
-              <p className="text-muted-foreground">No staff members found matching your criteria.</p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => {
-                  setSearchTerm("");
-                  setRoleFilter("all");
-                  setStatusFilter("all");
-                }}
-              >
-                Clear Filters
-              </Button>
-            </div>
-          )}
+          {staffList.filter(
+            staff =>
+              (roleFilter === "all" || staff.role.toLowerCase() === roleFilter.toLowerCase()) &&
+              (statusFilter === "all" || staff.status.toLowerCase() === statusFilter.toLowerCase()) &&
+              (searchTerm === "" || staff.name.toLowerCase().includes(searchTerm.toLowerCase()) || staff.email.toLowerCase().includes(searchTerm.toLowerCase()))
+          ).length === 0 && (
+              <div className="text-center py-8">
+                <Shield className="w-12 h-12 text-muted mx-auto mb-4" />
+                <p className="text-muted-foreground">No staff members found matching your criteria.</p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setRoleFilter("all");
+                    setStatusFilter("all");
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
         </CardContent>
       </Card>
 
       {/* Permissions Modal */}
-      <Dialog open={showPermissionsModal} onOpenChange={setShowPermissionsModal}>
+      {/* <Dialog open={showPermissionsModal} onOpenChange={setShowPermissionsModal}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Edit Permissions</DialogTitle>
@@ -668,7 +792,24 @@ export default function Staff() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
+
+      {/* Update Staff Modal */}
+      {selectedStaff && (selectedStaff.role.toLowerCase() === "manager" || selectedStaff.role.toLowerCase() === "waiter") && (
+        <UpdateStaffModal
+          staff={{
+            name: selectedStaff.name,
+            email: selectedStaff.email,
+            phone: selectedStaff.phone,
+            role: selectedStaff.role.toLowerCase() as "manager" | "waiter",
+            status: selectedStaff.status === "active" ? "active" : "inactive",
+          }}
+          showModal={showUpdateModal}
+          setShowModal={setShowUpdateModal}
+          onSubmit={handleUpdateStaff}
+          roles={roles}
+        />
+      )}
     </div>
   );
 }
