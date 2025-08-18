@@ -99,7 +99,7 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
       <Button
         variant="ghost"
         size="sm"
-        className={`flex ${isMobile ? 'w-full justify-start' : 'flex-col'} items-center space-y-1 h-auto py-3 px-4 rounded-xl transition-all duration-200 relative ${
+        className={`flex ${isMobile ? 'w-full justify-start' : 'flex-col'} items-center space-y-1 h-auto py-3 px- rounded-xl transition-all duration-200 relative ${
           isActive 
             ? `bg-[var(--sidebar-primary)]/20 text-[var(--sidebar-primary)]` 
             : `text-[var(--sidebar-foreground)]/70 hover:text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)]`
@@ -130,9 +130,10 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
   return (
     <div className="min-h-screen transition-colors duration-200 bg-[var(--background)] text-[var(--foreground)] font-sans">
       {/* Desktop Sidebar - Hidden on mobile, visible on tablet and up */}
-      <div className={`fixed left-0 top-0 bottom-0 w-64 z-40 transform transition-transform duration-300 lg:translate-x-0 ${
+      {/* ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:block hidden md:block bg-[var(--sidebar)] border-r border-[var(--sidebar-border)] shadow-[var(--shadow-lg)]`}>
+      }  */}
+      <div className={`fixed left-0 top-0 bottom-0 w-64 z-40 transform transition-transform duration-300 lg:translate-x-0 lg:block hidden md:block bg-[var(--sidebar)] border-r border-[var(--sidebar-border)] shadow-[var(--shadow-lg)]`}>
         
         {/* Sidebar Header */}
         <div className="p-6 border-b border-[var(--sidebar-border)]">
@@ -282,7 +283,7 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
 
       {/* Mobile Bottom Navigation - Hidden on tablet and desktop */}
       <div className="fixed bottom-0 left-0 right-0 md:hidden bg-[var(--card)]/95 backdrop-blur-lg border-t border-[var(--border)] shadow-[var(--shadow-lg)] z-30">
-        <div className="px-4 py-2">
+        <div className="px-2 py-2">
           <div className="flex items-center justify-around">
             {navigationItems.map((item) => (
               <NavItem key={item.path} item={item} />
