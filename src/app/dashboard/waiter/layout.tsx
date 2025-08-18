@@ -76,6 +76,17 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
     return () => clearInterval(timer);
   }, []);
 
+
+  // for handling hydration error because time is not match in ssr and csr
+  // const [currentTime, setCurrentTime] = useState('');
+
+  // useEffect(() => {
+  //   const now = new Date();
+  //   const formatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  //   setCurrentTime(formatted);
+  // }, []);
+
+
   interface NavigationItem {
     icon: React.ComponentType<{ className?: string }>;
     label: string;
