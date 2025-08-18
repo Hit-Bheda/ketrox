@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "@/lib/auth-client";
 
 interface WaiterLayoutProps {
   children: ReactNode;
@@ -57,6 +58,13 @@ const navigationItems = [
     bgColor: "var(--destructive)"
   }
 ];
+
+const handleLogout = async () => {
+  // Implement logout logic here
+  console.log("Logging out...");
+  await signOut();
+  window.location.href = "/";
+};
 
 export default function WaiterLayout({ children }: WaiterLayoutProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -157,14 +165,22 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
         </div>
 
         {/* Sidebar Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[var(--sidebar-border)]">
+        {/* <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[var(--sidebar-border)]">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-[var(--primary)] rounded-full animate-pulse"></div>
               <span className="text-xs font-medium text-[var(--sidebar-foreground)]">Online</span>
             </div>
           </div>
-        </div>
+        </div> */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[var(--sidebar-border)]">
+            <button className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg transition-colors"
+            onClick={handleLogout}
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Log Out</span>
+            </button>
+          </div>
       </div>
 
       {/* Mobile Overlay */}
@@ -207,7 +223,7 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
         </div>
 
         {/* Desktop Header */}
-        <div className="hidden md:block px-8 py-6 bg-gradient-to-r from-[var(--sidebar)] to-[var(--sidebar-accent)] border-b border-[var(--sidebar-border)]">
+        {/* <div className="hidden md:block px-8 py-6 bg-gradient-to-r from-[var(--sidebar)] to-[var(--sidebar-accent)] border-b border-[var(--sidebar-border)]">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-white">Good Evening</h1>
@@ -241,7 +257,7 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Emergency Alert Banner */}
         <div className="bg-gradient-to-r from-[var(--destructive)] to-[#DC2626] px-4 md:px-8 py-3">
