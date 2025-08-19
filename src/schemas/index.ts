@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 
 export const signinSchema = z.object({
@@ -62,7 +61,22 @@ export const
 export const tableSchema = z.object({
     number: z.string().min(1, "Table number is required"),
     name: z.string().min(1, "Table name is required"),
-    capacity: z.number().min(1, "Capacity must be at least 1"),
+    capacity: z.string().min(1, "Capacity must be at least 1"),
     notes: z.string().optional(),
-    tenantId: z.string().uuid("Invalid tenant ID")
-})
+    tenantId: z.string().uuid("Invalid tenant ID"),
+    available: z.boolean().optional().default(true),
+    maintenance: z.boolean().optional().default(false),
+    qrCodeUrl: z.string().url().optional(),
+});
+
+export const menuSchema = z.object({
+    item_logo: z.string().min(1, "Item logo is required").optional(),
+    itemName: z.string().min(1, "Item name is required"),
+    category: z.string().min(1, "Category is required"),
+    description: z.string().min(1, "Description is required"),
+    price: z.number().min(0, "Price must be non-negative"),
+    prepTime: z.number().min(1, "Prep time must be at least 1 minute"),
+    dietary: z.array(z.string()).optional(),
+    tenantId: z.string().uuid("Invalid tenant ID"),
+    isAvailable: z.boolean().optional(),
+});

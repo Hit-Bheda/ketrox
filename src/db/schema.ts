@@ -1,4 +1,5 @@
 
+import { Item } from "@radix-ui/react-select";
 import {
     pgTable,
     text,
@@ -100,6 +101,24 @@ export const table = pgTable("table", {
     capacity: text("capacity").notNull(),
     notes: text("notes"),
     tenantId: text("tenant_id").notNull().references(() => tenants.id),
+    available: boolean("available").notNull().default(true),
+    maintenance: boolean("maintenance").notNull().default(false),
+    qrCodeUrl: text("qr_code_url"),  
+    createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+    updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+});
+
+export const menu = pgTable("menu", {
+    id: text("id").primaryKey(),
+    Item_logo: text('Item_logo').notNull(),
+    ItemName: text("item_name").notNull(),
+    category: text("category").notNull(),
+    description: text("description").notNull(),
+    price: text("price").notNull(),
+    prepTime: text("prep_time").notNull(),
+    dietaty: text("dietary").array().notNull(),
+    tenantId: text("tenant_id").notNull().references(() => tenants.id),
+    isAvailable: boolean("is_available").$defaultFn(() => true).notNull(),
     createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
     updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });

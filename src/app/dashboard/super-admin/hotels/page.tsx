@@ -39,7 +39,7 @@ export default function HotelsPage() {
   const [selectedHotel, setSelectedHotel] = useState<HotelType | null>(null);
   const [hotelsData, setHotelsData] = useState<HotelType[]>([]);
   const [showViewModal, setShowViewModal] = useState(false);
-  const isEditModelOpen = useSelector((state: RootState) => state.hotel.isEditModelOpen);
+  const isEditModelOpen = useSelector((state: RootState) => (state.hotel as { isEditModelOpen: boolean }).isEditModelOpen);
   const dispatch = useDispatch();
 
   const filteredHotels = hotelsData && hotelsData.length > 0

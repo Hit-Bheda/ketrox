@@ -328,13 +328,24 @@ export default function Staff() {
   }, []);
 
   async function createStaff(staffData: StaffFormData) {
+
+    let tenantId = "";
+    if (typeof document !== "undefined") {
+      const match = document.cookie.match(/(?:^|; )tenantId=([^;]*)/);
+      if (match) tenantId = decodeURIComponent(match[1]);
+      console.log("tenantId from cookies:", tenantId);
+
+    }
+    const payload = { ...staffData, tenantId };
     const res = await fetch("/api/admin/hotel", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(staffData),
+      body: JSON.stringify(payload),
     });
 
     const result = await res.json();
+    console.log("createStaff result:", result);
+
 
     if (!res.ok) {
       throw new Error(result.error || "Error creating staff");
@@ -631,7 +642,9 @@ export default function Staff() {
               <TableBody>
                 {staffList
                   .filter((staff) =>
-                    roleFilter === "all" || staff.role.toLowerCase() === roleFilter.toLowerCase()
+                    (roleFilter === "all" || staff.role.toLowerCase() === roleFilter.toLowerCase()) &&
+                    (statusFilter === "all" || staff.status.toLowerCase() === statusFilter.toLowerCase()) &&
+                    (searchTerm === "" || staff.name.toLowerCase().includes(searchTerm.toLowerCase()) || staff.email.toLowerCase().includes(searchTerm.toLowerCase()))
                   )
                   .map((staff) => (
                     <TableRow key={staff.id} className="hover:bg-accent hover:rounded-full transition-colors">
