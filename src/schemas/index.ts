@@ -17,7 +17,7 @@ export const signupSchema = z.object({
 export const hotelSchema = z.object({
     name: z.string().min(1, "Hotel name is required!"),
     email: z.email("Provide valid email address"),
-    password:z.string().min(9,"password must be 9 words"),
+    password: z.string().min(9, "password must be 9 words"),
     logoUrl: z.string().min(1, "Logo is required"),
     ownerName: z.string().min(1, "Owner name is required"),
     ownerPhone: z
@@ -31,10 +31,10 @@ export const hotelSchema = z.object({
 })
 
 export const hotelUpdateSchema = z.object({
-    id: z.string().min(1,"Invalid hotel ID"),
+    id: z.string().min(1, "Invalid hotel ID"),
     name: z.string().min(1, "Hotel name is required!"),
     email: z.email("Provide valid email address"),
-    password:z.string().min(9,"password must be 9 words").optional(),
+    password: z.string().min(9, "password must be 9 words").optional(),
     logoUrl: z.string().min(1, "Logo is required"),
     ownerName: z.string().min(1, "Owner name is required"),
     ownerPhone: z
@@ -47,10 +47,36 @@ export const hotelUpdateSchema = z.object({
     status: z.enum(["active", "trial", "suspended", "expired"])
 })
 
-export const staffSchema = z.object({
-    name: z.string().min(1, "name is required!"),
-    email: z.email("Provide valid email address"),
-    phone: z.string().optional(),
-    password:z.string().min(9,"password must be 9 words"),
-    role: z.enum(["manager", "waiter"])
-})
+export const
+    staffSchema = z.object({
+        name: z.string().min(1, "name is required!"),
+        email: z.email("Provide valid email address"),
+        phone: z.string().optional(),
+        password: z.string().min(9, "password must be 9 words").optional(),
+        role: z.enum(["manager", "waiter"]),
+        tenantId: z.uuid("Invalid tenant ID").optional(),
+        status: z.enum(["active", "inactive"]).optional(),
+    })
+
+export const tableSchema = z.object({
+    number: z.string().min(1, "Table number is required"),
+    name: z.string().min(1, "Table name is required"),
+    capacity: z.coerce.number().min(1, "Capacity must be at least 1").transform(String),
+    notes: z.string().optional(),
+    tenantId: z.string().uuid("Invalid tenant ID"),
+    available: z.boolean().optional().default(true),
+    maintenance: z.boolean().optional().default(false),
+    qrCodeUrl: z.string().url().optional(),
+});
+
+export const menuSchema = z.object({
+    item_logo: z.string().min(1, "Item logo is required").optional(),
+    itemName: z.string().min(1, "Item name is required"),
+    category: z.string().min(1, "Category is required"),
+    description: z.string().min(1, "Description is required"),
+    price: z.number().min(0, "Price must be non-negative"),
+    prepTime: z.number().min(1, "Prep time must be at least 1 minute"),
+    dietary: z.array(z.string()).optional(),
+    tenantId: z.string().uuid("Invalid tenant ID"),
+    isAvailable: z.boolean().optional(),
+});

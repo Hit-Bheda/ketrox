@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  MoreHorizontal, 
-  Edit, 
-  Trash2, 
+import { useEffect, useState } from "react";
+import {
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Edit,
+  Trash2,
   Eye,
   Clock,
   Star,
@@ -20,251 +20,69 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Image,
+  Salad,
 } from "lucide-react";
-
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+// import { Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import AddMenuModal from "@/components/menu/add-menu-modal";
+import Image from "next/image";
+import EditMenuModal from "@/components/menu/edit-menu-modal";
+import { toast } from "sonner";
+
 
 // Realistic menu data with categories
 const menuCategories = [
   { id: "appetizers", name: "Appetizers", icon: UtensilsCrossed, color: "text-chart-1" },
   { id: "mains", name: "Main Courses", icon: ChefHat, color: "text-chart-2" },
-  { id: "desserts", name: "Desserts", icon: IceCream, color: "text-chart-3" },
-  { id: "beverages", name: "Beverages", icon: Coffee, color: "text-chart-4" },
-  { id: "wines", name: "Wines & Spirits", icon: Wine, color: "text-chart-5" }
+  { id: "sides", name: "Side Dishes", icon: Salad, color: "text-chart-3" },
+  { id: "desserts", name: "Desserts", icon: IceCream, color: "text-chart-4" },
+  { id: "beverages", name: "Beverages", icon: Coffee, color: "text-chart-5" }
 ];
 
-const menuData = [
-  // Appetizers
-  {
-    id: 1,
-    name: "Truffle Burrata",
-    category: "appetizers",
-    description: "Fresh burrata with black truffle shavings, arugula, and aged balsamic",
-    price: 18.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 10,
-    allergens: ["dairy"],
-    isVegetarian: true,
-    isVegan: false,
-    isGlutenFree: true,
-    available: true,
-    popularity: 4.8,
-    orderCount: 142
-  },
-  {
-    id: 2,
-    name: "Seared Scallops",
-    category: "appetizers", 
-    description: "Pan-seared scallops with cauliflower purée and pancetta crisps",
-    price: 24.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 15,
-    allergens: ["shellfish"],
-    isVegetarian: false,
-    isVegan: false,
-    isGlutenFree: true,
-    available: true,
-    popularity: 4.9,
-    orderCount: 89
-  },
-  {
-    id: 3,
-    name: "Wagyu Beef Carpaccio",
-    category: "appetizers",
-    description: "Thinly sliced wagyu with wild mushrooms, aged parmesan, and lemon oil",
-    price: 32.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 12,
-    allergens: ["dairy"],
-    isVegetarian: false,
-    isVegan: false,
-    isGlutenFree: true,
-    available: false,
-    popularity: 4.7,
-    orderCount: 67
-  },
-  
-  // Main Courses
-  {
-    id: 4,
-    name: "Dry-Aged Ribeye",
-    category: "mains",
-    description: "28-day dry-aged ribeye with roasted bone marrow and seasonal vegetables",
-    price: 65.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 25,
-    allergens: [],
-    isVegetarian: false,
-    isVegan: false,
-    isGlutenFree: true,
-    available: true,
-    popularity: 4.9,
-    orderCount: 156
-  },
-  {
-    id: 5,
-    name: "Chilean Sea Bass",
-    category: "mains",
-    description: "Miso-glazed Chilean sea bass with forbidden rice and bok choy",
-    price: 42.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 20,
-    allergens: ["fish", "soy"],
-    isVegetarian: false,
-    isVegan: false,
-    isGlutenFree: false,
-    available: true,
-    popularity: 4.6,
-    orderCount: 98
-  },
-  {
-    id: 6,
-    name: "Lobster Risotto",
-    category: "mains",
-    description: "Maine lobster risotto with saffron, peas, and microgreens",
-    price: 48.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 22,
-    allergens: ["shellfish", "dairy"],
-    isVegetarian: false,
-    isVegan: false,
-    isGlutenFree: true,
-    available: true,
-    popularity: 4.8,
-    orderCount: 134
-  },
-  
-  // Desserts
-  {
-    id: 7,
-    name: "Chocolate Soufflé",
-    category: "desserts",
-    description: "Dark chocolate soufflé with vanilla bean ice cream and gold leaf",
-    price: 16.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 18,
-    allergens: ["dairy", "eggs"],
-    isVegetarian: true,
-    isVegan: false,
-    isGlutenFree: false,
-    available: true,
-    popularity: 4.7,
-    orderCount: 178
-  },
-  {
-    id: 8,
-    name: "Tiramisu",
-    category: "desserts",
-    description: "Classic tiramisu with espresso-soaked ladyfingers and mascarpone",
-    price: 12.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 5,
-    allergens: ["dairy", "eggs"],
-    isVegetarian: true,
-    isVegan: false,
-    isGlutenFree: false,
-    available: true,
-    popularity: 4.5,
-    orderCount: 203
-  },
-  
-  // Beverages
-  {
-    id: 9,
-    name: "Craft Cold Brew",
-    category: "beverages",
-    description: "House-made cold brew with vanilla simple syrup and oat milk foam",
-    price: 6.50,
-    image: "/api/placeholder/300/200",
-    preparationTime: 3,
-    allergens: [],
-    isVegetarian: true,
-    isVegan: true,
-    isGlutenFree: true,
-    available: true,
-    popularity: 4.4,
-    orderCount: 312
-  },
-  {
-    id: 10,
-    name: "Artisan Hot Chocolate",
-    category: "beverages",
-    description: "Belgian dark chocolate with house-made marshmallows and cinnamon",
-    price: 8.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 5,
-    allergens: ["dairy"],
-    isVegetarian: true,
-    isVegan: false,
-    isGlutenFree: true,
-    available: true,
-    popularity: 4.6,
-    orderCount: 145
-  },
-  
-  // Wines
-  {
-    id: 11,
-    name: "Châteauneuf-du-Pape 2018",
-    category: "wines",
-    description: "Full-bodied red wine with notes of dark fruit and spices",
-    price: 85.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 2,
-    allergens: ["sulfites"],
-    isVegetarian: true,
-    isVegan: false,
-    isGlutenFree: true,
-    available: true,
-    popularity: 4.8,
-    orderCount: 45
-  },
-  {
-    id: 12,
-    name: "Champagne Dom Pérignon",
-    category: "wines",
-    description: "Vintage champagne with elegant bubbles and complex flavor profile",
-    price: 280.00,
-    image: "/api/placeholder/300/200",
-    preparationTime: 2,
-    allergens: ["sulfites"],
-    isVegetarian: true,
-    isVegan: false,
-    isGlutenFree: true,
-    available: true,
-    popularity: 4.9,
-    orderCount: 23
-  }
-];
+type DietaryOption = "vegetarian" | "vegan" | "glutenFree";
+
+type MenuItem = {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  price: number;
+  preparationTime: number;
+  dietary: DietaryOption[];
+  isVegetarian: boolean;
+  isVegan: boolean;
+  isGlutenFree: boolean;
+  available: boolean;
+  image?: string;
+};
+
 
 export default function Menu() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -272,88 +90,143 @@ export default function Menu() {
   const [availabilityFilter, setAvailabilityFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<typeof menuData[0] | null>(null);
-  
-  // Form state for add/edit modal
-  const [itemForm, setItemForm] = useState({
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [itemForm, setItemForm] = useState<MenuItem>({
+    id: "",
     name: "",
     category: "appetizers",
     description: "",
     price: 0,
     preparationTime: 10,
-    allergens: [] as string[],
+    dietary: [],
     isVegetarian: false,
     isVegan: false,
     isGlutenFree: false,
-    available: true
+    available: true,
+
   });
 
-  const filteredMenuItems = menuData.filter(item => {
+  const filteredMenuItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchTerm.toLowerCase());
+      item.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
-    const matchesAvailability = availabilityFilter === "all" || 
-                               (availabilityFilter === "available" && item.available) ||
-                               (availabilityFilter === "unavailable" && !item.available);
-    
+    const matchesAvailability = availabilityFilter === "all" ||
+      (availabilityFilter === "available" && item.available) ||
+      (availabilityFilter === "unavailable" && !item.available);
+
     return matchesSearch && matchesCategory && matchesAvailability;
   });
 
-  const getAllergenBadge = (allergens: string[]) => {
-    if (allergens.length === 0) return null;
-    return (
-      <Badge variant="outline" className="text-xs">
-        <AlertCircle className="w-3 h-3 mr-1" />
-        {allergens.length} allergen{allergens.length > 1 ? 's' : ''}
+  console.log("Filtered menu items:", filteredMenuItems);
+
+  const badgeColors: Record<DietaryOption, string> = {
+    vegetarian: "bg-emerald-700 text-white",
+    vegan: "bg-indigo-700 text-white",
+    glutenFree: "bg-amber-700 text-white",
+  };
+  const getDietaryBadges = (item: MenuItem) => {
+    if (!item.dietary || !Array.isArray(item.dietary)) return null;
+
+    return item.dietary.map((diet) => (
+      <Badge key={diet} className={`${badgeColors[diet]} px-2 py-0.5 rounded-full text-xs font-medium`}>
+        {diet.charAt(0).toUpperCase() + diet.slice(1)}
       </Badge>
-    );
-  };
 
-  const getDietaryBadges = (item: typeof menuData[0]) => {
-    const badges = [];
-    if (item.isVegan) badges.push(<Badge key="vegan" className="bg-chart-3 text-foreground text-xs">Vegan</Badge>);
-    else if (item.isVegetarian) badges.push(<Badge key="vegetarian" className="bg-chart-4 text-foreground text-xs">Vegetarian</Badge>);
-    if (item.isGlutenFree) badges.push(<Badge key="gf" className="bg-chart-5 text-foreground text-xs">GF</Badge>);
-    return badges;
+    ));
   };
-
   const handleAddItem = () => {
     console.log("Adding menu item:", itemForm);
     setShowAddModal(false);
     resetForm();
   };
 
-  const handleEditItem = (item: typeof menuData[0]) => {
-    setSelectedItem(item);
-    setItemForm({
-      name: item.name,
-      category: item.category,
-      description: item.description,
-      price: item.price,
-      preparationTime: item.preparationTime,
-      allergens: item.allergens,
-      isVegetarian: item.isVegetarian,
-      isVegan: item.isVegan,
-      isGlutenFree: item.isGlutenFree,
-      available: item.available
-    });
-    setShowEditModal(true);
+  type ApiMenuItem = {
+    id: string;
+    ItemName?: string;
+    name?: string;
+    category: string;
+    description: string;
+    price: number | string;
+    Item_logo?: string;
+    image?: string;
+    prepTime?: number | string;
+    preparationTime?: number | string;
+    dietaty?: DietaryOption[];
+    dietary?: DietaryOption[];
+    isAvailable?: boolean;
   };
 
-  const handleUpdateItem = () => {
-    console.log("Updating menu item:", selectedItem?.id, itemForm);
-    setShowEditModal(false);
-    resetForm();
+  const featchhMenuItems = async () => {
+    try {
+      const response = await fetch('/api/admin/menu', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to fetch menu items');
+      const data = await response.json();
+      const mappedMenu: MenuItem[] = (data.menu || []).map((item: ApiMenuItem) => ({
+        id: String(item.id),
+        name: item.ItemName || item.name || "",
+        category: item.category,
+        description: item.description,
+        price: Number(item.price),
+        image: item.Item_logo || item.image || "",
+        preparationTime: Number(item.prepTime || item.preparationTime || 0),
+        dietary: (item.dietaty || item.dietary || []) as DietaryOption[],
+        isVegetarian: (item.dietaty || item.dietary || []).includes("vegetarian"),
+        isVegan: (item.dietaty || item.dietary || []).includes("vegan"),
+        isGlutenFree: (item.dietaty || item.dietary || []).includes("glutenFree"),
+        available: item.isAvailable ?? true,
+      }));
+      setMenuItems(mappedMenu);
+    } catch (error) {
+      console.error("Error fetching menu items:", error);
+    }
+  };
+
+  useEffect(() => {
+    featchhMenuItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const categories = menuItems.map(item => item.category);
+  console.log("Categories:", categories);
+
+  const handleToggleAvailability = async (itemId: string, currentAvailable: boolean) => {
+    try {
+      const response = await fetch("/api/admin/menu", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: itemId, isAvailable: !currentAvailable }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        // Optionally show a toast here
+        toast.success(data.message);
+        // Refresh menu items
+        featchhMenuItems();
+      } else {
+
+        console.error(data.error || "Failed to update availability");
+      }
+    } catch (err) {
+      console.error("Network error");
+    }
   };
 
   const resetForm = () => {
     setItemForm({
+      id: "",
       name: "",
       category: "appetizers",
       description: "",
       price: 0,
       preparationTime: 10,
-      allergens: [],
+      dietary: [],
       isVegetarian: false,
       isVegan: false,
       isGlutenFree: false,
@@ -362,26 +235,50 @@ export default function Menu() {
     setSelectedItem(null);
   };
 
-  const toggleAvailability = (itemId: number) => {
-    console.log(`Toggling availability for item ${itemId}`);
+
+  const deleteMenuItem = async (
+    id: string,
+    onSuccess: () => void,
+    onFinish: () => void
+  ) => {
+    try {
+      const response = await fetch("/api/admin/menu", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message || "Menu item deleted");
+        onSuccess();
+      } else {
+        toast.error(data.error || "Failed to delete menu item");
+      }
+    } catch (err) {
+      toast.error("Network error");
+    } finally {
+      onFinish();
+    }
   };
 
-  const deleteItem = (itemId: number) => {
-    console.log(`Deleting item ${itemId}`);
-  };
 
   const categoryStats = menuCategories.map(category => ({
     ...category,
-    count: menuData.filter(item => item.category === category.id).length,
-    available: menuData.filter(item => item.category === category.id && item.available).length
+    count: menuItems.filter(item => item.category === category.id).length,
+    available: menuItems.filter(item => item.category === category.id && item.available).length
   }));
 
+  console.log("Category stats:", categoryStats);
+
+
   const totalStats = {
-    totalItems: menuData.length,
-    availableItems: menuData.filter(item => item.available).length,
-    avgPrice: menuData.reduce((sum, item) => sum + item.price, 0) / menuData.length,
-    topRated: menuData.reduce((max, item) => item.popularity > max.popularity ? item : max, menuData[0])
+    totalItems: menuItems.length,
+    availableItems: menuItems.filter(item => item.available).length,
+    avgPrice: menuItems.length > 0 ? menuItems.reduce((sum, item) => sum + item.price, 0) / menuItems.length : 0,
+    topRated: menuItems.length > 0 ? menuItems[0] : { popularity: 0, name: "" }
   };
+
+
 
   return (
     <>
@@ -421,7 +318,7 @@ export default function Menu() {
               <Star className="h-4 w-4 text-chart-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-chart-4">{totalStats.topRated.popularity}</div>
+
               <div className="text-xs text-muted-foreground mt-1">
                 {totalStats.topRated.name}
               </div>
@@ -453,8 +350,8 @@ export default function Menu() {
               {categoryStats.map((category) => {
                 const IconComponent = category.icon;
                 return (
-                  <Card key={category.id} className="hover:shadow-md transition-all duration-300 cursor-pointer"
-                        onClick={() => setSelectedCategory(category.id)}>
+                  <Card key={category.id} className="hover:shadow-md transition-all duration-300 cursor-pointer border-1"
+                    onClick={() => setSelectedCategory(category.id)}>
                     <CardContent className="p-4 text-center">
                       <IconComponent className={`w-8 h-8 mx-auto mb-2 ${category.color}`} />
                       <h3 className="font-medium text-sm">{category.name}</h3>
@@ -477,129 +374,23 @@ export default function Menu() {
                 <CardTitle>Menu Items</CardTitle>
                 <CardDescription>Manage your restaurant&apos;s menu items and pricing</CardDescription>
               </div>
-              <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-                <DialogTrigger asChild>
-                  <Button className="hover:scale-105 transition-transform">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Menu Item
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Add New Menu Item</DialogTitle>
-                    <DialogDescription>
-                      Create a new menu item with all details and specifications.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="item-name">Item Name</Label>
-                        <Input
-                          id="item-name"
-                          value={itemForm.name}
-                          onChange={(e) => setItemForm({...itemForm, name: e.target.value})}
-                          placeholder="Truffle Pasta"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="item-category">Category</Label>
-                        <Select value={itemForm.category} onValueChange={(value) => setItemForm({...itemForm, category: value})}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {menuCategories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="item-description">Description</Label>
-                      <Textarea
-                        id="item-description"
-                        value={itemForm.description}
-                        onChange={(e) => setItemForm({...itemForm, description: e.target.value})}
-                        placeholder="Detailed description of the dish..."
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="item-price">Price ($)</Label>
-                        <Input
-                          id="item-price"
-                          type="number"
-                          step="0.01"
-                          value={itemForm.price}
-                          onChange={(e) => setItemForm({...itemForm, price: parseFloat(e.target.value)})}
-                          placeholder="24.99"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="prep-time">Prep Time (minutes)</Label>
-                        <Input
-                          id="prep-time"
-                          type="number"
-                          value={itemForm.preparationTime}
-                          onChange={(e) => setItemForm({...itemForm, preparationTime: parseInt(e.target.value)})}
-                          placeholder="15"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Label>Dietary Options</Label>
-                      <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="vegetarian"
-                            checked={itemForm.isVegetarian}
-                            onCheckedChange={(checked) => setItemForm({...itemForm, isVegetarian: checked})}
-                          />
-                          <Label htmlFor="vegetarian">Vegetarian</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="vegan"
-                            checked={itemForm.isVegan}
-                            onCheckedChange={(checked) => setItemForm({...itemForm, isVegan: checked})}
-                          />
-                          <Label htmlFor="vegan">Vegan</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="gluten-free"
-                            checked={itemForm.isGlutenFree}
-                            onCheckedChange={(checked) => setItemForm({...itemForm, isGlutenFree: checked})}
-                          />
-                          <Label htmlFor="gluten-free">Gluten Free</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="available"
-                            checked={itemForm.available}
-                            onCheckedChange={(checked) => setItemForm({...itemForm, available: checked})}
-                          />
-                          <Label htmlFor="available">Available</Label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowAddModal(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddItem}>Add Item</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button className="hover:scale-105  transition-transform" onClick={() => setShowAddModal(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Menu Item
+              </Button>
+
             </div>
+            <AddMenuModal
+              open={showAddModal}
+              setOpen={setShowAddModal}
+              itemForm={itemForm}
+              setItemForm={setItemForm}
+              menuCategories={menuCategories}
+              handleAddItem={handleAddItem}
+              onSave={featchhMenuItems}
+            />
           </CardHeader>
-          
+
           <CardContent>
             {/* Filters Row */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -636,98 +427,172 @@ export default function Menu() {
             </div>
 
             {/* Menu Items Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredMenuItems.map((item) => (
-                <Card key={item.id} className={`hover:shadow-lg transition-all duration-300 ${!item.available ? 'opacity-60' : ''}`}>
-                  <div className="relative">
-                    <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
-                      <Image className="w-12 h-12 text-muted-foreground" />
-                    </div>
-                    {!item.available && (
-                      <div className="absolute inset-0 bg-black/50 rounded-t-lg flex items-center justify-center">
-                        <Badge variant="destructive">
-                          <XCircle className="w-3 h-3 mr-1" />
-                          Unavailable
-                        </Badge>
-                      </div>
-                    )}
-                    <div className="absolute top-2 right-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="secondary" size="sm" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditItem(item)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit Item
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleAvailability(item.id)}>
-                            {item.available ? (
-                              <>
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Mark Unavailable
-                              </>
+            {menuCategories.map((category) => {
+              const itemsInCategory = filteredMenuItems.filter((item) => item.category === category.id);
+              if (itemsInCategory.length === 0) return null; // <-- Only render if items exist
+              return (
+                <div key={category.id} className="mb-8">
+                  <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <span>{category.name}</span>
+                  </h2>
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {itemsInCategory.map((item) => (
+                      <Card key={item.id} className={`hover:shadow-lg transition-all py-0 duration-300 border-1 ${!item.available ? 'opacity-60' : ''}`}>
+                        <div className="relative rounded-t-xl overflow-hidden">
+                          {/* Image */}
+                          <div className="aspect-video bg-muted relative">
+                            {item.image ? (
+                              <Image
+                                src={item.image}
+                                alt={item.name}
+                                fill
+                                className="object-cover w-full h-full transition-transform duration-300 hover:scale-105"
+                              />
                             ) : (
-                              <>
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Mark Available
-                              </>
+                              <ChefHat className="w-12 h-12 text-muted-foreground m-auto" />
                             )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Analytics
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => deleteItem(item.id)} className="text-destructive">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete Item
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                  
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold">{item.name}</h3>
-                          <p className="text-2xl font-bold text-primary">${item.price.toFixed(2)}</p>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-4 h-4 text-chart-4 fill-current" />
-                          <span className="text-sm font-medium">{item.popularity}</span>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
-                      
-                      <div className="flex flex-wrap gap-1">
-                        {getDietaryBadges(item)}
-                        {getAllergenBadge(item.allergens)}
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-3 h-3" />
-                          <span>{item.preparationTime}min</span>
-                        </div>
-                        <span>{item.orderCount} orders</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                          </div>
 
+                          {/* Action Menu (Top Right) */}
+                          <div className="absolute top-2 right-2 z-10">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="secondary" size="sm" className="h-8 w-8 p-0 rounded-full bg-white/90 backdrop-blur-sm shadow">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedItem(item);
+                                    setItemForm({
+                                      id: String(item.id),
+                                      name: item.name,
+                                      category: item.category,
+                                      description: item.description,
+                                      price: item.price,
+                                      preparationTime: item.preparationTime,
+                                      dietary: item.dietary || [],
+                                      isVegetarian: item.dietary?.includes("vegetarian") || false,
+                                      isVegan: item.dietary?.includes("vegan") || false,
+                                      isGlutenFree: item.dietary?.includes("glutenFree") || false,
+                                      available: item.available,
+                                      image: item.image || "",
+                                    });
+                                    setShowEditModal(true);
+                                  }}
+                                >
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Item
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleToggleAvailability(item.id, item.available)}>
+                                  {item.available ? (
+                                    <>
+                                      <XCircle className="w-4 h-4 mr-2" />
+                                      Mark Unavailable
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="w-4 h-4 mr-2" />
+                                      Mark Available
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Analytics
+                                </DropdownMenuItem>
+                                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem
+                                      onSelect={(e) => {
+                                        e.preventDefault();
+                                        setDeleteTargetId(item.id);
+                                        setDeleteDialogOpen(true);
+                                      }}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete Item
+                                    </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Delete <span className="font-bold text-destructive">{item.name}</span>?
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This action cannot be undone. <br />
+                                        <b>{item.name}</b> will be permanently removed from your menu and will no longer be available to customers.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        disabled={deleteLoading}
+                                        onClick={() => {
+                                          if (!deleteTargetId) return;
+                                          setDeleteLoading(true);
+
+                                          deleteMenuItem(
+                                            deleteTargetId,
+                                            () => featchhMenuItems(),
+                                            () => {
+                                              setDeleteLoading(false);
+                                              setDeleteDialogOpen(false);
+                                              setDeleteTargetId(null);
+                                            }
+                                          );
+                                        }}
+                                        className="bg-red-600 text-white hover:bg-red-700"
+                                      >
+                                        {deleteLoading ? "Deleting..." : "Delete"}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
+                          {/* Overlay for Unavailable Items */}
+                          {!item.available && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-t-xl">
+                              <Badge variant="destructive" className="px-3 py-1 text-xs font-medium">
+                                <XCircle className="w-3 h-3 mr-1" />
+                                Unavailable
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Card Content */}
+                        <CardContent className="p-4 pt-0">
+                          <div className="space-y-3">
+                            <h3 className="font-semibold text-base">{item.name}</h3>
+                            <p className="text-xl font-bold text-primary">${item.price}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {getDietaryBadges(item)}
+                            </div>
+                            <div className="flex items-center text-xs text-muted-foreground mt-2">
+                              <Clock className="w-3 h-3 mr-1" />
+                              <span>{item.preparationTime}min</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
             {filteredMenuItems.length === 0 && (
               <div className="text-center py-8">
                 <ChefHat className="w-12 h-12 text-muted mx-auto mb-4" />
                 <p className="text-muted-foreground">No menu items found matching your criteria.</p>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="mt-4"
                   onClick={() => {
                     setSearchTerm("");
@@ -742,117 +607,15 @@ export default function Menu() {
           </CardContent>
         </Card>
 
-        {/* Edit Modal */}
-        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Menu Item</DialogTitle>
-              <DialogDescription>
-                Update the details for {selectedItem?.name}.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-name">Item Name</Label>
-                  <Input
-                    id="edit-name"
-                    value={itemForm.name}
-                    onChange={(e) => setItemForm({...itemForm, name: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-category">Category</Label>
-                  <Select value={itemForm.category} onValueChange={(value) => setItemForm({...itemForm, category: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {menuCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  value={itemForm.description}
-                  onChange={(e) => setItemForm({...itemForm, description: e.target.value})}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-price">Price ($)</Label>
-                  <Input
-                    id="edit-price"
-                    type="number"
-                    step="0.01"
-                    value={itemForm.price}
-                    onChange={(e) => setItemForm({...itemForm, price: parseFloat(e.target.value)})}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-prep-time">Prep Time (minutes)</Label>
-                  <Input
-                    id="edit-prep-time"
-                    type="number"
-                    value={itemForm.preparationTime}
-                    onChange={(e) => setItemForm({...itemForm, preparationTime: parseInt(e.target.value)})}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <Label>Dietary Options</Label>
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="edit-vegetarian"
-                      checked={itemForm.isVegetarian}
-                      onCheckedChange={(checked) => setItemForm({...itemForm, isVegetarian: checked})}
-                    />
-                    <Label htmlFor="edit-vegetarian">Vegetarian</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="edit-vegan"
-                      checked={itemForm.isVegan}
-                      onCheckedChange={(checked) => setItemForm({...itemForm, isVegan: checked})}
-                    />
-                    <Label htmlFor="edit-vegan">Vegan</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="edit-gluten-free"
-                      checked={itemForm.isGlutenFree}
-                      onCheckedChange={(checked) => setItemForm({...itemForm, isGlutenFree: checked})}
-                    />
-                    <Label htmlFor="edit-gluten-free">Gluten Free</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="edit-available"
-                      checked={itemForm.available}
-                      onCheckedChange={(checked) => setItemForm({...itemForm, available: checked})}
-                    />
-                    <Label htmlFor="edit-available">Available</Label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEditModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateItem}>Update Item</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Edit Menu Modal */}
+        <EditMenuModal
+          open={showEditModal}
+          setOpen={setShowEditModal}
+          itemForm={itemForm}
+          setItemForm={setItemForm}
+          menuCategories={menuCategories}
+          onSave={featchhMenuItems}
+        />
       </div>
     </>
   );

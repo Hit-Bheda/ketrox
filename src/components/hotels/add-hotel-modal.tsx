@@ -30,7 +30,7 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
       name: "",
       email: "",
       password:"",
-      logoUrl: "", // Optional in schema or make sure to allow empty string
+      logoUrl: "", 
       ownerName: "",
       ownerPhone: "",
       address: "",

@@ -5,7 +5,7 @@ import crypto from "crypto";
 
 export async function POST(request: Request) {
   const {
-    name, email, logoUrl, ownerName, ownerPhone, address, plan, status, password
+    name, email, logoUrl, ownerName, ownerPhone, address, plan, status, password,phone
   } = await request.json();
 
   if (!name || !email || !logoUrl || !ownerName || !ownerPhone || !address || !plan || !status || !password) {
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         email,
+        phone,
         password,
         name: ownerName,
         role: "admin",
