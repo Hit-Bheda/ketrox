@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1755163367206,
-      "tag": "0000_curious_wildside",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1755163902043,
-      "tag": "0001_neat_longshot",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1755169803645,
-      "tag": "0002_real_darwin",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1755170102190,
-      "tag": "0003_wise_spot",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1755171938227,
-      "tag": "0004_wild_ben_urich",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1755501321553,
-      "tag": "0005_confused_morbius",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1755597429364,
-      "tag": "0006_workable_slapstick",
+      "when": 1755671875624,
+      "tag": "0000_peaceful_ezekiel",
       "breakpoints": true
     }
   ]
