@@ -61,7 +61,7 @@ export const
 export const tableSchema = z.object({
     number: z.string().min(1, "Table number is required"),
     name: z.string().min(1, "Table name is required"),
-    capacity: z.string().min(1, "Capacity must be at least 1"),
+    capacity: z.coerce.number().min(1, "Capacity must be at least 1").transform(String),
     notes: z.string().optional(),
     tenantId: z.string().uuid("Invalid tenant ID"),
     available: z.boolean().optional().default(true),

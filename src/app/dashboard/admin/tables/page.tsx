@@ -61,6 +61,7 @@ type Table = {
   number: string;
   name: string;
   capacity: number;
+  notes?: string;
   available: string;
   // add other fields if needed
 };
@@ -112,41 +113,8 @@ export default function Tables() {
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case "available":
-        return "bg-green-500/15 text-green-700 dark:text-green-300 border border-green-500/30";
-      case "occupied":
-        return "bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30";
-      case "reserved":
-        return "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30";
-      case "maintenance":
-        return "bg-destructive/15 text-destructive dark:text-destructive-foreground border border-destructive/30";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "available":
-        return <CheckCircle className="w-4 h-4" />;
-      case "occupied":
-        return <Users className="w-4 h-4" />;
-      case "reserved":
-        return <Clock className="w-4 h-4" />;
-      case "maintenance":
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return <AlertCircle className="w-4 h-4" />;
-    }
-  };
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-
-
 
   const handleAddTable = async () => {
     if (!tenantId) {
@@ -173,6 +141,7 @@ export default function Tables() {
           capacity: 2,
           notes: ""
         });
+        fetchTables();
       }
     } catch (err) {
       setError("Network error");
@@ -385,6 +354,7 @@ export default function Tables() {
                   </div>
 
                   <p className="text-sm font-medium text-muted-foreground">{table.name}</p>
+                  <p className="text-sm font-medium text-muted-foreground">{table.notes}</p>
                 </CardHeader>
 
                 <CardContent className="space-y-3">
@@ -419,10 +389,6 @@ export default function Tables() {
           )}
         </CardContent>
       </Card>
-
-
-
-
 
       <AddTableDialog
         showAddModal={showAddModal}
