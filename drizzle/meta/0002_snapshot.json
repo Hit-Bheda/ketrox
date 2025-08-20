@@ -1,6 +1,6 @@
 {
-  "id": "600b5aec-ca6c-4c50-b5b6-238b3d50bdc5",
-  "prevId": "c3ba38b2-27b3-4fd4-aa75-bcd019df1ef8",
+  "id": "a2da0333-355c-4300-a6d0-7dd2146ef19d",
+  "prevId": "600b5aec-ca6c-4c50-b5b6-238b3d50bdc5",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -335,6 +335,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'waiter'"
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",

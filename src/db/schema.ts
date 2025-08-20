@@ -1,3 +1,5 @@
+
+import { Item } from "@radix-ui/react-select";
 import {
     pgTable,
     text,
@@ -10,6 +12,7 @@ export const user = pgTable("user", {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
+    phone: text("phone"),
     emailVerified: boolean("email_verified")
         .$defaultFn(() => false)
         .notNull(),
@@ -19,6 +22,9 @@ export const user = pgTable("user", {
     role: text("role", {
         enum: ["super-admin", "admin", "manager", "waiter"]
     }).notNull().default("waiter"),
+    status: text("status", { enum: ["active", "inactive"] })
+        .notNull()
+        .default("active"),
     createdAt: timestamp("created_at")
         .$defaultFn(() => /* @__PURE__ */ new Date())
         .notNull(),
@@ -86,4 +92,33 @@ export const tenants = pgTable('tenants', {
     status: text('status', { enum: ["active", "trial", "suspended", "expired"] }).notNull().default("active"),
     created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
+});
+
+export const table = pgTable("table", {
+    id: text("id").primaryKey(),
+    number: text("number").notNull(),
+    name: text("name").notNull(),
+    capacity: text("capacity").notNull(),
+    notes: text("notes"),
+    tenantId: text("tenant_id").notNull().references(() => tenants.id),
+    available: boolean("available").notNull().default(true),
+    maintenance: boolean("maintenance").notNull().default(false),
+    qrCodeUrl: text("qr_code_url"),  
+    createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+    updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+});
+
+export const menu = pgTable("menu", {
+    id: text("id").primaryKey(),
+    Item_logo: text('Item_logo').notNull(),
+    ItemName: text("item_name").notNull(),
+    category: text("category").notNull(),
+    description: text("description").notNull(),
+    price: text("price").notNull(),
+    prepTime: text("prep_time").notNull(),
+    dietaty: text("dietary").array().notNull(),
+    tenantId: text("tenant_id").notNull().references(() => tenants.id),
+    isAvailable: boolean("is_available").$defaultFn(() => true).notNull(),
+    createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+    updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });

@@ -52,6 +52,7 @@
     "react-to-print": "^3.1.1",
     "recharts": "^3.1.1",
     "sonner": "^2.0.7",
+    "swiper": "^11.2.10",
     "tailwind-merge": "^3.3.1",
     "uuid": "^11.1.0",
     "zod": "^4.0.15"
@@ -60,6 +61,7 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/formidable": "^3.4.5",
+    "@types/next-auth": "^3.13.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
