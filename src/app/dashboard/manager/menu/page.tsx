@@ -2,38 +2,16 @@
 
 import { useEffect, useState } from "react";
 import {
-  Plus,
   Search,
   Filter,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  Eye,
   Clock,
   Star,
   DollarSign,
   ChefHat,
-  Coffee,
-  UtensilsCrossed,
-  Wine,
-  IceCream,
-  AlertCircle,
   CheckCircle,
-  XCircle,
-  Salad,
+
 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
-// import { Trash2 } from "lucide-react";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,21 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import AddMenuModal from "@/components/menu/add-menu-modal";
-import Image from "next/image";
-import EditMenuModal from "@/components/menu/edit-menu-modal";
-import { toast } from "sonner";
 import { MenuImageSlider } from "@/components/menu/MenuImageSlider";
 
 
 import { DescriptionPopover } from "@/components/menu/DescriptionPopover";
-
 
 
 type DietaryOption = "vegetarian" | "vegan" | "glutenFree";
@@ -84,28 +51,7 @@ export default function Menu() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [availabilityFilter, setAvailabilityFilter] = useState("all");
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [itemForm, setItemForm] = useState<MenuItem>({
-    id: "",
-    name: "",
-    category: "",
-    description: "",
-    price: "",
-    preparationTime: "",
-    dietary: [],
-    isVegetarian: false,
-    isVegan: false,
-    isGlutenFree: false,
-    available: true,
-    image: [],
-  });
-
 
   const filteredMenuItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -133,10 +79,6 @@ export default function Menu() {
       </Badge>
 
     ));
-  };
-  const handleAddItem = () => {
-    setShowAddModal(false);
-    resetForm();
   };
 
   type ApiMenuItem = {
@@ -193,28 +135,6 @@ export default function Menu() {
   }, []);
 
 
-  const handleToggleAvailability = async (itemId: string, currentAvailable: boolean) => {
-    try {
-      const response = await fetch("/api/admin/menu", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: itemId, isAvailable: !currentAvailable }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        // Optionally show a toast here
-        toast.success(data.message);
-        // Refresh menu items
-        featchhMenuItems();
-      } else {
-
-        console.error(data.error || "Failed to update availability");
-      }
-    } catch (err) {
-      console.error("Network error");
-    }
-  };
-
   const uniqueCategories = Array.from(
     new Set(menuItems.map(item => item.category).filter(Boolean))
   );
@@ -226,50 +146,7 @@ export default function Menu() {
     available: menuItems.filter(item => item.category === category && item.available).length,
   }));
 
-  const resetForm = () => {
-    setItemForm({
-      id: "",
-      name: "",
-      category: "",
-      description: "",
-      price: "",
-      preparationTime: "",
-      dietary: [],
-      isVegetarian: false,
-      isVegan: false,
-      isGlutenFree: false,
-      available: true
-
-    });
-    setSelectedItem(null);
-  };
-
-
-  const deleteMenuItem = async (
-    id: string,
-    onSuccess: () => void,
-    onFinish: () => void
-  ) => {
-    try {
-      const response = await fetch("/api/admin/menu", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        toast.success(data.message || "Menu item deleted");
-        onSuccess();
-      } else {
-        toast.error(data.error || "Failed to delete menu item");
-      }
-    } catch (err) {
-      toast.error("Network error");
-    } finally {
-      onFinish();
-    }
-  };
-
+ 
   const totalStats = {
     totalItems: menuItems.length,
     availableItems: menuItems.filter(item => item.available).length,
@@ -365,30 +242,7 @@ export default function Menu() {
             </div>
           </CardContent>
         </Card>
-        {/* Menu Management */}
         <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle>Menu Items</CardTitle>
-                <CardDescription>Manage your restaurant&apos;s menu items and pricing</CardDescription>
-              </div>
-              <Button className="hover:scale-105  transition-transform" onClick={() => setShowAddModal(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Menu Item
-              </Button>
-
-            </div>
-            <AddMenuModal
-              open={showAddModal}
-              setOpen={setShowAddModal}
-              itemForm={itemForm}
-              setItemForm={setItemForm}
-              menuCategories={uniqueCategories.map(c => ({ id: c, name: c }))}
-              handleAddItem={handleAddItem}
-              onSave={featchhMenuItems}
-            />
-          </CardHeader>
 
           <CardContent>
             {/* Filters Row */}
@@ -441,117 +295,6 @@ export default function Menu() {
                           {/* Image */}
 
                           <MenuImageSlider images={item.image || []} alt={item.name} />
-                          {/* Action Menu (Top Right) */}
-                          <div className="absolute top-2 right-2 z-10">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="secondary" size="sm" className="h-8 w-8 p-0 rounded-full bg-white/90 backdrop-blur-sm shadow">
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedItem(item);
-                                    setItemForm({
-                                      id: String(item.id),
-                                      name: item.name || "",
-                                      category: item.category,
-                                      description: item.description,
-                                      price: item.price,
-                                      preparationTime: item.preparationTime,
-                                      dietary: item.dietary || [],
-                                      isVegetarian: item.dietary?.includes("vegetarian") || false,
-                                      isVegan: item.dietary?.includes("vegan") || false,
-                                      isGlutenFree: item.dietary?.includes("glutenFree") || false,
-                                      available: item.available,
-                                      image: item.image || [],
-                                    });
-                                    setShowEditModal(true);
-                                  }}
-                                >
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit Item
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleToggleAvailability(item.id, item.available)}>
-                                  {item.available ? (
-                                    <>
-                                      <XCircle className="w-4 h-4 mr-2" />
-                                      Mark Unavailable
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle className="w-4 h-4 mr-2" />
-                                      Mark Available
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  View Analytics
-                                </DropdownMenuItem>
-                                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                                  <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem
-                                      onSelect={(e) => {
-                                        e.preventDefault();
-                                        setDeleteTargetId(item.id);
-                                        setDeleteDialogOpen(true);
-                                      }}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Delete Item
-                                    </DropdownMenuItem>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>
-                                        Delete <span className="font-bold text-destructive">{item.name}</span>?
-                                      </AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        This action cannot be undone. <br />
-                                        <b>{item.name}</b> will be permanently removed from your menu and will no longer be available to customers.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        disabled={deleteLoading}
-                                        onClick={() => {
-                                          if (!deleteTargetId) return;
-                                          setDeleteLoading(true);
-
-                                          deleteMenuItem(
-                                            deleteTargetId,
-                                            () => featchhMenuItems(),
-                                            () => {
-                                              setDeleteLoading(false);
-                                              setDeleteDialogOpen(false);
-                                              setDeleteTargetId(null);
-                                            }
-                                          );
-                                        }}
-                                        className="bg-red-600 text-white hover:bg-red-700"
-                                      >
-                                        {deleteLoading ? "Deleting..." : "Delete"}
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-
-                          {/* Overlay for Unavailable Items */}
-                          {!item.available && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-t-xl">
-                              <Badge variant="destructive" className="px-3 py-1 text-xs font-medium">
-                                <XCircle className="w-3 h-3 mr-1" />
-                                Unavailable
-                              </Badge>
-                            </div>
-                          )}
                         </div>
 
                         {/* Card Content */}
@@ -596,16 +339,6 @@ export default function Menu() {
             )}
           </CardContent>
         </Card>
-
-        {/* Edit Menu Modal */}
-        <EditMenuModal
-          open={showEditModal}
-          setOpen={setShowEditModal}
-          itemForm={itemForm}
-          setItemForm={setItemForm}
-          menuCategories={uniqueCategories.map(c => ({ id: c, name: c }))}
-          onSave={featchhMenuItems}
-        />
       </div>
     </>
   );

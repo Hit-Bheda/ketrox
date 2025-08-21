@@ -4,52 +4,48 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
-interface AddTableDialogProps {
-  showAddModal: boolean;
-  setShowAddModal: (open: boolean) => void;
+interface EditTableDialogProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
   tableForm: {
+    id: string;
     number: string;
     name: string;
     capacity: number;
     notes: string;
   };
   setTableForm: React.Dispatch<React.SetStateAction<{
+    id: string;
     number: string;
     name: string;
     capacity: number;
     notes: string;
   }>>;
   capacities: number[];
-  handleAddTable: () => void;
-  errors?: {
-    tableNumber?: string;
-    tableName?: string;
-    tableNotes?: string;
-  };
-  setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
-  clearForm: () => void;
+  onSave: () => void;
+  onDelete: () => void;
+  loading?: boolean;
 }
 
-export default function AddTableDialog({
-  showAddModal,
-  setShowAddModal,
+export default function EditTableDialog({
+  open,
+  setOpen,
   tableForm,
   setTableForm,
   capacities,
-  handleAddTable,
-  clearForm,
-  errors,
-  setErrors
-}: AddTableDialogProps) {  
-
+  onSave,
+  onDelete,
+  loading = false,
+}: EditTableDialogProps) {
   return (
-    <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[500px] bg-background text-foreground">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Add New Table</DialogTitle>
+          <DialogTitle className="text-foreground">Edit Table</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Add a new table to your restaurant floor plan.
+            Update or remove this table.
           </DialogDescription>
         </DialogHeader>
 
@@ -60,29 +56,20 @@ export default function AddTableDialog({
               <Input
                 id="table-number"
                 value={tableForm.number}
-                onChange={(e) => {
-                  setTableForm({ ...tableForm, number: e.target.value });
-                  if (errors?.tableNumber) setErrors((prev) => ({ ...prev, tableNumber: "" }));
-                }}
+                onChange={(e) => setTableForm({ ...tableForm, number: e.target.value })}
                 placeholder="T009"
                 className="bg-background border-input text-foreground"
               />
-
-              {errors?.tableNumber && <p className="text-red-500 text-sm">{errors.tableNumber}</p>}
             </div>
             <div>
               <Label htmlFor="table-name" className="text-foreground mb-2">Table Name</Label>
               <Input
                 id="table-name"
                 value={tableForm.name}
-                onChange={(e) => {
-                  setTableForm({ ...tableForm, name: e.target.value });
-                  if (errors?.tableName) setErrors((prev) => ({ ...prev, tableName: "" }));
-                }}
+                onChange={(e) => setTableForm({ ...tableForm, name: e.target.value })}
                 placeholder="Corner Table"
                 className="bg-background border-input text-foreground"
               />
-              {errors?.tableName && <p className="text-red-500 text-sm">{errors.tableName}</p>}
             </div>
           </div>
 
@@ -112,33 +99,36 @@ export default function AddTableDialog({
             <Textarea
               id="table-notes"
               value={tableForm.notes}
-              onChange={(e) => {
-                setTableForm({ ...tableForm, notes: e.target.value });
-                if (errors?.tableNotes) setErrors((prev) => ({ ...prev, tableNotes: "" }));
-              }}
+              onChange={(e) => setTableForm({ ...tableForm, notes: e.target.value })}
               placeholder="Special features, accessibility notes..."
               className="bg-background border-input text-foreground"
             />
-            {errors?.tableNotes && <p className="text-red-500 text-sm">{errors.tableNotes}</p>}
           </div>
         </div>
 
         <DialogFooter>
           <Button
+            variant="destructive"
+            onClick={onDelete}
+            disabled={loading}
+            className="mr-auto"
+          >
+            {loading ? "Deleting..." : "Remove Table"}
+          </Button>
+          <Button
             variant="outline"
-            onClick={() => {
-              clearForm();
-              setShowAddModal(false);
-            }}
+            onClick={() => setOpen(false)}
             className="border-border text-foreground hover:bg-accent"
+            disabled={loading}
           >
             Cancel
           </Button>
           <Button
-            onClick={handleAddTable}
+            onClick={onSave}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
+            disabled={loading}
           >
-            Add Table
+            {loading ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>

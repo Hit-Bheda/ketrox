@@ -96,3 +96,22 @@ export async function PUT(request: Request) {
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const { id } = body;
+    if (!id) {
+      return Response.json({ error: "Table ID is required" }, { status: 400 });
+    }
+    const deleted = await db.delete(table).where(eq(table.id, id)).returning();
+    if (!deleted.length) {
+      return Response.json({ error: "Table not found" }, { status: 404 });
+    }
+    return Response.json({ message: "Table deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting table:", err);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
