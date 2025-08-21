@@ -87,111 +87,6 @@ const staffData = [
       settings: false
     }
   },
-  {
-    id: 2,
-    name: "James Thompson",
-    email: "james.thompson@restaurant.com",
-    phone: "+1 (555) 987-6543",
-    role: "Chef",
-    status: "active",
-    shift: "Evening",
-    joinedDate: "2023-02-20",
-    lastActive: "5 minutes ago",
-    avatar: "JT",
-    permissions: {
-      dashboard: true,
-      staff: false,
-      tables: false,
-      orders: true,
-      invoices: false,
-      reports: false,
-      settings: false
-    }
-  },
-  {
-    id: 3,
-    name: "Sarah Kim",
-    email: "sarah.kim@restaurant.com",
-    phone: "+1 (555) 456-7890",
-    role: "Waiter",
-    status: "active",
-    shift: "Morning",
-    joinedDate: "2023-03-10",
-    lastActive: "1 hour ago",
-    avatar: "SK",
-    permissions: {
-      dashboard: true,
-      staff: false,
-      tables: true,
-      orders: true,
-      invoices: false,
-      reports: false,
-      settings: false
-    }
-  },
-  {
-    id: 4,
-    name: "David Chen",
-    email: "david.chen@restaurant.com",
-    phone: "+1 (555) 321-9876",
-    role: "Waiter",
-    status: "active",
-    shift: "Evening",
-    joinedDate: "2023-04-05",
-    lastActive: "30 minutes ago",
-    avatar: "DC",
-    permissions: {
-      dashboard: true,
-      staff: false,
-      tables: true,
-      orders: true,
-      invoices: false,
-      reports: false,
-      settings: false
-    }
-  },
-  {
-    id: 5,
-    name: "Elena Petrov",
-    email: "elena.petrov@restaurant.com",
-    phone: "+1 (555) 654-3210",
-    role: "Chef",
-    status: "inactive",
-    shift: "Morning",
-    joinedDate: "2023-05-12",
-    lastActive: "2 days ago",
-    avatar: "EP",
-    permissions: {
-      dashboard: true,
-      staff: false,
-      tables: false,
-      orders: true,
-      invoices: false,
-      reports: false,
-      settings: false
-    }
-  },
-  {
-    id: 6,
-    name: "Michael Johnson",
-    email: "michael.johnson@restaurant.com",
-    phone: "+1 (555) 789-0123",
-    role: "Waiter",
-    status: "active",
-    shift: "Night",
-    joinedDate: "2023-06-01",
-    lastActive: "15 minutes ago",
-    avatar: "MJ",
-    permissions: {
-      dashboard: true,
-      staff: false,
-      tables: true,
-      orders: true,
-      invoices: false,
-      reports: false,
-      settings: false
-    }
-  }
 ];
 
 const roles = ["manager", "waiter"];
@@ -218,7 +113,6 @@ export default function Staff() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<typeof staffData[0] | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
@@ -288,10 +182,6 @@ export default function Staff() {
     }
   };
 
-  const handleEditPermissions = (staff: typeof staffData[0]) => {
-    setSelectedStaff(staff);
-    setShowPermissionsModal(true);
-  };
 
   const stats = {
     total: staffList.length,
@@ -627,10 +517,13 @@ export default function Staff() {
 
 
           {/* Staff Table */}
-          <div className="rounded-lg border">
+          <div className="rounded-lg border overflow-hidden rounded-b-lg">
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader >
+                <TableRow
+                  className={`hover:bg-muted/0 transition-colors ${staffList.length > 0 ? "border-b" : "border-none"
+                    }`}
+                >
                   <TableHead>Staff Member</TableHead>
                   <TableHead>Phone Number</TableHead>
                   <TableHead>Email</TableHead>
@@ -647,7 +540,10 @@ export default function Staff() {
                     (searchTerm === "" || staff.name.toLowerCase().includes(searchTerm.toLowerCase()) || staff.email.toLowerCase().includes(searchTerm.toLowerCase()))
                   )
                   .map((staff) => (
-                    <TableRow key={staff.id} className="hover:bg-accent hover:rounded-full transition-colors">
+                    <TableRow
+                      key={staff.id}
+                      className="hover:bg-muted/50 transition-colors [&:last-child]:rounded-b-lg"
+                    >
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           {/* <Avatar className="h-10 w-10">
@@ -692,10 +588,7 @@ export default function Staff() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditPermissions(staff)}>
-                              <Shield className="w-4 h-4 mr-2" />
-                              Edit Permissions
-                            </DropdownMenuItem>
+
                             {(staff.role.toLowerCase() === "manager" || staff.role.toLowerCase() === "waiter") && (
                               <DropdownMenuItem onClick={() => { setSelectedStaff(staff); setShowUpdateModal(true); }}>
                                 <Edit className="w-4 h-4 mr-2" />
@@ -754,58 +647,6 @@ export default function Staff() {
             )}
         </CardContent>
       </Card>
-
-      {/* Permissions Modal */}
-      {/* <Dialog open={showPermissionsModal} onOpenChange={setShowPermissionsModal}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Permissions</DialogTitle>
-            <DialogDescription>
-              Configure access permissions for {selectedStaff?.name}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedStaff && (
-            <div className="space-y-6 py-4">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback className="bg-primary text-primary-foreground">{selectedStaff.avatar}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{selectedStaff.name}</p>
-                  <p className="text-sm text-muted-foreground">{selectedStaff.role}</p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <h4 className="font-medium">Section Access</h4>
-                {Object.entries(selectedStaff.permissions).map(([section, hasAccess]) => (
-                  <div key={section} className="flex items-center justify-between">
-                    <div>
-                      <Label className="capitalize">{section}</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow access to {section} management
-                      </p>
-                    </div>
-                    <Switch checked={hasAccess} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPermissionsModal(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setShowPermissionsModal(false)}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
 
       {/* Update Staff Modal */}
       {selectedStaff && (selectedStaff.role.toLowerCase() === "manager" || selectedStaff.role.toLowerCase() === "waiter") && (

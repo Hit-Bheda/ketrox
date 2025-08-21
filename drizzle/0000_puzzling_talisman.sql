@@ -14,6 +14,21 @@ CREATE TABLE "account" (
 	"updated_at" timestamp NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "menu" (
+	"id" text PRIMARY KEY NOT NULL,
+	"item_logo" text[] NOT NULL,
+	"item_name" text NOT NULL,
+	"category" text NOT NULL,
+	"description" text NOT NULL,
+	"price" text NOT NULL,
+	"prep_time" text NOT NULL,
+	"dietary" text[] NOT NULL,
+	"tenant_id" text NOT NULL,
+	"is_available" boolean NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "session" (
 	"id" text PRIMARY KEY NOT NULL,
 	"expires_at" timestamp NOT NULL,
@@ -24,6 +39,20 @@ CREATE TABLE "session" (
 	"user_agent" text,
 	"user_id" text NOT NULL,
 	CONSTRAINT "session_token_unique" UNIQUE("token")
+);
+--> statement-breakpoint
+CREATE TABLE "table" (
+	"id" text PRIMARY KEY NOT NULL,
+	"number" text NOT NULL,
+	"name" text NOT NULL,
+	"capacity" text NOT NULL,
+	"notes" text,
+	"tenant_id" text NOT NULL,
+	"available" boolean DEFAULT true NOT NULL,
+	"maintenance" boolean DEFAULT false NOT NULL,
+	"qr_code_url" text,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "tenants" (
@@ -45,10 +74,12 @@ CREATE TABLE "user" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"email" text NOT NULL,
+	"phone" text,
 	"email_verified" boolean NOT NULL,
 	"image" text,
 	"tenant_id" text,
 	"role" text DEFAULT 'waiter' NOT NULL,
+	"status" text DEFAULT 'active' NOT NULL,
 	"created_at" timestamp NOT NULL,
 	"updated_at" timestamp NOT NULL,
 	CONSTRAINT "user_email_unique" UNIQUE("email")
@@ -64,5 +95,7 @@ CREATE TABLE "verification" (
 );
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "menu" ADD CONSTRAINT "menu_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "table" ADD CONSTRAINT "table_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user" ADD CONSTRAINT "user_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE no action ON UPDATE no action;
