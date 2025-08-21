@@ -350,7 +350,7 @@ export default function Menu() {
               {categoryStats.map((category) => {
                 const IconComponent = category.icon;
                 return (
-                  <Card key={category.id} className="hover:shadow-md transition-all duration-300 cursor-pointer border-1"
+                  <Card key={category.id} className="hover:shadow-md transition-all duration-300 cursor-pointer border"
                     onClick={() => setSelectedCategory(category.id)}>
                     <CardContent className="p-4 text-center">
                       <IconComponent className={`w-8 h-8 mx-auto mb-2 ${category.color}`} />
