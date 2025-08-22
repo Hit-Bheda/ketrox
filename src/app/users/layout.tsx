@@ -10,8 +10,8 @@ export default function layout({ children }: Readonly<{
     children: React.ReactNode;
 }>) {
     return (
-        <div className="px-4 bg-gray-200 min-h-screen">
-            <header className="py-4">
+        <div className="bg-gray-200 min-h-screen">
+            <header className="py-4 px-4">
                 {/* Greeting + Cart */}
                 <div className="container mx-auto">
                     <div className="flex items-center justify-between">
