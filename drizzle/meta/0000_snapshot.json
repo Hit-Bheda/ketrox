@@ -1,5 +1,5 @@
 {
-  "id": "427fbfcc-732e-4342-82eb-98b80187aede",
+  "id": "f24d6420-68ff-480d-a133-913bffb85034",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -119,9 +119,9 @@
           "primaryKey": true,
           "notNull": true
         },
-        "Item_logo": {
-          "name": "Item_logo",
-          "type": "text",
+        "item_logo": {
+          "name": "item_logo",
+          "type": "text[]",
           "primaryKey": false,
           "notNull": true
         },

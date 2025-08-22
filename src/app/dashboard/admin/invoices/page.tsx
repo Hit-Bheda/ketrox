@@ -616,7 +616,7 @@ export default function Invoices() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h1 className="text-2xl font-bold text-gray-900">INVOICE</h1>
-                    <p className="text-gray-600">RestaurantOS</p>
+                    <p className="text-gray-600">Ketrox</p>
                     <p className="text-sm text-gray-500">123 Restaurant Street, City, State 12345</p>
                   </div>
                   <div className="text-right">

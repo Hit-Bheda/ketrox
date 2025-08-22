@@ -55,16 +55,12 @@ import AddMenuModal from "@/components/menu/add-menu-modal";
 import Image from "next/image";
 import EditMenuModal from "@/components/menu/edit-menu-modal";
 import { toast } from "sonner";
+import { MenuImageSlider } from "@/components/menu/MenuImageSlider";
 
 
-// Realistic menu data with categories
-const menuCategories = [
-  { id: "appetizers", name: "Appetizers", icon: UtensilsCrossed, color: "text-chart-1" },
-  { id: "mains", name: "Main Courses", icon: ChefHat, color: "text-chart-2" },
-  { id: "sides", name: "Side Dishes", icon: Salad, color: "text-chart-3" },
-  { id: "desserts", name: "Desserts", icon: IceCream, color: "text-chart-4" },
-  { id: "beverages", name: "Beverages", icon: Coffee, color: "text-chart-5" }
-];
+import { DescriptionPopover } from "@/components/menu/DescriptionPopover";
+
+
 
 type DietaryOption = "vegetarian" | "vegan" | "glutenFree";
 
@@ -73,14 +69,14 @@ type MenuItem = {
   name: string;
   category: string;
   description: string;
-  price: number;
-  preparationTime: number;
+  price: string | "";
+  preparationTime: string | "";
   dietary: DietaryOption[];
   isVegetarian: boolean;
   isVegan: boolean;
   isGlutenFree: boolean;
   available: boolean;
-  image?: string;
+  image?: string[];
 };
 
 
@@ -98,17 +94,18 @@ export default function Menu() {
   const [itemForm, setItemForm] = useState<MenuItem>({
     id: "",
     name: "",
-    category: "appetizers",
+    category: "",
     description: "",
-    price: 0,
-    preparationTime: 10,
+    price: "",
+    preparationTime: "",
     dietary: [],
     isVegetarian: false,
     isVegan: false,
     isGlutenFree: false,
     available: true,
-
+    image: [],
   });
+
 
   const filteredMenuItems = menuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -121,7 +118,6 @@ export default function Menu() {
     return matchesSearch && matchesCategory && matchesAvailability;
   });
 
-  console.log("Filtered menu items:", filteredMenuItems);
 
   const badgeColors: Record<DietaryOption, string> = {
     vegetarian: "bg-emerald-700 text-white",
@@ -139,22 +135,22 @@ export default function Menu() {
     ));
   };
   const handleAddItem = () => {
-    console.log("Adding menu item:", itemForm);
     setShowAddModal(false);
     resetForm();
   };
 
   type ApiMenuItem = {
     id: string;
-    ItemName?: string;
+    item_name?: string;
     name?: string;
     category: string;
     description: string;
-    price: number | string;
-    Item_logo?: string;
-    image?: string;
+    price:
+    | "";
+    preparationTime: number | "";
+    item_logo?: string;
+    image?: string[];
     prepTime?: number | string;
-    preparationTime?: number | string;
     dietaty?: DietaryOption[];
     dietary?: DietaryOption[];
     isAvailable?: boolean;
@@ -168,13 +164,14 @@ export default function Menu() {
       });
       if (!response.ok) throw new Error('Failed to fetch menu items');
       const data = await response.json();
+      console.log("Fetched menu items:", data.menu);
       const mappedMenu: MenuItem[] = (data.menu || []).map((item: ApiMenuItem) => ({
         id: String(item.id),
-        name: item.ItemName || item.name || "",
+        name: item.item_name || item.name || "",
         category: item.category,
         description: item.description,
         price: Number(item.price),
-        image: item.Item_logo || item.image || "",
+        image: item.item_logo || [],
         preparationTime: Number(item.prepTime || item.preparationTime || 0),
         dietary: (item.dietaty || item.dietary || []) as DietaryOption[],
         isVegetarian: (item.dietaty || item.dietary || []).includes("vegetarian"),
@@ -183,6 +180,8 @@ export default function Menu() {
         available: item.isAvailable ?? true,
       }));
       setMenuItems(mappedMenu);
+      console.log("menuuu itemmmmmmms:", mappedMenu);
+
     } catch (error) {
       console.error("Error fetching menu items:", error);
     }
@@ -193,8 +192,6 @@ export default function Menu() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const categories = menuItems.map(item => item.category);
-  console.log("Categories:", categories);
 
   const handleToggleAvailability = async (itemId: string, currentAvailable: boolean) => {
     try {
@@ -218,19 +215,31 @@ export default function Menu() {
     }
   };
 
+  const uniqueCategories = Array.from(
+    new Set(menuItems.map(item => item.category).filter(Boolean))
+  );
+
+  const categoryStats = uniqueCategories.map(category => ({
+    id: category,
+    name: category,
+    count: menuItems.filter(item => item.category === category).length,
+    available: menuItems.filter(item => item.category === category && item.available).length,
+  }));
+
   const resetForm = () => {
     setItemForm({
       id: "",
       name: "",
-      category: "appetizers",
+      category: "",
       description: "",
-      price: 0,
-      preparationTime: 10,
+      price: "",
+      preparationTime: "",
       dietary: [],
       isVegetarian: false,
       isVegan: false,
       isGlutenFree: false,
       available: true
+
     });
     setSelectedItem(null);
   };
@@ -261,24 +270,12 @@ export default function Menu() {
     }
   };
 
-
-  const categoryStats = menuCategories.map(category => ({
-    ...category,
-    count: menuItems.filter(item => item.category === category.id).length,
-    available: menuItems.filter(item => item.category === category.id && item.available).length
-  }));
-
-  console.log("Category stats:", categoryStats);
-
-
   const totalStats = {
     totalItems: menuItems.length,
     availableItems: menuItems.filter(item => item.available).length,
-    avgPrice: menuItems.length > 0 ? menuItems.reduce((sum, item) => sum + item.price, 0) / menuItems.length : 0,
+    avgPrice: menuItems.length > 0 ? menuItems.reduce((sum, item) => sum + Number(item.price), 0) / menuItems.length : 0,
     topRated: menuItems.length > 0 ? menuItems[0] : { popularity: 0, name: "" }
   };
-
-
 
   return (
     <>
@@ -331,7 +328,7 @@ export default function Menu() {
               <Filter className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{menuCategories.length}</div>
+              <div className="text-2xl font-bold">{uniqueCategories.length}</div>
               <div className="text-xs text-muted-foreground mt-1">
                 Menu categories
               </div>
@@ -347,25 +344,27 @@ export default function Menu() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
-              {categoryStats.map((category) => {
-                const IconComponent = category.icon;
-                return (
-                  <Card key={category.id} className="hover:shadow-md transition-all duration-300 cursor-pointer border-1"
-                    onClick={() => setSelectedCategory(category.id)}>
-                    <CardContent className="p-4 text-center">
-                      <IconComponent className={`w-8 h-8 mx-auto mb-2 ${category.color}`} />
-                      <h3 className="font-medium text-sm">{category.name}</h3>
-                      <div className="text-xs text-muted-foreground">
-                        {category.available}/{category.count} available
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {categoryStats.map((category) => (
+                <Card
+                  key={category.id}
+                  className="hover:shadow-md transition-all duration-300 cursor-pointer border-1"
+                  onClick={() => setSelectedCategory(category.id)}
+                >
+                  <CardContent className="p-4 text-center">
+                    {/* Optionally, you can show a generic icon or the first letter */}
+                    <div className="w-8 h-8 mx-auto mb-2 flex items-center justify-center rounded-full bg-muted text-lg font-bold text-primary">
+                      {category.name.charAt(0).toUpperCase()}
+                    </div>
+                    <h3 className="font-medium text-sm">{category.name}</h3>
+                    <div className="text-xs text-muted-foreground">
+                      {category.available}/{category.count} available
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </CardContent>
         </Card>
-
         {/* Menu Management */}
         <Card>
           <CardHeader>
@@ -385,7 +384,7 @@ export default function Menu() {
               setOpen={setShowAddModal}
               itemForm={itemForm}
               setItemForm={setItemForm}
-              menuCategories={menuCategories}
+              menuCategories={uniqueCategories.map(c => ({ id: c, name: c }))}
               handleAddItem={handleAddItem}
               onSave={featchhMenuItems}
             />
@@ -409,8 +408,8 @@ export default function Menu() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {menuCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                  {uniqueCategories.map((category) => (
+                    <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -427,32 +426,21 @@ export default function Menu() {
             </div>
 
             {/* Menu Items Grid */}
-            {menuCategories.map((category) => {
-              const itemsInCategory = filteredMenuItems.filter((item) => item.category === category.id);
-              if (itemsInCategory.length === 0) return null; // <-- Only render if items exist
+            {uniqueCategories.map((category) => {
+              const itemsInCategory = filteredMenuItems.filter((item) => item.category === category);
+              if (itemsInCategory.length === 0) return null;
               return (
-                <div key={category.id} className="mb-8">
+                <div key={category} className="mb-8">
                   <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <span>{category.name}</span>
+                    <span>{category}</span>
                   </h2>
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {itemsInCategory.map((item) => (
                       <Card key={item.id} className={`hover:shadow-lg transition-all py-0 duration-300 border-1 ${!item.available ? 'opacity-60' : ''}`}>
                         <div className="relative rounded-t-xl overflow-hidden">
                           {/* Image */}
-                          <div className="aspect-video bg-muted relative">
-                            {item.image ? (
-                              <Image
-                                src={item.image}
-                                alt={item.name}
-                                fill
-                                className="object-cover w-full h-full transition-transform duration-300 hover:scale-105"
-                              />
-                            ) : (
-                              <ChefHat className="w-12 h-12 text-muted-foreground m-auto" />
-                            )}
-                          </div>
 
+                          <MenuImageSlider images={item.image || []} alt={item.name} />
                           {/* Action Menu (Top Right) */}
                           <div className="absolute top-2 right-2 z-10">
                             <DropdownMenu>
@@ -467,7 +455,7 @@ export default function Menu() {
                                     setSelectedItem(item);
                                     setItemForm({
                                       id: String(item.id),
-                                      name: item.name,
+                                      name: item.name || "",
                                       category: item.category,
                                       description: item.description,
                                       price: item.price,
@@ -477,7 +465,7 @@ export default function Menu() {
                                       isVegan: item.dietary?.includes("vegan") || false,
                                       isGlutenFree: item.dietary?.includes("glutenFree") || false,
                                       available: item.available,
-                                      image: item.image || "",
+                                      image: item.image || [],
                                     });
                                     setShowEditModal(true);
                                   }}
@@ -571,7 +559,9 @@ export default function Menu() {
                           <div className="space-y-3">
                             <h3 className="font-semibold text-base">{item.name}</h3>
                             <p className="text-xl font-bold text-primary">${item.price}</p>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+
+                        <DescriptionPopover description={item.description} />
+
                             <div className="flex flex-wrap gap-1 mt-2">
                               {getDietaryBadges(item)}
                             </div>
@@ -613,7 +603,7 @@ export default function Menu() {
           setOpen={setShowEditModal}
           itemForm={itemForm}
           setItemForm={setItemForm}
-          menuCategories={menuCategories}
+          menuCategories={uniqueCategories.map(c => ({ id: c, name: c }))}
           onSave={featchhMenuItems}
         />
       </div>

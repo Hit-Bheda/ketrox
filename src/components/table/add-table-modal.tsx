@@ -22,6 +22,13 @@ interface AddTableDialogProps {
   }>>;
   capacities: number[];
   handleAddTable: () => void;
+  errors?: {
+    tableNumber?: string;
+    tableName?: string;
+    tableNotes?: string;
+  };
+  setErrors: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
+  clearForm: () => void;
 }
 
 export default function AddTableDialog({
@@ -30,8 +37,12 @@ export default function AddTableDialog({
   tableForm,
   setTableForm,
   capacities,
-  handleAddTable
-}: AddTableDialogProps) {
+  handleAddTable,
+  clearForm,
+  errors,
+  setErrors
+}: AddTableDialogProps) {  
+
   return (
     <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
       <DialogContent className="sm:max-w-[500px] bg-background text-foreground">
@@ -49,20 +60,29 @@ export default function AddTableDialog({
               <Input
                 id="table-number"
                 value={tableForm.number}
-                onChange={(e) => setTableForm({ ...tableForm, number: e.target.value })}
+                onChange={(e) => {
+                  setTableForm({ ...tableForm, number: e.target.value });
+                  if (errors?.tableNumber) setErrors((prev) => ({ ...prev, tableNumber: "" }));
+                }}
                 placeholder="T009"
                 className="bg-background border-input text-foreground"
               />
+
+              {errors?.tableNumber && <p className="text-red-500 text-sm">{errors.tableNumber}</p>}
             </div>
             <div>
               <Label htmlFor="table-name" className="text-foreground mb-2">Table Name</Label>
               <Input
                 id="table-name"
                 value={tableForm.name}
-                onChange={(e) => setTableForm({ ...tableForm, name: e.target.value })}
+                onChange={(e) => {
+                  setTableForm({ ...tableForm, name: e.target.value });
+                  if (errors?.tableName) setErrors((prev) => ({ ...prev, tableName: "" }));
+                }}
                 placeholder="Corner Table"
                 className="bg-background border-input text-foreground"
               />
+              {errors?.tableName && <p className="text-red-500 text-sm">{errors.tableName}</p>}
             </div>
           </div>
 
@@ -92,17 +112,24 @@ export default function AddTableDialog({
             <Textarea
               id="table-notes"
               value={tableForm.notes}
-              onChange={(e) => setTableForm({ ...tableForm, notes: e.target.value })}
+              onChange={(e) => {
+                setTableForm({ ...tableForm, notes: e.target.value });
+                if (errors?.tableNotes) setErrors((prev) => ({ ...prev, tableNotes: "" }));
+              }}
               placeholder="Special features, accessibility notes..."
               className="bg-background border-input text-foreground"
             />
+            {errors?.tableNotes && <p className="text-red-500 text-sm">{errors.tableNotes}</p>}
           </div>
         </div>
 
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => setShowAddModal(false)}
+            onClick={() => {
+              clearForm();
+              setShowAddModal(false);
+            }}
             className="border-border text-foreground hover:bg-accent"
           >
             Cancel

@@ -59,9 +59,9 @@ export const
     })
 
 export const tableSchema = z.object({
-    number: z.string().min(1, "Table number is required"),
-    name: z.string().min(1, "Table name is required"),
-    capacity: z.coerce.number().min(1, "Capacity must be at least 1").transform(String),
+    number: z.string().min(1, "Table number is required!"),
+    name: z.string().min(1, "Table name is required!"),
+    capacity: z.coerce.number().min(1, "Capacity must be at least 1"),
     notes: z.string().optional(),
     tenantId: z.string().uuid("Invalid tenant ID"),
     available: z.boolean().optional().default(true),
@@ -70,13 +70,23 @@ export const tableSchema = z.object({
 });
 
 export const menuSchema = z.object({
-    item_logo: z.string().min(1, "Item logo is required").optional(),
-    itemName: z.string().min(1, "Item name is required"),
-    category: z.string().min(1, "Category is required"),
-    description: z.string().min(1, "Description is required"),
-    price: z.number().min(0, "Price must be non-negative"),
-    prepTime: z.number().min(1, "Prep time must be at least 1 minute"),
-    dietary: z.array(z.string()).optional(),
-    tenantId: z.string().uuid("Invalid tenant ID"),
-    isAvailable: z.boolean().optional(),
+  item_logo: z.array(z.string().url()).min(1, "At least one image is required!"),
+  item_name: z.string().min(1, "Item name is required!"),
+  category: z.string().min(1, "Category is required!"),
+  description: z.string().min(1, "Description is required!"),
+  price: z
+    .string()
+    .min(1, "Price is required") 
+    .transform((val) => Number(val))
+    .refine((val) => !Number.isNaN(val), { message: "Price must be a number" })
+    .refine((val) => val >= 0, { message: "Price must be non-negative or zero" }),
+ prepTime: z
+    .string()
+    .min(1, "Prep time is required")
+    .transform((val) => Number(val))
+    .refine((val) => !Number.isNaN(val), { message: "Prep time must be a number" })
+    .refine((val) => val >= 1, { message: "Prep time must be at least 1 minute" }),
+  dietary: z.array(z.string()).optional(),
+  tenantId: z.string().uuid("Invalid tenant ID"),
+  isAvailable: z.boolean().optional(),
 });

@@ -29,6 +29,7 @@ import { signOut } from "@/lib/auth-client";
 import { Provider } from "react-redux";
 import { store } from "@/store/store";
 import { betterFetch } from "@better-fetch/fetch";
+import Image from "next/image";
 
 interface LayoutProps {
   children: ReactNode;
@@ -46,7 +47,7 @@ const sidebarItems = [
 
 export default function DashboardLayout({ children }: LayoutProps) {
   const pathname = usePathname();
-  const [user, setUser] = useState<{ name: string; role: string; image?: string  } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string; image?: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isActivePath = (path: string) => {
@@ -79,12 +80,12 @@ export default function DashboardLayout({ children }: LayoutProps) {
           baseURL: window.location.origin,
           credentials: "include"
         });
-  
+
         if (session?.user) {
           setUser({
             name: session.user.name,
             role: session.user.role,
-            image: session.user.image 
+            image: session.user.image
           });
         }
       } catch (error) {
@@ -118,13 +119,15 @@ export default function DashboardLayout({ children }: LayoutProps) {
             <div className="p-6 border-b border-[var(--color-sidebar-border)]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-[var(--color-sidebar-primary)] rounded-xl flex items-center justify-center">
-                    <Hotel className="w-5 h-5 text-[var(--color-sidebar-primary-foreground)]" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-bold text-[var(--color-sidebar-foreground)]">Ketrox</h1>
-                    {/* <p className="text-xs text-[var(--color-sidebar-accent-foreground)]">Super Admin</p> */}
-                  </div>
+                  {/* <Hotel className="w-5 h-5 text-[var(--color-sidebar-primary-foreground)]" /> */}
+                  <Image
+                    src='/images/Ketrox-web-logo.webp'
+                    alt="Ketrox Logo"
+                    width={200}
+                    height={200}
+                    unoptimized={true} // Use this if you want to avoid Next.js image optimization
+                    priority={true} // Load this image with high priority
+                  />
                 </div>
                 <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
                   <X className="w-4 h-4" />

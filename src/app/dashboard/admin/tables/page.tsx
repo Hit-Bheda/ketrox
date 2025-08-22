@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { z } from "zod";
 import {
   Plus,
   Search,
@@ -16,7 +17,12 @@ import {
   XCircle,
   QrCode,
   Download,
-  Printer
+  Printer,
+  Check,
+  Table,
+  CircleDot,
+  UserCheck,
+  Wrench
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useReactToPrint } from "react-to-print";
@@ -40,6 +46,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import AddTableDialog from "@/components/table/add-table-modal";
+import EditTableDialog from "@/components/table/edit-table-modal";
+import { toast } from "sonner";
+import { tableSchema } from "@/schemas";
 
 // Table state (dynamic)
 const initialTables = [
@@ -57,18 +66,30 @@ const locations = ["Main Dining", "Patio", "Private Room", "Bar Area", "Outdoor"
 const capacities = [2, 3, 4, 6, 8];
 
 type Table = {
-  id: number;
+  id: string;
   number: string;
   name: string;
   capacity: number;
   notes?: string;
-  available: string;
-  // add other fields if needed
+  available: boolean;
+  maintenance: boolean;
+  status?: "available" | "occupied" | "unavailable" | string;
 };
 
 export default function Tables() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tableItem, setTableItem] = useState<Table[]>([])
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editTableForm, setEditTableForm] = useState({
+    id: "",
+    number: "",
+    name: "",
+    capacity: 2,
+    notes: ""
+  });
 
   async function fetchTables() {
     try {
@@ -90,7 +111,8 @@ export default function Tables() {
   useEffect(() => {
     fetchTables();
   }, []);
-  const [tables, setTables] = useState(initialTables);
+
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
@@ -103,26 +125,67 @@ export default function Tables() {
     capacity: 2,
     notes: ""
   });
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const clearForm = () => {
+    setTableForm({
+      number: "",
+      name: "",
+      capacity: 2,
+      notes: ""
+    });
+    setErrors({});
+  };
 
   const filteredTables = tableItem.filter(table => {
-    const matchesSearch = table.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      table.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       table.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || table.available === statusFilter;
 
+    let matchesStatus = true;
+    if (statusFilter === "available") {
+      matchesStatus = table.available && !table.maintenance;
+    } else if (statusFilter === "maintenance") {
+      matchesStatus = table.maintenance;
+    } else if (statusFilter === "unavailable") {
+      matchesStatus = !table.available && !table.maintenance;
+    } // add more status if needed
+
+    if (statusFilter === "all") matchesStatus = true;
 
     return matchesSearch && matchesStatus;
   });
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
 
   const handleAddTable = async () => {
     if (!tenantId) {
       setError("Tenant ID not found. Please login again.");
       return;
     }
+
+    // Validate with Zod
+    const result = tableSchema.safeParse({
+      ...tableForm, tenantId, available: true,
+      maintenance: false,
+    });
+    if (!result.success) {
+      const fieldErrors: { [key: string]: string } = {};
+      result.error.issues.forEach(err => {
+        if (err.path[0]) {
+          if (err.path[0] === "number") fieldErrors.tableNumber = err.message;
+          if (err.path[0] === "name") fieldErrors.tableName = err.message;
+          if (err.path[0] === "notes") fieldErrors.tableNotes = err.message;
+        }
+      });
+      setErrors(fieldErrors);
+      return;
+    }
+
+    setErrors({});
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch("/api/admin/table", {
         method: "POST",
@@ -132,70 +195,174 @@ export default function Tables() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "Failed to add table");
-      } else {
-        setTables(prev => [...prev, data.table]);
-        setShowAddModal(false);
-        setTableForm({
-          number: "",
-          name: "",
-          capacity: 2,
-          notes: ""
-        });
-        fetchTables();
+        toast.error(data.error || "Failed to add table");
+
+        return;
       }
+
+      setShowAddModal(false);
+      clearForm();
+      await fetchTables();
+      toast.success(data.message);
     } catch (err) {
       setError("Network error");
+      toast.error("Network error");
     } finally {
       setLoading(false);
     }
   };
+  const handleEditTable = async () => {
+    setEditLoading(true);
+    try {
+      const res = await fetch("/api/admin/table", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editTableForm)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to update table");
+        toast.error(data.error || "Failed to delete table");
+      } else {
+        setEditModalOpen(false);
+        fetchTables();
+        toast.success(data.message);
+      }
+    } catch (err) {
+      setError("Network error");
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
-  const changeTableStatus = (tableId: number, newStatus: string) => {
-    console.log(`Changing table ${tableId} status to ${newStatus}`);
-    // In a real app, this would update the backend
+  const handleToggleTableStatus = async (table: Table, field: "available" | "maintenance") => {
+    setEditLoading(true);
+    try {
+      const res = await fetch("/api/admin/table", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: table.id,
+          [field]: !table[field],
+          // If toggling available to true, also set maintenance to false
+          ...(field === "available" && !table.available ? { maintenance: false } : {}),
+          // If toggling maintenance to true, also set available to false
+          ...(field === "maintenance" && !table.maintenance ? { available: false } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to update table status");
+        toast.error(data.error || "Failed to update table status");
+      } else {
+        fetchTables();
+        toast.success(data.message || "Table status updated");
+      }
+    } catch (err) {
+      setError("Network error");
+      toast.error("Network error");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteTable = async (id: string) => {
+    setEditLoading(true);
+    try {
+      const res = await fetch("/api/admin/table", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to delete table");
+        toast.error(data.error || "Failed to delete table");
+      } else {
+        setEditModalOpen(false);
+        fetchTables();
+        toast.success(data.message || "Table deleted successfully");
+      }
+    } catch (err) {
+      setError("Network error");
+      toast.error("Network error");
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const stats = {
-    total: tables.length,
-    available: tables.filter(t => t.status === "available").length,
-    occupied: tables.filter(t => t.status === "occupied").length,
-    reserved: tables.filter(t => t.status === "reserved").length,
-    maintenance: tables.filter(t => t.status === "maintenance").length,
+    total: tableItem.length,
+    available: tableItem.filter(t => t.available && !t.maintenance).length,
+    occupied: tableItem.filter(t => t.status === "occupied").length,
+    reserved: tableItem.filter(t => t.status === "reserved").length,
+    maintenance: tableItem.filter(t => t.maintenance).length,
   };
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-6">
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Total Tables */}
         <Card className="hover:shadow-lg transition-all duration-300 bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-card-foreground">Total Tables</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <Table className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-card-foreground">{stats.total}</div>
             <div className="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
-              <CheckCircle className="w-3 h-3 text-green-500" />
+              <CircleDot className="w-3 h-3 text-blue-500" />
+              <span>{stats.total} total tables</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all duration-300 bg-card border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-card-foreground">Available</CardTitle>
+            <Check className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-card-foreground">{stats.available}</div>
+            <div className="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
+              <Check className="w-3 h-3 text-green-500" />
               <span>{stats.available} available</span>
             </div>
           </CardContent>
         </Card>
 
+        {/* Occupied */}
         <Card className="hover:shadow-lg transition-all duration-300 bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-card-foreground">Occupied</CardTitle>
-            <Users className="h-4 w-4 text-blue-500" />
+            <Users className="h-4 w-4 text-violet-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.occupied}</div>
+            <div className="text-2xl font-bold text-violet-600 dark:text-violet-400">{stats.occupied}</div>
             <div className="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
-              <Clock className="w-3 h-3 text-amber-500" />
-              <span>{stats.reserved} reserved</span>
+              <UserCheck className="w-3 h-3 text-violet-500" />
+              <span>{stats.occupied} occupied</span>
             </div>
           </CardContent>
         </Card>
 
-
+        {/* Maintenance */}
+        <Card className="hover:shadow-lg transition-all duration-300 bg-card border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-card-foreground">Maintenance</CardTitle>
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.maintenance}</div>
+            <div className="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
+              <Wrench className="w-3 h-3 text-amber-500" />
+              <span>{stats.maintenance} under maintenance</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Table Management */}
@@ -280,38 +447,61 @@ export default function Tables() {
                       >
 
 
-                        <DropdownMenuItem className="focus:bg-accent focus:text-accent-foreground">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditTableForm({
+                              id: String(table.id),
+                              number: table.number,
+                              name: table.name,
+                              capacity: table.capacity,
+                              notes: table.notes || ""
+                            });
+                            setEditModalOpen(true);
+                          }}
+                          className="focus:bg-accent focus:text-accent-foreground"
+                        >
                           <Edit className="w-4 h-4 mr-2" />
                           Edit Details
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
-                          onClick={() => changeTableStatus(table.id, "available")}
+                          onClick={() => handleToggleTableStatus(table, "available")}
                           className="focus:bg-accent focus:text-accent-foreground"
                         >
-                          <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                          Mark Available
+                          {table.available ? (
+                            <>
+                              <XCircle className="w-4 h-4 mr-2 text-destructive" />
+                              Mark Unavailable
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                              Mark Available
+                            </>
+                          )}
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
-                          onClick={() => changeTableStatus(table.id, "maintenance")}
+                          onClick={() => handleToggleTableStatus(table, "maintenance")}
                           className="focus:bg-accent focus:text-accent-foreground"
                         >
-                          <XCircle className="w-4 h-4 mr-2 text-destructive" />
-                          Maintenance
+                          {table.maintenance ? (
+                            <>
+                              <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                              Mark as Not in Maintenance
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="w-4 h-4 mr-2 text-amber-500" />
+                              Mark as Maintenance
+                            </>
+                          )}
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem className="focus:bg-accent focus:text-accent-foreground">
-                          <QrCode className="w-4 h-4 mr-2" />
-                          Edit QR Code
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete QR Code
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteTable(table.id.toString())}
+                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                        >
                           <Trash2 className="w-4 h-4 mr-2" />
                           Remove Table
                         </DropdownMenuItem>
@@ -337,8 +527,22 @@ export default function Tables() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <h3 className="font-semibold text-card-foreground">{table.number}</h3>
-                      <Badge variant="outline" className={table.available ? "bg-green-500/15 text-green-700 dark:text-green-300 border border-green-500/30" : "bg-destructive/15 text-destructive border border-destructive/30"}>
-                        {table.available ? (
+                      <Badge
+                        variant="outline"
+                        className={
+                          table.maintenance
+                            ? "bg-amber-500/15 text-amber-700 border border-amber-500/30"
+                            : table.available
+                              ? "bg-green-500/15 text-green-700 dark:text-green-300 border border-green-500/30"
+                              : "bg-destructive/15 text-destructive border border-destructive/30"
+                        }
+                      >
+                        {table.maintenance ? (
+                          <>
+                            <AlertCircle className="w-4 h-4" />
+                            <span className="ml-1">Maintenance</span>
+                          </>
+                        ) : table.available ? (
                           <>
                             <CheckCircle className="w-4 h-4" />
                             <span className="ml-1">Available</span>
@@ -397,6 +601,19 @@ export default function Tables() {
         setTableForm={setTableForm}
         capacities={capacities}
         handleAddTable={handleAddTable}
+        errors={errors}
+        setErrors={setErrors}
+        clearForm={clearForm}
+      />
+      <EditTableDialog
+        open={editModalOpen}
+        setOpen={setEditModalOpen}
+        tableForm={editTableForm}
+        setTableForm={setEditTableForm}
+        capacities={capacities}
+        onSave={handleEditTable}
+        onDelete={() => handleDeleteTable(editTableForm.id)}
+        loading={editLoading}
       />
     </div>
   );

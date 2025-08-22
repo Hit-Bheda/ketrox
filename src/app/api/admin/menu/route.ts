@@ -10,7 +10,8 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return Response.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
   }
-  const { item_logo, itemName, category, description, price, prepTime, dietary, tenantId, isAvailable } = parsed.data;
+  const { item_logo, item_name, category, description, price, prepTime, dietary, tenantId, isAvailable } = parsed.data;
+
 
   const tenant = await db.select().from(tenants).where(eq(tenants.id, tenantId));
   if (!tenant || tenant.length === 0) {
@@ -20,14 +21,14 @@ export async function POST(request: Request) {
     const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
     const inserted = await db.insert(menu).values({
       id,
-      Item_logo: item_logo || "",
-      ItemName: itemName,
+      item_logo: Array.isArray(item_logo) ? item_logo : [],
+       item_name: item_name,
       category,
 
       description,
       price: price !== undefined ? price.toString() : "",
       prepTime: prepTime !== undefined ? prepTime.toString() : "",
-      dietaty: Array.isArray(dietary) ? dietary : [],
+      dietary: Array.isArray(dietary) ? dietary : [],
       tenantId: tenantId,
       isAvailable: isAvailable ?? true
     }).returning();
@@ -126,7 +127,7 @@ export async function PUT(request: Request) {
   if (!parsed.success) {
     return Response.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
   }
-  const { item_logo, itemName, category, description, price, prepTime, dietary, tenantId } = parsed.data;
+  const { item_logo, item_name, category, description, price, prepTime, dietary, tenantId } = parsed.data;
 
   if (!id || !tenantId) {
     return Response.json({ error: "id and tenantId are required" }, { status: 400 });
@@ -140,13 +141,13 @@ export async function PUT(request: Request) {
   try {
     const updatedItem = await db.update(menu)
       .set({
-        Item_logo: item_logo || existingItem[0].Item_logo,
-        ItemName: itemName,
+       item_logo: Array.isArray(item_logo) ? item_logo : existingItem[0].item_logo,
+        item_name: item_name,
         category,
         description,
         price: price !== undefined ? price.toString() : existingItem[0].price,
         prepTime: prepTime !== undefined ? prepTime.toString() : existingItem[0].prepTime,
-        dietaty: Array.isArray(dietary) ? dietary : existingItem[0].dietaty,
+        dietary: Array.isArray(dietary) ? dietary : [],
         isAvailable: isAvailable ?? existingItem[0].isAvailable
       })
       .where(eq(menu.id, id))

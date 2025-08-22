@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -8,16 +7,18 @@ import { Button } from "@/components/ui/button";
 import React, { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { menuSchema } from "@/schemas";
+import { X } from "lucide-react";
 
 type MenuItemForm = {
   id: string;
   name: string;
   category: string;
   description: string;
-  imageUrl?: string;
+  item_logo?: string[];
   dietary: ("vegetarian" | "vegan" | "glutenFree")[];
-  price: number;
-  preparationTime: number;
+  price: string | "";
+  preparationTime: string | "";
   isVegetarian: boolean;
   isVegan: boolean;
   isGlutenFree: boolean;
@@ -30,8 +31,6 @@ export default function AddMenuModal({
   setOpen,
   itemForm,
   setItemForm,
-  menuCategories,
-  handleAddItem,
   onSave,
 }: {
   open: boolean;
@@ -43,67 +42,93 @@ export default function AddMenuModal({
   onSave: () => void;
 }) {
 
-  const [file, setFile] = useState<File | null>(null);
+
+  const [files, setFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
 
-  const handleFileUpload = async (): Promise<string | null> => {
-    if (!file) return null;
-
-    try {
-      setUploading(true);
-      setUploadError(null);
-
+  const handleFileUpload = async (): Promise<string[]> => {
+    if (!files.length) return [];
+    const urls: string[] = [];
+    for (const file of files) {
       const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `uploads/${fileName}`;
-
       const supabaseClient = supabase();
       const { error } = await supabaseClient.storage
         .from("mybucket")
         .upload(filePath, file, { contentType: file.type });
-
-      if (error) throw error;
-
+      if (error) continue;
       const { data, error: signedUrlError } = await supabaseClient.storage.from("mybucket").createSignedUrl(filePath, 1577880000);
-      if (signedUrlError || !data) throw signedUrlError || new Error("Failed to create signed URL");
-      console.log("File uploaded successfully:", data);
-      return data.signedUrl;
-    } catch (err) {
-      console.error("Upload error:", err);
-      setUploadError(
-        typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message?: string }).message)
-          : "Upload failed"
-      );
-      return null;
-    } finally {
-      setUploading(false);
+      if (!signedUrlError && data) urls.push(data.signedUrl);
     }
+    return urls;
   };
+
+  React.useEffect(() => {
+    if (open) {
+      setFiles([]);
+      setPreviewUrls([]);
+      setUploadError(null);
+    }
+  }, [open]);
 
   const AddMenu = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    let tenantId = "";
+    if (typeof document !== "undefined") {
+      const match = document.cookie.match(/(?:^|; )tenantId=([^;]*)/);
+      if (match) tenantId = decodeURIComponent(match[1]);
+    }
+
+    const dietaryArr = [];
+    if (itemForm.isVegetarian) dietaryArr.push("vegetarian");
+    if (itemForm.isVegan) dietaryArr.push("vegan");
+    if (itemForm.isGlutenFree) dietaryArr.push("glutenFree");
+
+    const validation = menuSchema.safeParse({
+      item_logo: previewUrls,
+      item_name: itemForm.name,
+      category: itemForm.category,
+      description: itemForm.description,
+      price: String(itemForm.price),
+      prepTime: String(itemForm.preparationTime),
+      dietary: dietaryArr,
+      tenantId,
+      isAvailable: itemForm.available,
+    });
+
+    if (!validation.success) {
+      const fieldErrors: { [key: string]: string } = {};
+      validation.error.issues.forEach(err => {
+        if (err.path[0]) fieldErrors[String(err.path[0])] = err.message;
+      });
+      setErrors(fieldErrors);
+      setUploading(false);
+      return;
+    } else {
+      setErrors({});
+    }
     setUploading(true);
     try {
-      let imageUrl = itemForm.imageUrl;
-      if (file && (!imageUrl || imageUrl.startsWith("blob:"))) {
-        const uploadedUrl = await handleFileUpload();
-        if (!uploadedUrl) {
+      let imageUrls: string[] = [];
+      if (files.length) {
+        imageUrls = await handleFileUpload();
+        if (!imageUrls.length) {
           toast.error("Image upload failed");
           setUploading(false);
           return;
         }
-        imageUrl = uploadedUrl;
       }
       let tenantId = "";
       if (typeof document !== "undefined") {
         const match = document.cookie.match(/(?:^|; )tenantId=([^;]*)/);
         if (match) tenantId = decodeURIComponent(match[1]);
       }
-      const { name, category, description, price, preparationTime, isVegetarian, isVegan, isGlutenFree, available } = itemForm;
-      // Send dietary as array of strings
+      const { name, category, description, isVegetarian, isVegan, isGlutenFree, available } = itemForm;
       const dietaryArr = [];
       if (isVegetarian) dietaryArr.push("vegetarian");
       if (isVegan) dietaryArr.push("vegan");
@@ -114,13 +139,14 @@ export default function AddMenuModal({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          item_logo: imageUrl,
-          itemName: name,
+          item_logo: imageUrls,
+          item_name: name,
           category,
           description,
-          price,
+          price: itemForm.price, // <-- keep as string
+          prepTime: itemForm.preparationTime,
           tenantId,
-          prepTime: preparationTime,
+
           dietary: dietaryArr,
           isAvailable: available
         }),
@@ -132,25 +158,26 @@ export default function AddMenuModal({
         return;
       }
       const data = await response.json();
-      console.log("Menu item added:", data);
+      console.log("Menu item added successfully:", data);
       toast.success(data.message);
       setOpen(false);
       onSave();
       setItemForm({
         id: "",
         name: "",
-        category: menuCategories[0]?.id || "",
+        category: "",
         description: "",
-        imageUrl: "",
-        price: 0,
-        preparationTime: 10,
+        item_logo: [],
+        price: "",
+        preparationTime: "",
         dietary: [],
         isVegetarian: false,
         isVegan: false,
         isGlutenFree: false,
         available: true
       });
-      setFile(null);
+      setFiles([]);
+      setPreviewUrls([]);
       setUploadError(null);
     } catch (error) {
       console.error("Error adding menu item:", error);
@@ -164,21 +191,22 @@ export default function AddMenuModal({
     setItemForm({
       id: "",
       name: "",
-      category: menuCategories[0]?.id || "",
+      category: "",
       description: "",
-      imageUrl: "",
-      price: 0,
-      preparationTime: 10,
+      item_logo: [],
+      price: "",
+      preparationTime: "",
       dietary: [],
       isVegetarian: false,
       isVegan: false,
       isGlutenFree: false,
       available: true
     });
-    setFile(null);
+    setFiles([]);
+    setPreviewUrls([]);
     setUploadError(null);
+    setErrors({});
   };
-
   return (
 
     <Dialog open={open} onOpenChange={setOpen}>
@@ -191,21 +219,74 @@ export default function AddMenuModal({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div>
-              <Label htmlFor="item-image" className="mb-2">Item Image</Label>
-              <Input
-                id="item-image"
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const selectedFile = e.target.files?.[0];
-                  if (selectedFile) {
-                    setFile(selectedFile);
-                    setItemForm({ ...itemForm, imageUrl: URL.createObjectURL(selectedFile) });
-                  }
-                }}
-              />
-              {uploadError && <div className="text-destructive text-xs mt-2">{uploadError}</div>}
+            <div className="mb-2">
+              <label htmlFor="item-image" className="mb-2 block text-sm font-medium">
+                Item Image
+              </label>
+              <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-accent/10 transition">
+                <input
+                  id="item-image"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    const selectedFiles = Array.from(e.target.files ?? []);
+                    if (selectedFiles.length === 0) return;
+
+                    setFiles((prev) => [...prev, ...selectedFiles]);
+
+                    previewUrls.forEach((url) => URL.revokeObjectURL(url));
+
+                    setPreviewUrls((prev) => [
+                      ...prev,
+                      ...selectedFiles.map((file) => URL.createObjectURL(file)),
+                    ]);
+                    if (errors.item_logo) {
+                      setErrors((prev) => ({ ...prev, item_logo: "" }));
+                    }
+                  }}
+                  className="hidden"
+                />
+                {errors.item_logo && <p className="text-red-500 text-sm">{errors.item_logo}</p>}
+
+                <label htmlFor="item-image" className="cursor-pointer">
+                  <p className="text-muted-foreground">Click to upload or drag & drop</p>
+                  <p className="text-xs text-muted-foreground">PNG, JPG, WEBP (max 5MB each)</p>
+                </label>
+              </div>
+
+              {uploadError && (
+                <div className="text-destructive text-xs mt-2">{uploadError}</div>
+              )}
+
+              {previewUrls.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {previewUrls.map((url, idx) => (
+                    <div key={idx} className="relative h-20 w-20">
+                      <img
+                        src={url}
+                        alt={`Preview ${idx + 1}`}
+                        className="object-cover rounded-md h-full w-full"
+                      />
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 bg-black/60 rounded-full p-1 text-white opacity-80 hover:opacity-100 transition"
+                        onClick={() => {
+                          setPreviewUrls(prev => prev.filter((_, i) => i !== idx));
+                          setFiles(prev => prev.filter((_, i) => i !== idx));
+                          // Optionally clear error if all images removed
+                          if (previewUrls.length === 1 && errors.item_logo) {
+                            setErrors(prev => ({ ...prev, item_logo: "" }));
+                          }
+                        }}
+                        aria-label="Remove image"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -213,22 +294,26 @@ export default function AddMenuModal({
                 <Input
                   id="item-name"
                   value={itemForm.name}
-                  onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                  onChange={(e) => {
+                    setItemForm({ ...itemForm, name: e.target.value });
+                    if (errors.item_name) setErrors(prev => ({ ...prev, item_name: "" }));
+                  }}
                   placeholder="Truffle Pasta"
                 />
+                {errors.item_name && <p className="text-red-500 text-sm">{errors.item_name}</p>}
               </div>
               <div>
                 <Label htmlFor="item-category" className="mb-2">Category</Label>
-                <Select value={itemForm.category} onValueChange={(value) => setItemForm({ ...itemForm, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {menuCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="item-category"
+                  value={itemForm.category}
+                  onChange={(e) => {
+                    setItemForm({ ...itemForm, category: e.target.value });
+                    if (errors.category) setErrors(prev => ({ ...prev, category: "" }));
+                  }}
+                  placeholder="e.g. Appetizers"
+                />
+                {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
               </div>
             </div>
             <div>
@@ -236,9 +321,13 @@ export default function AddMenuModal({
               <Textarea
                 id="item-description"
                 value={itemForm.description}
-                onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
+                onChange={(e) => {
+                  setItemForm({ ...itemForm, description: e.target.value });
+                  if (errors.description) setErrors(prev => ({ ...prev, description: "" }));
+                }}
                 placeholder="Detailed description of the dish..."
               />
+              {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -248,14 +337,16 @@ export default function AddMenuModal({
                   type="number"
                   step="0.01"
                   value={itemForm.price ?? ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setItemForm({
                       ...itemForm,
-                      price: e.target.value === "" ? 0 : parseFloat(e.target.value),
-                    })
-                  }
+                      price: e.target.value, // keep as string
+                    });
+                    if (errors.price) setErrors(prev => ({ ...prev, price: "" }));
+                  }}
                   placeholder="24.99"
                 />
+                {errors.price && <p className="text-red-500 text-sm">{errors.price}</p>}
               </div>
 
               <div>
@@ -264,14 +355,16 @@ export default function AddMenuModal({
                   id="prep-time"
                   type="number"
                   value={itemForm.preparationTime ?? 0}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setItemForm({
                       ...itemForm,
-                      preparationTime: e.target.value === "" ? 0 : parseInt(e.target.value),
-                    })
-                  }
+                      preparationTime: e.target.value, // keep as string
+                    });
+                    if (errors.prepTime) setErrors(prev => ({ ...prev, prepTime: "" }));
+                  }}
                   placeholder="15"
                 />
+                {errors.prepTime && <p className="text-red-500 text-sm">{errors.prepTime}</p>}
               </div>
 
             </div>
@@ -317,7 +410,7 @@ export default function AddMenuModal({
             <Button variant="outline" type="button" onClick={() => {
               setOpen(false);
               resetForm();
-              
+
             }}>
               Cancel
             </Button>
