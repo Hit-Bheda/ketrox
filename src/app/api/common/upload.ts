@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const filePath = `uploads/${fileName}`
 
     const { error } = await supabase.storage
-      .from('my-bucket')
+      .from('mybucket')
       .upload(filePath, file, {
         contentType: file.type,
       })
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     const { data } = supabase.storage
-      .from('my-bucket')
+      .from('mybucket')
       .getPublicUrl(filePath)
 
     return Response.json({ url: data.publicUrl }, { status: 200 })
