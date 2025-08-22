@@ -2,12 +2,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  ChevronDown, 
-  ChevronUp, 
-  Clock, 
-  CheckCircle, 
-  ChefHat, 
+import {
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  CheckCircle,
+  ChefHat,
   AlertTriangle,
   Users,
   ArrowRight,
@@ -122,8 +122,8 @@ export default function WaiterOrders() {
 
 
   const toggleTable = (tableId: string) => {
-    setExpandedTables(prev => 
-      prev.includes(tableId) 
+    setExpandedTables(prev =>
+      prev.includes(tableId)
         ? prev.filter(id => id !== tableId)
         : [...prev, tableId]
     );
@@ -205,9 +205,9 @@ export default function WaiterOrders() {
   };
 
   const totalOrders = ordersData.length;
-  const pendingItems = ordersData.reduce((sum, order) => 
+  const pendingItems = ordersData.reduce((sum, order) =>
     sum + order.items.filter(item => item.status === 'pending').length, 0);
-  const preparingItems = ordersData.reduce((sum, order) => 
+  const preparingItems = ordersData.reduce((sum, order) =>
     sum + order.items.filter(item => item.status === 'preparing').length, 0);
 
   const filteredOrders = getFilteredOrders();
@@ -224,7 +224,7 @@ export default function WaiterOrders() {
             Manage orders across your assigned tables
           </p>
         </div>
-        
+
         {/* Desktop Controls */}
         <div className="flex items-center space-x-4">
           <div className="hidden lg:flex items-center space-x-2">
@@ -247,7 +247,7 @@ export default function WaiterOrders() {
               Grid
             </Button>
           </div>
-          
+
           <Tabs value={filterStatus} onValueChange={setFilterStatus}>
             <TabsList className="hidden lg:flex bg-[var(--muted)]">
               <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-[var(--background)] data-[state=active]:text-[var(--foreground)]">All</TabsTrigger>
@@ -279,7 +279,7 @@ export default function WaiterOrders() {
             <p className="text-xs text-[var(--muted-foreground)]">Preparing</p>
           </CardContent>
         </Card>
-        
+
         {/* Desktop-only additional stats */}
         <Card className="hidden lg:block border-0 shadow-md bg-[var(--card)]">
           <CardContent className="p-4 text-center">
@@ -335,55 +335,66 @@ export default function WaiterOrders() {
       </Card>
 
       {/* Orders Layout */}
-      <div className={viewMode === 'grid' && filteredOrders.length > 1 
-        ? 'lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 lg:space-y-0' 
+      <div className={viewMode === 'grid' && filteredOrders.length > 1
+        ? 'lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 lg:space-y-0'
         : 'space-y-4 lg:space-y-6'
       }>
         {filteredOrders.map((order) => {
           const isExpanded = expandedTables.includes(order.tableId);
           const completedItems = order.items.filter(item => item.status === 'served').length;
           const progressPercentage = (completedItems / order.items.length) * 100;
-          
+
           return (
-            <Card 
+            <Card
               key={order.tableId}
               className={`border-0 shadow-lg transition-all duration-200 hover:shadow-xl bg-[var(--card)] ${getPriorityColor(order.priority)}`}
             >
               <Collapsible open={isExpanded} onOpenChange={() => toggleTable(order.tableId)}>
                 <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-[var(--accent)] transition-colors p-4 lg:p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-xl ${getStatusColor(order.status)} flex items-center justify-center text-white shadow-md`}>
-                          <span className="font-bold text-lg lg:text-xl">{order.tableNumber}</span>
+                  <CardHeader className="cursor-pointer hover:bg-[var(--accent)] transition-colors p-3 sm:p-4 lg:p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      {/* Left Section */}
+                      <div className="flex items-center space-x-3 sm:space-x-4">
+                        <div
+                          className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl ${getStatusColor(order.status)} flex items-center justify-center text-white shadow-md`}
+                        >
+                          <span className="font-bold text-base sm:text-lg lg:text-xl">
+                            {order.tableNumber}
+                          </span>
                         </div>
                         <div>
-                          <CardTitle className="text-lg lg:text-xl font-bold text-[var(--foreground)]">
+                          <CardTitle className="text-base sm:text-lg lg:text-xl font-bold text-[var(--foreground)]">
                             {order.tableName}
                           </CardTitle>
-                          <div className="flex items-center space-x-4 mt-1">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                             <div className="flex items-center space-x-1">
                               <Users className="w-3 h-3 text-[var(--muted-foreground)]" />
-                              <span className="text-xs text-[var(--muted-foreground)]">{order.guests} guests</span>
+                              <span className="text-xs text-[var(--muted-foreground)]">
+                                {order.guests} guests
+                              </span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Clock className="w-3 h-3 text-[var(--muted-foreground)]" />
-                              <span className="text-xs text-[var(--muted-foreground)]">{order.orderTime}</span>
+                              <span className="text-xs text-[var(--muted-foreground)]">
+                                {order.orderTime}
+                              </span>
                             </div>
-                            <Badge className={`${getStatusColor(order.status)} text-white text-xs px-2 py-1 rounded-full`}>
+                            <Badge className={`${getStatusColor(order.status)} text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full`}>
                               {order.estimatedTime}
                             </Badge>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-3">
+
+                      {/* Right Section */}
+                      <div className="flex items-center space-x-2 sm:space-x-3">
                         {order.priority === 'urgent' && (
-                          <Badge className="bg-[var(--destructive)] text-white text-xs animate-pulse">
+                          <Badge className="bg-[var(--destructive)] text-white text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 animate-pulse whitespace-nowrap">
                             URGENT
                           </Badge>
                         )}
                         <div className="text-right">
-                          <div className="text-lg lg:text-xl font-bold text-[var(--foreground)]">
+                          <div className="text-base sm:text-lg lg:text-xl font-bold text-[var(--foreground)]">
                             ${order.totalAmount}
                           </div>
                           <div className="text-xs text-[var(--muted-foreground)]">
@@ -391,15 +402,15 @@ export default function WaiterOrders() {
                           </div>
                         </div>
                         {isExpanded ? (
-                          <ChevronUp className="w-5 h-5 text-[var(--muted-foreground)]" />
+                          <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--muted-foreground)]" />
                         ) : (
-                          <ChevronDown className="w-5 h-5 text-[var(--muted-foreground)]" />
+                          <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--muted-foreground)]" />
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Progress Bar */}
-                    <div className="mt-4">
+                    <div className="mt-3 sm:mt-4">
                       <Progress value={progressPercentage} className="h-2 rounded-full" />
                       <div className="flex justify-between text-xs text-[var(--muted-foreground)] mt-1">
                         <span>Progress</span>
@@ -408,7 +419,8 @@ export default function WaiterOrders() {
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
-                
+
+
                 <CollapsibleContent>
                   <CardContent className="px-4 lg:px-6 pb-4 lg:pb-6">
                     {/* Order Notes */}
@@ -422,13 +434,12 @@ export default function WaiterOrders() {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Order Items - Grid layout for desktop */}
-                    <div className={`space-y-3 ${
-                      viewMode === 'grid' && typeof window !== 'undefined' && window.innerWidth >= 1024 
-                        ? 'lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0' 
+                    <div className={`space-y-3 ${viewMode === 'grid' && typeof window !== 'undefined' && window.innerWidth >= 1024
+                        ? 'lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0'
                         : ''
-                    }`}>
+                      }`}>
                       {order.items.map((item) => (
                         <div
                           key={item.id}
@@ -465,7 +476,7 @@ export default function WaiterOrders() {
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Item Details */}
                           <div className="space-y-2">
                             {item.notes && (
@@ -474,7 +485,7 @@ export default function WaiterOrders() {
                                 <span className="text-xs text-[var(--muted-foreground)]">{item.notes}</span>
                               </div>
                             )}
-                            
+
                             {item.allergies.length > 0 && (
                               <div className="flex items-start space-x-2">
                                 <AlertTriangle className="w-3 h-3 text-[var(--destructive)] mt-0.5" />
@@ -484,7 +495,7 @@ export default function WaiterOrders() {
                               </div>
                             )}
                           </div>
-                          
+
                           {/* Quick Action Buttons - Stacked on mobile, inline on desktop */}
                           <div className="flex flex-col lg:flex-row space-y-2 lg:space-y-0 lg:space-x-2 mt-3">
                             {item.status === 'pending' && (
@@ -520,16 +531,16 @@ export default function WaiterOrders() {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Table Actions */}
                     <div className="flex flex-col lg:flex-row space-y-3 lg:space-y-0 lg:space-x-3 mt-6">
-                      <Button 
+                      <Button
                         className="flex-1 bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-[var(--primary-foreground)] rounded-xl h-12 font-semibold"
                       >
                         <Zap className="w-4 h-4 mr-2" />
                         Mark All Served
                       </Button>
-                      <Button 
+                      <Button
                         variant="outline"
                         className="border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--accent)] rounded-xl h-12 lg:px-6 font-semibold"
                       >
