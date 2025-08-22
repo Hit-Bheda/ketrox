@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "@/lib/auth-client";
 
 interface WaiterLayoutProps {
   children: ReactNode;
@@ -58,6 +59,13 @@ const navigationItems = [
   }
 ];
 
+const handleLogout = async () => {
+  // Implement logout logic here
+  console.log("Logging out...");
+  await signOut();
+  window.location.href = "/";
+};
+
 export default function WaiterLayout({ children }: WaiterLayoutProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -67,6 +75,17 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+
+  // for handling hydration error because time is not match in ssr and csr
+  // const [currentTime, setCurrentTime] = useState('');
+
+  // useEffect(() => {
+  //   const now = new Date();
+  //   const formatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  //   setCurrentTime(formatted);
+  // }, []);
+
 
   interface NavigationItem {
     icon: React.ComponentType<{ className?: string }>;
@@ -91,7 +110,7 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
       <Button
         variant="ghost"
         size="sm"
-        className={`flex ${isMobile ? 'w-full justify-start' : 'flex-col'} items-center space-y-1 h-auto py-3 px-4 rounded-xl transition-all duration-200 relative ${
+        className={`flex ${isMobile ? 'w-full justify-start' : 'flex-col'} items-center space-y-1 h-auto py-3 px- rounded-xl transition-all duration-200 relative ${
           isActive 
             ? `bg-[var(--sidebar-primary)]/20 text-[var(--sidebar-primary)]` 
             : `text-[var(--sidebar-foreground)]/70 hover:text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)]`
@@ -122,9 +141,10 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
   return (
     <div className="min-h-screen transition-colors duration-200 bg-[var(--background)] text-[var(--foreground)] font-sans">
       {/* Desktop Sidebar - Hidden on mobile, visible on tablet and up */}
-      <div className={`fixed left-0 top-0 bottom-0 w-64 z-40 transform transition-transform duration-300 lg:translate-x-0 ${
+      {/* ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:block hidden md:block bg-[var(--sidebar)] border-r border-[var(--sidebar-border)] shadow-[var(--shadow-lg)]`}>
+      }  */}
+      <div className={`fixed left-0 top-0 bottom-0 w-64 z-40 transform transition-transform duration-300 lg:translate-x-0 lg:block hidden md:block bg-[var(--sidebar)] border-r border-[var(--sidebar-border)] shadow-[var(--shadow-lg)]`}>
         
         {/* Sidebar Header */}
         <div className="p-6 border-b border-[var(--sidebar-border)]">
@@ -157,14 +177,22 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
         </div>
 
         {/* Sidebar Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[var(--sidebar-border)]">
+        {/* <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[var(--sidebar-border)]">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-[var(--primary)] rounded-full animate-pulse"></div>
               <span className="text-xs font-medium text-[var(--sidebar-foreground)]">Online</span>
             </div>
           </div>
-        </div>
+        </div> */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-[var(--sidebar-border)]">
+            <button className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg transition-colors"
+            onClick={handleLogout}
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Log Out</span>
+            </button>
+          </div>
       </div>
 
       {/* Mobile Overlay */}
@@ -207,7 +235,7 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
         </div>
 
         {/* Desktop Header */}
-        <div className="hidden md:block px-8 py-6 bg-gradient-to-r from-[var(--sidebar)] to-[var(--sidebar-accent)] border-b border-[var(--sidebar-border)]">
+        {/* <div className="hidden md:block px-8 py-6 bg-gradient-to-r from-[var(--sidebar)] to-[var(--sidebar-accent)] border-b border-[var(--sidebar-border)]">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-white">Good Evening</h1>
@@ -241,7 +269,7 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Emergency Alert Banner */}
         <div className="bg-gradient-to-r from-[var(--destructive)] to-[#DC2626] px-4 md:px-8 py-3">
@@ -266,7 +294,7 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
 
       {/* Mobile Bottom Navigation - Hidden on tablet and desktop */}
       <div className="fixed bottom-0 left-0 right-0 md:hidden bg-[var(--card)]/95 backdrop-blur-lg border-t border-[var(--border)] shadow-[var(--shadow-lg)] z-30">
-        <div className="px-4 py-2">
+        <div className="px-2 py-2">
           <div className="flex items-center justify-around">
             {navigationItems.map((item) => (
               <NavItem key={item.path} item={item} />
