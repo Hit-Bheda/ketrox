@@ -9,6 +9,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import Image from "next/image";
+import { X } from "lucide-react";
 
 type DietaryOption = "vegetarian" | "vegan" | "glutenFree";
 
@@ -18,10 +19,10 @@ type MenuItemForm = {
   name: string;
   category: string;
   description: string;
-  image?: string;
+  image?: string[];
   dietary: DietaryOption[];
-  price: number;
-  preparationTime: number;
+  price: string | "";
+  preparationTime: string | "";
   isVegetarian: boolean;
   isVegan: boolean;
   isGlutenFree: boolean;
@@ -43,56 +44,58 @@ export default function EditMenuModal({
   menuCategories: { id: string; name: string }[];
   onSave: () => void;
 }) {
-  const [file, setFile] = useState<File | null>(null);
+
+  const [files, setFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
     setUploadError(null);
-    setFile(null);
-  }, [open]);
+    setFiles([]);
+    setPreviewUrls(itemForm.image || []);
+  }, [open, itemForm.image]);
 
-  const handleFileUpload = async (): Promise<string | null> => {
-    if (!file) return itemForm.image || null;
-    try {
-      setUploading(true);
-      setUploadError(null);
+  const handleFileUpload = async (): Promise<string[]> => {
+    if (!files.length) return previewUrls; // keep existing if no new files
+    const urls: string[] = [];
+    for (const file of files) {
       const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `uploads/${fileName}`;
       const supabaseClient = supabase();
       const { error } = await supabaseClient.storage
         .from("mybucket")
         .upload(filePath, file, { contentType: file.type });
-      if (error) throw error;
+      if (error) continue;
       const { data, error: signedUrlError } = await supabaseClient.storage.from("mybucket").createSignedUrl(filePath, 1577880000);
-      if (signedUrlError || !data) throw signedUrlError || new Error("Failed to create signed URL");
-      return data.signedUrl;
-    } catch (err) {
-      setUploadError(
-        typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message?: string }).message)
-          : "Upload failed"
-      );
-      return null;
-    } finally {
-      setUploading(false);
+      if (!signedUrlError && data) urls.push(data.signedUrl);
     }
+    // Merge new uploads with existing (if you want to keep old images)
+    return [...previewUrls.filter(url => url.startsWith("http")), ...urls];
   };
 
   const handleEditMenu = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    if (!previewUrls.length) {
+      setImageError("At least one image is required!");
+      return;
+    } else {
+      setImageError(null);
+    }
+
     setUploading(true);
     try {
-      let imageUrl = itemForm.image;
-      if (file && (!imageUrl || imageUrl.startsWith("blob:"))) {
-        const uploadedUrl = await handleFileUpload();
-        if (!uploadedUrl) {
+      let imageUrls: string[] = previewUrls;
+      if (files.length) {
+        imageUrls = await handleFileUpload();
+        if (!imageUrls.length) {
           toast.error("Image upload failed");
           setUploading(false);
           return;
         }
-        imageUrl = uploadedUrl;
       }
       let tenantId = "";
       if (typeof document !== "undefined") {
@@ -111,13 +114,13 @@ export default function EditMenuModal({
         },
         body: JSON.stringify({
           id,
-          item_logo: imageUrl,
-          itemName: name,
+          item_logo: imageUrls, // <-- send array of image URLs
+          item_name: name,
           category,
           description,
-          price,
+          price: String(itemForm.price), // <-- keep as string
+          prepTime: String(itemForm.preparationTime),
           tenantId,
-          prepTime: preparationTime,
           dietary: dietaryArr,
           isAvailable: available
         }),
@@ -132,7 +135,8 @@ export default function EditMenuModal({
       toast.success(data.message);
       setOpen(false);
       onSave();
-      setFile(null);
+      setFiles([]);
+      setPreviewUrls([]);
       setUploadError(null);
     } catch (error) {
       toast.error("Failed to update menu item. Please try again.");
@@ -152,52 +156,113 @@ export default function EditMenuModal({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div>
-              <Label htmlFor="item-image" className="mb-2">Item Image</Label>
+            {/* <div>
+              <Label htmlFor="item-image" className="mb-2">Item Images</Label>
               <Input
                 id="item-image"
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={(e) => {
-                  const selectedFile = e.target.files?.[0];
-                  if (selectedFile) {
-                    setFile(selectedFile);
-                    // setItemForm({ ...itemForm, image: URL.createObjectURL(selectedFile) });
+                  const selectedFiles = Array.from(e.target.files ?? []);
+                  setFiles(selectedFiles);
+                  // Show previews for new files, keep old ones if not replaced
+                  if (selectedFiles.length === 0) {
+                    setPreviewUrls(itemForm.image || []);
+                    return;
                   }
+                  previewUrls.forEach((url) => {
+                    if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+                  });
+                  setPreviewUrls([
+                    ...((itemForm.image || []).filter(url => url.startsWith("http"))),
+                    ...selectedFiles.map((file) => URL.createObjectURL(file))
+                  ]);
                 }}
               />
 
               {uploadError && <div className="text-destructive text-xs mt-2">{uploadError}</div>}
 
-
-              {!file && itemForm.image && (
-                <div className="mt-2">
-                  <p className="text-sm text-muted-foreground">Current image:</p>
-                  <div className="relative mt-2 h-20 w-20">
-                    <Image
-                      src={itemForm.image}
-                      alt="Current menu item image"
-                      className="object-cover rounded-md h-full w-full"
-                      width={80}
-                      height={80}
-                    />
-                  </div>
+              {previewUrls.length > 0 && (
+                <div className="flex gap-2 mt-2">
+                  {previewUrls.map((url, idx) => (
+                    <div key={idx} className="relative h-20 w-20">
+                      <Image
+                        src={url}
+                        alt={`Preview ${idx + 1}`}
+                        className="object-cover rounded-md h-full w-full"
+                        width={80}
+                        height={80}
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
+            </div> */}
 
-
-              {file && (
-                <div className="mt-2">
-                  <p className="text-sm text-muted-foreground">Preview:</p>
-                  <div className="relative mt-2 h-20 w-20">
-                    <Image
-                      src={URL.createObjectURL(file)}
-                      alt="Preview image"
-                      className="object-cover rounded-md h-full w-full"
-                      width={80}
-                      height={80}
-                    />
-                  </div>
+            <div className="mb-2">
+              <label htmlFor="item-image" className="mb-2 block text-sm font-medium">
+                Item Image
+              </label>
+              <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-accent/10 transition">
+                <input
+                  id="item-image"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    const selectedFiles = Array.from(e.target.files ?? []);
+                    if (selectedFiles.length === 0) return;
+                    setFiles((prev) => [...prev, ...selectedFiles]);
+                    previewUrls.forEach((url) => URL.revokeObjectURL(url));
+                    setPreviewUrls((prev) => [
+                      ...prev,
+                      ...selectedFiles.map((file) => URL.createObjectURL(file)),
+                    ]);
+                    setUploadError(null);
+                  }}
+                  className="hidden"
+                />
+                <label htmlFor="item-image" className="cursor-pointer">
+                  <p className="text-muted-foreground">Click to upload or drag & drop</p>
+                  <p className="text-xs text-muted-foreground">PNG, JPG, WEBP (max 5MB each)</p>
+                </label>
+              </div>
+              {uploadError && (
+                <div className="text-destructive text-xs mt-2">{uploadError}</div>
+              )}
+              {imageError && (
+                <div className="text-destructive text-xs mt-2">{imageError}</div>
+              )}
+              {previewUrls.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {previewUrls.map((url, idx) => (
+                    <div key={idx} className="relative h-20 w-20 group">
+                      <Image
+                        src={url}
+                        alt={`Preview ${idx + 1}`}
+                        className="object-cover rounded-md h-full w-full"
+                        width={80}
+                        height={80}
+                      />
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 bg-black/60 rounded-full p-1 text-white opacity-80 hover:opacity-100 transition"
+                        onClick={() => {
+                    
+                          setPreviewUrls((prev) => prev.filter((_, i) => i !== idx));
+                          if (url.startsWith("blob:")) {
+                            setFiles((prev) => prev.filter((_, i) => {
+                              return URL.createObjectURL(prev[i]) !== url;
+                            }));
+                          }
+                        }}
+                        aria-label="Remove image"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -213,16 +278,12 @@ export default function EditMenuModal({
               </div>
               <div>
                 <Label htmlFor="item-category" className="mb-2">Category</Label>
-                <Select value={itemForm.category} onValueChange={(value) => setItemForm({ ...itemForm, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {menuCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="item-category"
+                  value={itemForm.category}
+                  onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
+                  placeholder="e.g. Appetizers"
+                />
               </div>
             </div>
             <div>
@@ -245,7 +306,7 @@ export default function EditMenuModal({
                   onChange={(e) =>
                     setItemForm({
                       ...itemForm,
-                      price: e.target.value === "" ? 0 : parseFloat(e.target.value),
+                      price: e.target.value
                     })
                   }
                   placeholder="24.99"
@@ -260,7 +321,7 @@ export default function EditMenuModal({
                   onChange={(e) =>
                     setItemForm({
                       ...itemForm,
-                      preparationTime: e.target.value === "" ? 0 : parseInt(e.target.value),
+                      preparationTime: e.target.value,
                     })
                   }
                   placeholder="15"

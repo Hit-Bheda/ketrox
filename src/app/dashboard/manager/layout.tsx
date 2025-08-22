@@ -43,7 +43,6 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { betterFetch } from "@better-fetch/fetch";
-import Image from "next/image";
 
 interface LayoutProps {
   children: ReactNode;
@@ -135,15 +134,11 @@ const mockNotifications: Notification[] = [
 ];
 
 const sidebarItems = [
-  { icon: BarChart3, label: "Dashboard", path: "/dashboard/admin" },
-  { icon: Users, label: "Staff", path: "/dashboard/admin/staff" },
-  { icon: Utensils, label: "Tables", path: "/dashboard/admin/tables" },
-  { icon: ChefHat, label: "Menu", path: "/dashboard/admin/menu" },
-  { icon: OrderIcon, label: "Orders", path: "/dashboard/admin/orders", badge: 12 },
-  { icon: FileText, label: "Invoices", path: "/dashboard/admin/invoices" },
-  { icon: TrendingUp, label: "Reports", path: "/dashboard/admin/reports" },
-  { icon: MessageSquare, label: "Messages", path: "/dashboard/admin/messages", badge: 3 },
-  { icon: Settings, label: "Settings", path: "/dashboard/admin/settings" },
+  { icon: BarChart3, label: "Dashboard", path: "/dashboard/manager" },
+  // { icon: Users, label: "Staff", path: "/dashboard/admin/staff" },
+  { icon: Utensils, label: "Tables", path: "/dashboard/manager/tables" },
+  { icon: ChefHat, label: "Menu", path: "/dashboard/manager/menu" },
+  { icon: OrderIcon, label: "Orders", path: "/dashboard/manager/orders", badge: 12 },
 ];
 
 const handleLogout = async () => {
@@ -248,14 +243,13 @@ export default function Layout({ children }: LayoutProps) {
           {/* Logo */}
           <div className="p-6 border-b border-sidebar-border">
             <div className="flex items-center space-x-3">
-              <Image
-                src='/images/Ketrox-web-logo.webp'
-                alt="Ketrox Logo"
-                width={200}
-                height={200}
-                unoptimized={true} // Use this if you want to avoid Next.js image optimization
-                priority={true} // Load this image with high priority
-              />
+              <div className="w-8 h-8 bg-sidebar-primary rounded-lg flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-sidebar-foreground">RestaurantOS</h1>
+                {/* <p className="text-xs text-sidebar-accent-foreground">Admin Panel</p> */}
+              </div>
             </div>
           </div>
 
@@ -324,7 +318,7 @@ export default function Layout({ children }: LayoutProps) {
           {/* Logout */}
           <div className="p-4 border-t border-sidebar-border">
             <button className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg transition-colors"
-              onClick={handleLogout}
+            onClick={handleLogout}
             >
               <LogOut className="w-5 h-5" />
               <span>Log Out</span>
