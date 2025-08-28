@@ -11,18 +11,14 @@ import {
   MessageSquare,
   Settings,
   LogOut,
-  Search,
-  Bell,
   Menu,
   X
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Avatar,
-  AvatarFallback,
   AvatarImage
 } from "@/components/ui/avatar";
 import { signOut } from "@/lib/auth-client";
@@ -93,9 +89,19 @@ export default function DashboardLayout({ children }: LayoutProps) {
       }
     };
     fetchUserData();
+
+    // Listen for profile photo updates
+    const handleProfileUpdate = () => {
+      fetchUserData();
+    };
+
+    window.addEventListener('profile-photo-updated', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('profile-photo-updated', handleProfileUpdate);
+    };
   }, []);
 
-  // ...existing code...
+
   return (
     <Provider store={store}>
       <div className="flex h-screen bg-[var(--color-background)] text-[var(--color-foreground)] font-sans antialiased">
@@ -106,7 +112,6 @@ export default function DashboardLayout({ children }: LayoutProps) {
           />
         )}
 
-        {/* Sidebar */}
         <aside
           className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[var(--color-sidebar)] border-r border-[var(--color-sidebar-border)]
@@ -118,15 +123,15 @@ export default function DashboardLayout({ children }: LayoutProps) {
             {/* Logo */}
             <div className="p-6 border-b border-[var(--color-sidebar-border)]">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {/* <Hotel className="w-5 h-5 text-[var(--color-sidebar-primary-foreground)]" /> */}
+                <div className="flex items-center justify-center h-20">
                   <Image
                     src='/images/Ketrox-web-logo.webp'
                     alt="Ketrox Logo"
                     width={200}
-                    height={200}
-                    unoptimized={true} // Use this if you want to avoid Next.js image optimization
-                    priority={true} // Load this image with high priority
+                    height={64}
+                    unoptimized={true}
+                    priority={true}
+                    className="h-full w-auto object-contain"
                   />
                 </div>
                 <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
@@ -137,13 +142,6 @@ export default function DashboardLayout({ children }: LayoutProps) {
 
             {/* User */}
             <div className="p-4 border-b border-[var(--color-sidebar-border)]">
-              {/* <div className="flex items-center space-x-3">
-              <Avatar>
-                <AvatarImage src="https://placehold.co/128x128/e2e8f0/0f172a?text=MJ" />
-                <AvatarFallback>MJ</AvatarFallback>
-              </Avatar>
-              <div> */}
-
 
               <div className="flex items-center space-x-3">
                 <Avatar>
@@ -153,8 +151,6 @@ export default function DashboardLayout({ children }: LayoutProps) {
                   />
                 </Avatar>
                 <div>
-                  {/* <p className="text-sm font-medium text-[var(--color-sidebar-foreground)]">Mark Johnson</p>
-                <p className="text-xs text-[var(--color-sidebar-accent-foreground)]">Super Administrator</p> */}
 
                   <p className="text-sm font-medium text-[var(--color-sidebar-foreground)]">
                     {user?.name || "Loading..."}
@@ -227,18 +223,6 @@ export default function DashboardLayout({ children }: LayoutProps) {
                       : `Manage your ${getPageTitle().toLowerCase()} efficiently.`}
                   </p>
                 </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center space-x-4">
-                <div className="relative hidden md:block">
-                  <Search className="w-4 h-4 absolute left-3 top-3 text-[var(--color-muted-foreground)]" />
-                  <Input placeholder="Search..." className="pl-9 w-64 bg-[var(--color-input)] border-[var(--color-border)] text-[var(--color-foreground)]" />
-                </div>
-                <Button size="sm" variant="outline" className="bg-[var(--color-card)] text-[var(--color-foreground)] border-[var(--color-border)]">
-                  <Bell className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Notifications</span>
-                </Button>
               </div>
             </div>
           </header>

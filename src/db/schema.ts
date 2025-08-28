@@ -1,4 +1,4 @@
-    import { Item } from "@radix-ui/react-select";
+import { Item } from "@radix-ui/react-select";
 import {
   pgTable,
   text,
@@ -16,7 +16,7 @@ export const tenants = pgTable('tenants', {
   owner_name: varchar('owner_name', { length: 255 }).notNull(),
   owner_phone: varchar('phone', { length: 256 }).notNull(),
   address: text('address'),
-  plan: text('plam', {               // keeping your column name as-is
+  plan: text('plan', {               // keeping your column name as-is
     enum: ["free", "standard"]
   }).notNull().default("free"),
   status: text('status', { enum: ["active", "trial", "suspended", "expired"] }).notNull().default("active"),
@@ -124,4 +124,33 @@ export const menu = pgTable("menu", {
   isAvailable: boolean("is_available").$defaultFn(() => true).notNull(),
   createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
   updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+});
+
+
+export const order = pgTable("order", {
+  id: text("id").primaryKey(),
+  orderNumber: text("order_number").notNull().unique(),
+  tableId: text("table_id").notNull().references(() => table.id),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  managerId: text("manager_id").references(() => user.id),
+  customerName: text("customer_name").notNull(),
+  items: text("items").array().notNull(),
+  quantity: text("quantity").array().notNull(),
+  status: text("status", { enum: ["pending", "preparing", "delivered", "cancelled"] })
+    .notNull()
+    .default("pending"),
+  totalPrice: text("total_price").notNull(),
+  createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+  updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+});
+
+
+export const passwordResetToken = pgTable("password_reset_token", {
+  id: text("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
 });

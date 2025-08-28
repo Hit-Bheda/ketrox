@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { z } from "zod";
+import { useState, useEffect } from "react";
 import {
   Plus,
   Search,
@@ -9,23 +8,21 @@ import {
   Edit,
   Trash2,
   Users,
-  Clock,
+ 
   MapPin,
-  Calendar,
+
   CheckCircle,
   AlertCircle,
   XCircle,
   QrCode,
-  Download,
-  Printer,
+  
   Check,
   Table,
   CircleDot,
   UserCheck,
   Wrench
 } from "lucide-react";
-import QRCode from "qrcode";
-import { useReactToPrint } from "react-to-print";
+
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,17 +47,6 @@ import EditTableDialog from "@/components/table/edit-table-modal";
 import { toast } from "sonner";
 import { tableSchema } from "@/schemas";
 
-// Table state (dynamic)
-const initialTables = [
-  {
-    id: 1,
-    number: "T001",
-    name: "Window Side",
-    capacity: 4,
-    status: "available",
-  },
-
-];
 
 const locations = ["Main Dining", "Patio", "Private Room", "Bar Area", "Outdoor", "VIP Section"];
 const capacities = [2, 3, 4, 6, 8];
@@ -97,10 +83,19 @@ export default function Tables() {
       if (match) {
         setTenantId(decodeURIComponent(match[1]));
       }
-      const res = await fetch("/api/admin/table"); // GET all
+      const res = await fetch("/api/admin/table"); 
       const data = await res.json();
       console.log("Fetched tables:", data);
-      setTableItem(data.tables || []);
+      setTableItem(
+        (data.tables || []).map((table: Table) => ({
+          ...table,
+          status: table.maintenance
+            ? "maintenance"
+            : table.available
+              ? "available"
+              : "occupied"
+        }))
+      );
     } catch (error) {
       console.error("Error fetching tables:", error);
     } finally {
@@ -205,7 +200,7 @@ export default function Tables() {
       await fetchTables();
       toast.success(data.message);
     } catch (err) {
-      setError("Network error");
+      setError(err instanceof Error ? err.message : String(err));
       toast.error("Network error");
     } finally {
       setLoading(false);
@@ -296,11 +291,9 @@ export default function Tables() {
   const stats = {
     total: tableItem.length,
     available: tableItem.filter(t => t.available && !t.maintenance).length,
-    occupied: tableItem.filter(t => t.status === "occupied").length,
-    reserved: tableItem.filter(t => t.status === "reserved").length,
+    occupied: tableItem.filter(t => !t.available && !t.maintenance).length,
     maintenance: tableItem.filter(t => t.maintenance).length,
   };
-
   return (
     <div className="flex-1 space-y-6 p-4 md:p-6">
       {/* Stats Cards */}
@@ -530,27 +523,27 @@ export default function Tables() {
                       <Badge
                         variant="outline"
                         className={
-                          table.maintenance
+                          table.status === "maintenance"
                             ? "bg-amber-500/15 text-amber-700 border border-amber-500/30"
-                            : table.available
+                            : table.status === "available"
                               ? "bg-green-500/15 text-green-700 dark:text-green-300 border border-green-500/30"
                               : "bg-destructive/15 text-destructive border border-destructive/30"
                         }
                       >
-                        {table.maintenance ? (
+                        {table.status === "maintenance" ? (
                           <>
                             <AlertCircle className="w-4 h-4" />
                             <span className="ml-1">Maintenance</span>
                           </>
-                        ) : table.available ? (
+                        ) : table.status === "available" ? (
                           <>
                             <CheckCircle className="w-4 h-4" />
                             <span className="ml-1">Available</span>
                           </>
                         ) : (
                           <>
-                            <XCircle className="w-4 h-4" />
-                            <span className="ml-1">Unavailable</span>
+                            <Users className="w-4 h-4" />
+                            <span className="ml-1">Occupied</span>
                           </>
                         )}
                       </Badge>

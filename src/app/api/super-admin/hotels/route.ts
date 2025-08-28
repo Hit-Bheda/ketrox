@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { tenants, user } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import crypto from "crypto";
 
 export async function POST(request: Request) {
@@ -89,6 +89,15 @@ export async function PUT(request: Request) {
     if (updatedHotel.count === 0) {
         return Response.json({ error: "Hotel not found" }, { status: 404 });
     }
+
+    await db
+      .update(user)
+      .set({
+        name: ownerName as string,
+        email: email as string,
+        phone: ownerPhone as string,
+      })
+      .where(and(eq(user.tenant_id, id as string), eq(user.role, "admin")));
     return Response.json({
         message: "Super Admin API Endpoint",
     });

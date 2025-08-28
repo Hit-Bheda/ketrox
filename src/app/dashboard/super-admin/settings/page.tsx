@@ -1,22 +1,16 @@
 "use client"
 
-import { useState } from "react";
-import { 
-  Save, 
+import { useEffect, useState } from "react";
+import {
+  Save,
   Upload,
-  Eye,
-  EyeOff,
   Trash2,
   AlertTriangle,
-  Key,
   Mail,
   Globe,
-  CreditCard,
   Bell,
   Shield,
   Database,
-  Copy,
-  CheckCircle
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -33,19 +27,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+// import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { 
   Form,
   FormControl,
   FormField,
@@ -57,6 +41,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
 
 // Form schemas
 const generalSettingsSchema = z.object({
@@ -86,7 +71,9 @@ const securitySettingsSchema = z.object({
 });
 
 export default function Settings() {
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -94,10 +81,10 @@ export default function Settings() {
   const generalForm = useForm<z.infer<typeof generalSettingsSchema>>({
     resolver: zodResolver(generalSettingsSchema),
     defaultValues: {
-      brandName: "HotelSaaS",
-      supportEmail: "support@ketrox.com",
-      currency: "USD",
-      timezone: "America/New_York",
+      brandName: "KETROX",
+      supportEmail: "ketrox083@gmail.com",
+      currency: "INR",
+      timezone: "Asia/Kolkata",
       language: "en"
     },
   });
@@ -123,9 +110,87 @@ export default function Settings() {
     },
   });
 
-  const onGeneralSubmit = (values: z.infer<typeof generalSettingsSchema>) => {
-    console.log("General settings:", values);
-    toast.success("General settings updated successfully!");
+  // Show existing saved image on UI when page loads, keep preview when selecting a new file
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch('/api/auth/get-session', { credentials: 'include' });
+        const js = await resp.json();
+        const existing: string | undefined = js?.user?.image;
+        if (!cancelled && existing && !selectedFile) {
+          setPreviewUrl(existing);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFile]);
+
+  const onGeneralSubmit = async () => {
+    try {
+      let imageUrl: string | null = null;
+      if (selectedFile) {
+        setIsUploading(true);
+        const fileExt = selectedFile.name.split(".").pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `uploads/${fileName}`;
+
+        const supabaseClient = supabase();
+        const { error } = await supabaseClient.storage
+          .from("mybucket")
+          .upload(filePath, selectedFile, { contentType: selectedFile.type });
+        if (error) {
+          toast.error(error.message || 'Upload failed');
+          setIsUploading(false);
+          return;
+        }
+        const { data, error: signedUrlError } = await supabaseClient.storage
+          .from("mybucket")
+          .createSignedUrl(filePath, 1577880000);
+        if (signedUrlError || !data) {
+          toast.error(signedUrlError?.message || 'Failed to create signed URL');
+          setIsUploading(false);
+          return;
+        }
+        imageUrl = data.signedUrl as string;
+        // Get session user id
+        const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
+        const sessJson = await sess.json();
+        const uid = sessJson?.user?.id;
+        if (!uid) {
+          toast.error('User not found');
+          setIsUploading(false);
+          return;
+        }
+        const res = await fetch('/api/user/photo', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uid, imageUrl })
+        });
+        const j = await res.json();
+        if (!res.ok) {
+          toast.error(j.error || 'Failed to save photo');
+          setIsUploading(false);
+          return;
+        }
+        // Clear local state after successful save
+        setSelectedFile(null);
+        setIsUploading(false);
+        // Dispatch custom event to update sidebar photo
+        window.dispatchEvent(new CustomEvent('profile-photo-updated'));
+      }
+      toast.success('Configuration saved');
+      if (imageUrl) {
+        setPreviewUrl(imageUrl);
+      }
+    } catch {
+      toast.error('Failed to save configuration');
+      setIsUploading(false);
+    }
   };
 
   const onSmtpSubmit = (values: z.infer<typeof smtpSettingsSchema>) => {
@@ -133,29 +198,24 @@ export default function Settings() {
     toast.success("SMTP settings updated successfully!");
   };
 
-  const onSecuritySubmit = (values: z.infer<typeof securitySettingsSchema>) => {
-    console.log("Security settings:", values);
-    toast.success("Password updated successfully!");
-    securityForm.reset();
-  };
 
-  const handleGenerateApiKey = () => {
-    console.log("Generating new API key");
-    toast.success("New API key generated!");
-  };
+  // const handleGenerateApiKey = () => {
+  //   console.log("Generating new API key");
+  //   toast.success("New API key generated!");
+  // };
 
-  const handleCopyApiKey = () => {
-    navigator.clipboard.writeText("sk_live_1234567890abcdef");
-    toast.success("API key copied to clipboard!");
-  };
+  // const handleCopyApiKey = () => {
+  //   navigator.clipboard.writeText("sk_live_1234567890abcdef");
+  //   toast.success("API key copied to clipboard!");
+  // };
 
-  const handleDeleteAccount = () => {
-    console.log("Initiating account deletion");
-    toast.error("Account deletion initiated!");
-  };
+  // const handleDeleteAccount = () => {
+  //   console.log("Initiating account deletion");
+  //   toast.error("Account deletion initiated!");
+  // };
 
   return (
-        <div className="flex-1 space-y-6 p-6">
+    <div className="flex-1 space-y-6 p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -166,13 +226,12 @@ export default function Settings() {
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="billing">Billing</TabsTrigger>
             <TabsTrigger value="email">Email</TabsTrigger>
-            <TabsTrigger value="api">API</TabsTrigger>
+            {/* <TabsTrigger value="api">API</TabsTrigger> */}
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
-          
+
           {/* General Settings */}
           <TabsContent value="general" className="space-y-6">
             <Card className="border-0 shadow-sm">
@@ -223,13 +282,17 @@ export default function Settings() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Default Currency</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value || "USD"}
+                            >
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select currency" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
+                                <SelectItem value="INR">INR - Indian Rupee</SelectItem>
                                 <SelectItem value="USD">USD - US Dollar</SelectItem>
                                 <SelectItem value="EUR">EUR - Euro</SelectItem>
                                 <SelectItem value="GBP">GBP - British Pound</SelectItem>
@@ -253,11 +316,13 @@ export default function Settings() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
+                                <SelectItem value="Asia/Kolkata">India Standard Time (IST)</SelectItem>
                                 <SelectItem value="America/New_York">Eastern Time</SelectItem>
                                 <SelectItem value="America/Chicago">Central Time</SelectItem>
                                 <SelectItem value="America/Denver">Mountain Time</SelectItem>
                                 <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
                                 <SelectItem value="UTC">UTC</SelectItem>
+
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -289,23 +354,94 @@ export default function Settings() {
                       />
                     </div>
                     <div className="space-y-4">
-                      <Label>Company Logo</Label>
+                      <Label>profile Logo</Label>
                       <div className="flex items-center space-x-4">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-muted">
-                          <span className="text-sm text-muted-foreground">Logo</span>
+                        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-muted overflow-hidden">
+                          {previewUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Logo</span>
+                          )}
                         </div>
-                        <Button variant="outline" type="button">
-                          <Upload className="w-4 h-4 mr-2" />
-                          Upload New Logo
-                        </Button>
+                        <label className="inline-flex">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            hidden
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setSelectedFile(file);
+                              const url = URL.createObjectURL(file);
+                              setPreviewUrl(url);
+                            }}
+                          />
+                          <Button asChild variant="outline" type="button">
+                            <span><Upload className="w-4 h-4 mr-2" />Upload Profile photo</span>
+                          </Button>
+                        </label>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-destructive">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Remove
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove profile photo?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action will remove your current profile photo.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={async () => {
+                                  try {
+                                    const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
+                                    const sessJson = await sess.json();
+                                    const uid = sessJson?.user?.id;
+                                    if (!uid) { toast.error('User not found'); return; }
+                                    const res = await fetch('/api/user/photo', {
+                                      method: 'DELETE',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ userId: uid })
+                                    });
+                                    const j = await res.json();
+                                    if (!res.ok) { toast.error(j.error || 'Failed to remove photo'); return; }
+                                    // Clear preview and selection
+                                    setPreviewUrl(null);
+                                    setSelectedFile(null);
+                                    toast.success('Photo removed');
+                                  } catch {
+                                    toast.error('Unexpected error');
+                                  }
+                                }}
+                              >
+                                Confirm
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                       <p className="text-sm text-muted-foreground">
                         Recommended: 256x256px, PNG or SVG format
                       </p>
                     </div>
-                    <Button type="submit">
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Configuration
+                    <Button type="submit" disabled={isUploading}>
+                      {isUploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Saving changes...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Configuration
+                        </>
+                      )}
                     </Button>
                   </form>
                 </Form>
@@ -348,60 +484,8 @@ export default function Settings() {
               </CardContent>
             </Card>
           </TabsContent>
-          
-          {/* Billing Settings */}
-          <TabsContent value="billing">
-            <Card className="border-0 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <CreditCard className="w-5 h-5" />
-                  <span>Current Plan</span>
-                </CardTitle>
-                <CardDescription>
-                  Manage your subscription and billing information
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-lg border bg-gradient-to-r from-primary/5 to-secondary/5 p-6"> {/* Updated to use shadcn variables */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center space-x-2 mb-2">
-                        <h3 className="text-xl font-bold">Enterprise Plan</h3>
-                        <Badge>Current</Badge>
-                      </div>
-                      <p className="text-muted-foreground">$299/month • Unlimited everything</p>
-                      <p className="text-sm text-muted-foreground">Next payment: February 15, 2024</p>
-                    </div>
-                    <Button variant="outline">Change Plan</Button>
-                  </div>
-                </div>
-                <div className="mt-6 space-y-4">
-                  <h4 className="font-semibold">Billing History</h4>
-                  <div className="space-y-3">
-                    {[
-                      { date: "Jan 15, 2024", amount: "$299.00", status: "Paid", invoice: "INV-2024-001" },
-                      { date: "Dec 15, 2023", amount: "$299.00", status: "Paid", invoice: "INV-2023-012" },
-                      { date: "Nov 15, 2023", amount: "$299.00", status: "Paid", invoice: "INV-2023-011" },
-                    ].map((payment, index) => (
-                      <div key={index} className="flex items-center justify-between rounded-lg border p-3">
-                        <div>
-                          <p className="font-medium">{payment.invoice}</p>
-                          <p className="text-sm text-muted-foreground">{payment.date}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{payment.amount}</p>
-                          <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20"> {/* Updated to use shadcn variables */}
-                            {payment.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
+
+
           {/* Email Settings */}
           <TabsContent value="email">
             <Card className="border-0 shadow-sm">
@@ -537,9 +621,9 @@ export default function Settings() {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           {/* API & Webhooks */}
-          <TabsContent value="api">
+          {/* <TabsContent value="api">
             <Card className="border-0 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -586,7 +670,7 @@ export default function Settings() {
                         <p className="font-medium">https://api.yourapp.com/webhooks</p>
                         <p className="text-sm text-muted-foreground">Hotel booking events</p>
                       </div>
-                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20"> {/* Updated to use shadcn variables */}
+                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20"> 
                         <CheckCircle className="w-3 h-3 mr-1" />
                         Active
                       </Badge>
@@ -596,8 +680,8 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-          
+          </TabsContent> */}
+
           {/* Notifications */}
           <TabsContent value="notifications">
             <Card className="border-0 shadow-sm">
@@ -611,63 +695,63 @@ export default function Settings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Email Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive notifications via email
-                        </p>
-                      </div>
-                      <Switch
-                        checked={emailNotifications}
-                        onCheckedChange={setEmailNotifications}
-                      />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Email Notifications</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receive notifications via email
+                      </p>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>SMS Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive urgent notifications via SMS
-                        </p>
-                      </div>
-                      <Switch
-                        checked={smsNotifications}
-                        onCheckedChange={setSmsNotifications}
-                      />
-                    </div>
+                    <Switch
+                      checked={emailNotifications}
+                      onCheckedChange={setEmailNotifications}
+                    />
                   </div>
-                  <Separator />
-                  <div className="space-y-4">
-                    <h4 className="font-semibold">Notification Types</h4>
-                    <div className="space-y-3">
-                      {[
-                        { name: "New hotel registrations", email: true, sms: false },
-                        { name: "Payment failures", email: true, sms: true },
-                        { name: "System maintenance", email: true, sms: false },
-                        { name: "Security alerts", email: true, sms: true },
-                        { name: "Monthly reports", email: true, sms: false },
-                      ].map((notification, index) => (
-                        <div key={index} className="flex items-center justify-between rounded-lg border p-3">
-                          <span className="font-medium">{notification.name}</span>
-                          <div className="flex items-center space-x-4">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm">Email</span>
-                              <Switch checked={notification.email} />
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm">SMS</span>
-                              <Switch checked={notification.sms} />
-                            </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>SMS Notifications</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receive urgent notifications via SMS
+                      </p>
+                    </div>
+                    <Switch
+                      checked={smsNotifications}
+                      onCheckedChange={setSmsNotifications}
+                    />
+                  </div>
+                </div>
+                <Separator />
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Notification Types</h4>
+                  <div className="space-y-3">
+                    {[
+                      { name: "New hotel registrations", email: true, sms: false },
+                      { name: "Payment failures", email: true, sms: true },
+                      { name: "System maintenance", email: true, sms: false },
+                      { name: "Security alerts", email: true, sms: true },
+                      { name: "Monthly reports", email: true, sms: false },
+                    ].map((notification, index) => (
+                      <div key={index} className="flex items-center justify-between rounded-lg border p-3">
+                        <span className="font-medium">{notification.name}</span>
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm">Email</span>
+                            <Switch checked={notification.email} />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm">SMS</span>
+                            <Switch checked={notification.sms} />
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
-                </CardContent>
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
-          
+
           {/* Security */}
           <TabsContent value="security" className="space-y-6">
             <Card className="border-0 shadow-sm">
@@ -682,7 +766,7 @@ export default function Settings() {
               </CardHeader>
               <CardContent>
                 <Form {...securityForm}>
-                  <form onSubmit={securityForm.handleSubmit(onSecuritySubmit)} className="space-y-6">
+                  <form className="space-y-6">
                     <FormField
                       control={securityForm.control}
                       name="currentPassword"
@@ -728,71 +812,10 @@ export default function Settings() {
                     </Button>
                   </form>
                 </Form>
-                <Separator className="my-6" />
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Two-Factor Authentication</h4>
-                  <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4"> {/* Updated to use shadcn variables */}
-                    <div className="flex items-center space-x-2">
-                      <AlertTriangle className="h-5 w-5 text-yellow-500" /> {/* text-yellow-500 */}
-                      <span className="font-medium text-yellow-500">Not Enabled</span> {/* text-yellow-500 */}
-                    </div>
-                    <p className="mt-1 text-sm text-yellow-500/80"> {/* text-yellow-500/80 */}
-                      Enable two-factor authentication for additional security.
-                    </p>
-                    <Button className="mt-3" variant="outline">
-                      <Shield className="w-4 h-4 mr-2" />
-                      Enable 2FA
-                    </Button>
-                  </div>
-                </div>
+
               </CardContent>
             </Card>
-            {/* Danger Zone */}
-            <Card className="border-destructive/50 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-destructive">
-                  <AlertTriangle className="w-5 h-5" />
-                  <span>Danger Zone</span>
-                </CardTitle>
-                <CardDescription>
-                  Irreversible and destructive actions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-lg border border-destructive/20 p-4">
-                  <h4 className="font-semibold text-destructive mb-2">Delete Account</h4>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Permanently delete your account and all associated data. This action cannot be undone.
-                  </p>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete Account
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete your account
-                          and remove all your data from our servers.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={handleDeleteAccount}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Yes, delete account
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardContent>
-            </Card>
+
           </TabsContent>
         </Tabs>
       </div>

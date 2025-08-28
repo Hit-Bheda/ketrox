@@ -10,17 +10,11 @@ import {
   Trash2,
   Eye,
   Clock,
-  Star,
   DollarSign,
   ChefHat,
-  Coffee,
-  UtensilsCrossed,
-  Wine,
-  IceCream,
-  AlertCircle,
   CheckCircle,
   XCircle,
-  Salad,
+
 } from "lucide-react";
 import {
   AlertDialog,
@@ -52,7 +46,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import AddMenuModal from "@/components/menu/add-menu-modal";
-import Image from "next/image";
+
 import EditMenuModal from "@/components/menu/edit-menu-modal";
 import { toast } from "sonner";
 import { MenuImageSlider } from "@/components/menu/MenuImageSlider";
@@ -145,8 +139,7 @@ export default function Menu() {
     name?: string;
     category: string;
     description: string;
-    price:
-    | "";
+    price: | "";
     preparationTime: number | "";
     item_logo?: string;
     image?: string[];
@@ -180,7 +173,6 @@ export default function Menu() {
         available: item.isAvailable ?? true,
       }));
       setMenuItems(mappedMenu);
-      console.log("menuuu itemmmmmmms:", mappedMenu);
 
     } catch (error) {
       console.error("Error fetching menu items:", error);
@@ -211,7 +203,7 @@ export default function Menu() {
         console.error(data.error || "Failed to update availability");
       }
     } catch (err) {
-      console.error("Network error");
+      console.error(err,"error");
     }
   };
 
@@ -264,7 +256,7 @@ export default function Menu() {
         toast.error(data.error || "Failed to delete menu item");
       }
     } catch (err) {
-      toast.error("Network error");
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       onFinish();
     }
@@ -308,7 +300,7 @@ export default function Menu() {
               </div>
             </CardContent>
           </Card>
-
+{/* 
           <Card className="hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Top Rated</CardTitle>
@@ -320,7 +312,7 @@ export default function Menu() {
                 {totalStats.topRated.name}
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           <Card className="hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -440,7 +432,7 @@ export default function Menu() {
                         <div className="relative rounded-t-xl overflow-hidden">
                           {/* Image */}
 
-                          <MenuImageSlider images={item.image || []} alt={item.name} />
+                          <MenuImageSlider images={item.image || []} alt={item.name} /> 
                           {/* Action Menu (Top Right) */}
                           <div className="absolute top-2 right-2 z-10">
                             <DropdownMenu>

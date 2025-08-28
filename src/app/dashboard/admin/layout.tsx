@@ -6,17 +6,14 @@ import {
   Users,
   Utensils,
   FileText,
-  Building2,
   CreditCard,
   TrendingUp,
   MessageSquare,
   Settings,
   LogOut,
-  Search,
   Bell,
   Menu,
   X,
-  Sun,
   ChefHat,
   ClipboardList as OrderIcon,
   CreditCard as PaymentIcon,
@@ -25,11 +22,11 @@ import {
   CheckCircle,
   HandMetal,
   BellRing,
-  Trash2
+  Trash2,
+  User
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { signOut } from "@/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,6 +40,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { betterFetch } from "@better-fetch/fetch";
+
 import Image from "next/image";
 
 interface LayoutProps {
@@ -156,6 +154,7 @@ const handleLogout = async () => {
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const [user, setUser] = useState<{ name: string; role: string; image?: string } | null>(null);
+  const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
 
   const isActivePath = (path: string) => {
     return pathname === path;
@@ -183,11 +182,40 @@ export default function Layout({ children }: LayoutProps) {
             image: session.user.image
           });
         }
+        console.log("Fetched session:", session);
+
       } catch (error) {
         console.error("Error fetching session:", error);
       }
     };
     fetchUserData();
+
+    // Listen for profile photo updates
+    const handleProfileUpdate = () => {
+      fetchUserData();
+    };
+
+    window.addEventListener('profile-photo-updated', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('profile-photo-updated', handleProfileUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchTenantLogo = async () => {
+      try {
+        const { data } = await betterFetch<{ logoUrl?: string }>("/api/common/tenant-logo", {
+          baseURL: window.location.origin,
+          credentials: "include"
+        });
+        if (data?.logoUrl) {
+          setTenantLogoUrl(data.logoUrl);
+        }
+      } catch (error) {
+        console.error("Error fetching tenant logo:", error);
+      }
+    };
+    fetchTenantLogo();
   }, []);
 
   // Notification functions
@@ -247,27 +275,23 @@ export default function Layout({ children }: LayoutProps) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-sidebar-border">
-            <div className="flex items-center space-x-3">
-              <Image
-                src='/images/Ketrox-web-logo.webp'
-                alt="Ketrox Logo"
-                width={200}
-                height={200}
-                unoptimized={true} // Use this if you want to avoid Next.js image optimization
-                priority={true} // Load this image with high priority
-              />
+            <div className="flex items-center justify-center h-20">
+              {tenantLogoUrl && (
+                <Image
+                  src={tenantLogoUrl}
+                  alt="Hotel Logo"
+                  width={200}
+                  height={64}
+                  unoptimized
+                  priority
+                  className="h-full w-auto object-contain"
+                />
+              )}
             </div>
           </div>
 
           {/* User Profile */}
           <div className="p-4 border-b border-sidebar-border">
-            {/* <div className="flex items-center space-x-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src="/placeholder.svg" />
-                <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground">JD</AvatarFallback>
-              </Avatar>
-              <div> */}
-
             <div className="flex items-center space-x-3">
               <Avatar>
                 <AvatarImage
@@ -276,9 +300,6 @@ export default function Layout({ children }: LayoutProps) {
                 />
               </Avatar>
               <div>
-
-                {/* <p className="text-sm font-medium text-sidebar-foreground">John Doe</p>
-                <p className="text-xs text-sidebar-accent-foreground">Hotel Manager</p> */}
 
                 <p className="text-sm font-medium text-[var(--color-sidebar-foreground)]">
                   {user?.name || "Loading..."}
@@ -355,16 +376,7 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="relative hidden md:block">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  className="pl-9 w-64 bg-background border-input text-foreground"
-                />
-              </div>
-              <Button variant="ghost" size="sm">
-                <Sun className="w-4 h-4" />
-              </Button>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="relative">
@@ -495,7 +507,9 @@ export default function Layout({ children }: LayoutProps) {
                   <Button variant="ghost" size="sm">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src="/placeholder.svg" />
-                      <AvatarFallback className="bg-muted text-muted-foreground">JD</AvatarFallback>
+                      <AvatarFallback className="bg-muted text-muted-foreground">
+                        <User className="w-4 h-4" />
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
@@ -504,13 +518,12 @@ export default function Layout({ children }: LayoutProps) {
                   className="bg-popover border-border text-popover-foreground"
                 >
                   <DropdownMenuItem className="hover:bg-accent hover:text-accent-foreground">
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="hover:bg-accent hover:text-accent-foreground">
-                    Account Settings
+                    <Link href="/dashboard/admin/settings">
+                      Account Settings
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border" />
-                  <DropdownMenuItem className="hover:bg-accent hover:text-accent-foreground">
+                  <DropdownMenuItem className="hover:bg-accent hover:text-accent-foreground" onClick={handleLogout}>
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>

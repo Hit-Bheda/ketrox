@@ -22,9 +22,9 @@ export default function Home() {
   }, [session, isPending, error]);
 
   const handleLogin = () => {
-    // Replace with real login logic
+    
     console.log("Redirecting to login...");
-    window.location.href = "/signin"; // Redirect to the sign-in page
+    window.location.href = "/signin"; 
   };
 
   const handleSignup = () => {

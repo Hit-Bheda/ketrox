@@ -1,19 +1,15 @@
 "use client"
-import { useState } from "react";
-import { 
-  User, 
-  Building2, 
-  Palette, 
-  Bell, 
-  Shield, 
-  Save, 
-  Eye, 
+import { useEffect, useState } from "react";
+import {
+  User,
+  Building2,
+  Bell,
+  Shield,
+  Save,
+  Eye,
   EyeOff,
   Upload,
   Trash2,
-  Moon,
-  Sun,
-  Monitor,
   Database,
   Download
 } from "lucide-react";
@@ -23,8 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { 
+// import { Textarea } from "@/components/ui/textarea";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -35,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +43,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { betterFetch } from "@better-fetch/fetch";
+import { HotelType } from "@/types";
+import Image from "next/image";
+import { supabase } from "@/lib/supabase/client";
 
 // User profile data
 const userProfile = {
@@ -74,6 +75,11 @@ const restaurantSettings = {
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
   const [showPassword, setShowPassword] = useState(false);
+  const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string, email: string } | null>(null);
+  const [hotelsData, setHotelsData] = useState<HotelType | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [notifications, setNotifications] = useState({
     newOrders: true,
     customerMessages: true,
@@ -107,20 +113,17 @@ export default function Settings() {
   });
 
   const [systemSettings, setSystemSettings] = useState({
-    timezone: "America/New_York",
+    timezone: "Asia/Kolkata",
     dateFormat: "MM/DD/YYYY",
     timeFormat: "12hour",
-    currency: "USD",
+    currency: "INR",
     language: "en",
     autoBackup: true,
     dataRetention: "365",
     maintenanceMode: false
   });
 
-  const handleSaveProfile = () => {
-    console.log("Saving profile:", profileForm);
-    // In a real app, this would save to backend
-  };
+
 
   const handleSaveRestaurant = () => {
     console.log("Saving restaurant settings:", restaurantForm);
@@ -147,6 +150,145 @@ export default function Settings() {
     // In a real app, this would trigger backup process
   };
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const { data: session } = await betterFetch<{
+          user: { id: string; name: string; role: string; image?: string, email?: string }
+        }>("/api/auth/get-session", {
+          baseURL: window.location.origin,
+          credentials: "include"
+        });
+
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            name: session.user.name,
+            role: session.user.role,
+            email: session.user.email ?? "",
+            image: session.user.image
+          });
+        }
+
+      } catch (error) {
+        console.error("Error fetching session:", error);
+      }
+    };
+    fetchUserData();
+  }, []);
+
+  const getHotelsData = async () => {
+    try {
+      const res = await fetch("/api/super-admin/hotels");
+      if (!res.ok) {
+        throw new Error("Failed to fetch hotels");
+      }
+      const data = await res.json();
+      console.log("Fetched hotels dataaaaaaaaaaaa:", data);
+      return Array.isArray(data.hotels) ? data.hotels : [];
+    } catch (error) {
+      console.error("Error fetching hotels:", error);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    getHotelsData().then(data => {
+      if (data.length > 0) {
+        setHotelsData(data[0]);
+      }
+    });
+  }, []);
+
+
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch('/api/auth/get-session', { credentials: 'include' });
+        const js = await resp.json();
+        const existing: string | undefined = js?.user?.image;
+        if (!cancelled && existing && !selectedFile) {
+          setPreviewUrl(existing);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFile]);
+
+  const handleSaveProfile = async () => {
+    try {
+      let imageUrl: string | null = null;
+      if (selectedFile) {
+        setIsUploading(true);
+        const fileExt = selectedFile.name.split(".").pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `uploads/${fileName}`;
+
+        const supabaseClient = supabase();
+        const { error } = await supabaseClient.storage
+          .from("mybucket")
+          .upload(filePath, selectedFile, { contentType: selectedFile.type });
+        if (error) {
+          toast.error(error.message || 'Upload failed');
+          setIsUploading(false);
+          return;
+        }
+        const { data, error: signedUrlError } = await supabaseClient.storage
+          .from("mybucket")
+          .createSignedUrl(filePath, 1577880000);
+        if (signedUrlError || !data) {
+          toast.error(signedUrlError?.message || 'Failed to create signed URL');
+          setIsUploading(false);
+          return;
+        }
+        imageUrl = data.signedUrl as string;
+        // Get session user id
+        const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
+        const sessJson = await sess.json();
+        const uid = sessJson?.user?.id;
+        if (!uid) {
+          toast.error('User not found');
+          setIsUploading(false);
+          return;
+        }
+        const res = await fetch('/api/user/photo', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uid, imageUrl })
+        });
+        const j = await res.json();
+        if (!res.ok) {
+          toast.error(j.error || 'Failed to save photo');
+          setIsUploading(false);
+          return;
+        }
+        // Clear local state after successful save
+        setSelectedFile(null);
+        setIsUploading(false);
+        // Update user state to reflect the new image
+        if (imageUrl) {
+          setUser(prev => prev ? { ...prev, image: imageUrl as string } : null);
+          // Dispatch custom event to update sidebar photo
+          window.dispatchEvent(new CustomEvent('profile-photo-updated'));
+        }
+      }
+      toast.success('Profile updated successfully');
+      if (imageUrl) {
+        setPreviewUrl(imageUrl);
+      }
+    } catch {
+      toast.error('Failed to update profile');
+      setIsUploading(false);
+    }
+  };
+
+
   return (
     <>
       <div className="flex-1 space-y-6 p-6 animate-fadeIn">
@@ -162,7 +304,6 @@ export default function Settings() {
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
           </TabsList>
 
@@ -179,55 +320,116 @@ export default function Settings() {
               <CardContent className="space-y-6">
                 {/* Avatar Section */}
                 <div className="flex items-center space-x-4">
-                  <Avatar className="w-20 h-20">
-                    <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
-                    <AvatarFallback>{userProfile.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <div className="space-y-2">
-                    <Button variant="outline" size="sm">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Change Photo
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-destructive">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Remove
-                    </Button>
+                  <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted overflow-hidden">
+                    {previewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={previewUrl} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <Avatar className="w-20 h-20">
+                        <AvatarImage src={user?.image || userProfile.avatar} alt={user?.name} />
+                        <AvatarFallback>{user?.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                      </Avatar>
+                    )}
+                  </div>
+                  <div className="space-y-2 flex gap-2">
+                    <label className="inline-flex">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setSelectedFile(file);
+                          const url = URL.createObjectURL(file);
+                          setPreviewUrl(url);
+                        }}
+                      />
+                      <Button asChild variant="outline" size="sm">
+                        <span><Upload className="w-4 h-4 mr-2" />Change Photo</span>
+                      </Button>
+                    </label>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-destructive">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remove
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove profile photo?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action will remove your current profile photo.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={async () => {
+                              try {
+                                if (!user) return;
+                                const res = await fetch('/api/user/photo', {
+                                  method: 'DELETE',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ userId: user.id })
+                                });
+                                const j = await res.json();
+                                if (!res.ok) { toast.error(j.error || 'Failed to remove photo'); return; }
+                                // Clear preview and selection
+                                setPreviewUrl(null);
+                                setSelectedFile(null);
+                                // Update user state to reflect the removed image
+                                setUser(prev => prev ? { ...prev, image: undefined } : null);
+                                // Dispatch custom event to update sidebar photo
+                                window.dispatchEvent(new CustomEvent('profile-photo-updated'));
+                                toast.success('Photo removed');
+                              } catch {
+                                toast.error('Unexpected error');
+                              }
+                            }}
+                          >
+                            Confirm
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
 
                 <Separator />
 
                 {/* Profile Form */}
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="name" className="mb-2">Full Name</Label>
                     <Input
                       id="name"
-                      value={profileForm.name}
-                      onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
+                      value={user?.name}
+                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email" className="mb-2">Email</Label>
                     <Input
                       id="email"
                       type="email"
-                      value={profileForm.email}
-                      onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
+                      value={user?.email}
+                      onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="phone" className="mb-2">Phone</Label>
                     <Input
                       id="phone"
-                      value={profileForm.phone}
-                      onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
+                      value={hotelsData?.owner_phone}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
                     />
                   </div>
                   <div>
-                    <Label>Role</Label>
+                    <Label className="mb-2">Role</Label>
                     <div className="flex items-center h-10 px-3 py-2 border border-input bg-background rounded-md">
-                      <Badge variant="secondary">{userProfile.role}</Badge>
+                      <Badge variant="secondary">{user?.role}</Badge>
                     </div>
                   </div>
                 </div>
@@ -239,13 +441,13 @@ export default function Settings() {
                   <h3 className="text-lg font-medium">Change Password</h3>
                   <div className="grid gap-4 md:grid-cols-3">
                     <div>
-                      <Label htmlFor="current-password">Current Password</Label>
+                      <Label htmlFor="current-password" className="mb-2">Current Password</Label>
                       <div className="relative">
                         <Input
                           id="current-password"
                           type={showPassword ? "text" : "password"}
                           value={profileForm.currentPassword}
-                          onChange={(e) => setProfileForm({...profileForm, currentPassword: e.target.value})}
+                          onChange={(e) => setProfileForm({ ...profileForm, currentPassword: e.target.value })}
                         />
                         <Button
                           variant="ghost"
@@ -258,30 +460,39 @@ export default function Settings() {
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="new-password">New Password</Label>
+                      <Label htmlFor="new-password" className="mb-2">New Password</Label>
                       <Input
                         id="new-password"
                         type="password"
                         value={profileForm.newPassword}
-                        onChange={(e) => setProfileForm({...profileForm, newPassword: e.target.value})}
+                        onChange={(e) => setProfileForm({ ...profileForm, newPassword: e.target.value })}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="confirm-password">Confirm Password</Label>
+                      <Label htmlFor="confirm-password" className="mb-2">Confirm Password</Label>
                       <Input
                         id="confirm-password"
                         type="password"
                         value={profileForm.confirmPassword}
-                        onChange={(e) => setProfileForm({...profileForm, confirmPassword: e.target.value})}
+                        onChange={(e) => setProfileForm({ ...profileForm, confirmPassword: e.target.value })}
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="flex justify-end">
-                  <Button onClick={handleSaveProfile}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
+                  <Button onClick={handleSaveProfile} disabled={isUploading}>
+                    {isUploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Saving changes...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -301,9 +512,20 @@ export default function Settings() {
               <CardContent className="space-y-6">
                 {/* Logo Section */}
                 <div className="flex items-center space-x-4">
-                  <div className="w-20 h-20 border-2 border-dashed border-muted rounded-lg flex items-center justify-center">
-                    <Building2 className="w-8 h-8 text-muted-foreground" />
-                  </div>
+                  {hotelsData?.logo_url ? (
+                    <Image
+                      src={hotelsData.logo_url}
+                      width={100}
+                      height={100}
+                      
+                      alt={hotelsData?.name}
+                      className="w-20 h-20 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 border-2 border-dashed border-muted rounded-lg flex items-center justify-center">
+                      <Building2 className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Button variant="outline" size="sm">
                       <Upload className="w-4 h-4 mr-2" />
@@ -316,86 +538,48 @@ export default function Settings() {
                 <Separator />
 
                 {/* Restaurant Form */}
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <Label htmlFor="restaurant-name">Restaurant Name</Label>
+                    <Label htmlFor="restaurant-name" className="mb-2">Restaurant Name</Label>
                     <Input
                       id="restaurant-name"
-                      value={restaurantForm.name}
-                      onChange={(e) => setRestaurantForm({...restaurantForm, name: e.target.value})}
+                      value={hotelsData?.name}
+                      onChange={(e) => setRestaurantForm({ ...restaurantForm, name: e.target.value })}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="cuisine-type">Cuisine Type</Label>
-                    <Select value={restaurantForm.cuisine} onValueChange={(value) => setRestaurantForm({...restaurantForm, cuisine: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Contemporary">Contemporary</SelectItem>
-                        <SelectItem value="Italian">Italian</SelectItem>
-                        <SelectItem value="French">French</SelectItem>
-                        <SelectItem value="Asian">Asian</SelectItem>
-                        <SelectItem value="Mexican">Mexican</SelectItem>
-                        <SelectItem value="American">American</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={restaurantForm.description}
-                      onChange={(e) => setRestaurantForm({...restaurantForm, description: e.target.value})}
-                      rows={3}
+                    <Label htmlFor="Owner-name" className="mb-2">Owner Name</Label>
+                    <Input
+                      id="Owner-name"
+                      value={hotelsData?.owner_name}
+                      onChange={(e) => setRestaurantForm({ ...restaurantForm, name: e.target.value })}
                     />
                   </div>
+
                   <div className="md:col-span-2">
-                    <Label htmlFor="address">Address</Label>
+                    <Label htmlFor="address" className="mb-2">Address</Label>
                     <Input
                       id="address"
-                      value={restaurantForm.address}
-                      onChange={(e) => setRestaurantForm({...restaurantForm, address: e.target.value})}
+                      value={hotelsData?.address}
+                      onChange={(e) => setRestaurantForm({ ...restaurantForm, address: e.target.value })}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="restaurant-phone">Phone</Label>
+                    <Label htmlFor="restaurant-phone" className="mb-2">Phone</Label>
                     <Input
                       id="restaurant-phone"
-                      value={restaurantForm.phone}
-                      onChange={(e) => setRestaurantForm({...restaurantForm, phone: e.target.value})}
+                      value={hotelsData?.owner_phone}
+                      onChange={(e) => setRestaurantForm({ ...restaurantForm, phone: e.target.value })}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="restaurant-email">Email</Label>
+                    <Label htmlFor="restaurant-email" className="mb-2">Email</Label>
                     <Input
                       id="restaurant-email"
                       type="email"
-                      value={restaurantForm.email}
-                      onChange={(e) => setRestaurantForm({...restaurantForm, email: e.target.value})}
+                      value={hotelsData?.email}
+                      onChange={(e) => setRestaurantForm({ ...restaurantForm, email: e.target.value })}
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="website">Website</Label>
-                    <Input
-                      id="website"
-                      value={restaurantForm.website}
-                      onChange={(e) => setRestaurantForm({...restaurantForm, website: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="price-range">Price Range</Label>
-                    <Select value={restaurantForm.priceRange} onValueChange={(value) => setRestaurantForm({...restaurantForm, priceRange: value})}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="$">$ (Under $15)</SelectItem>
-                        <SelectItem value="$$">$$ ($15-30)</SelectItem>
-                        <SelectItem value="$$$">$$$ ($30-50)</SelectItem>
-                        <SelectItem value="$$$$">$$$$ (Over $50)</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                 </div>
 
@@ -428,7 +612,7 @@ export default function Settings() {
                     </div>
                     <Switch
                       checked={notifications.newOrders}
-                      onCheckedChange={(checked) => setNotifications({...notifications, newOrders: checked})}
+                      onCheckedChange={(checked) => setNotifications({ ...notifications, newOrders: checked })}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -438,7 +622,7 @@ export default function Settings() {
                     </div>
                     <Switch
                       checked={notifications.customerMessages}
-                      onCheckedChange={(checked) => setNotifications({...notifications, customerMessages: checked})}
+                      onCheckedChange={(checked) => setNotifications({ ...notifications, customerMessages: checked })}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -448,7 +632,7 @@ export default function Settings() {
                     </div>
                     <Switch
                       checked={notifications.staffAlerts}
-                      onCheckedChange={(checked) => setNotifications({...notifications, staffAlerts: checked})}
+                      onCheckedChange={(checked) => setNotifications({ ...notifications, staffAlerts: checked })}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -458,7 +642,7 @@ export default function Settings() {
                     </div>
                     <Switch
                       checked={notifications.systemUpdates}
-                      onCheckedChange={(checked) => setNotifications({...notifications, systemUpdates: checked})}
+                      onCheckedChange={(checked) => setNotifications({ ...notifications, systemUpdates: checked })}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -468,7 +652,7 @@ export default function Settings() {
                     </div>
                     <Switch
                       checked={notifications.smsNotifications}
-                      onCheckedChange={(checked) => setNotifications({...notifications, smsNotifications: checked})}
+                      onCheckedChange={(checked) => setNotifications({ ...notifications, smsNotifications: checked })}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -478,7 +662,7 @@ export default function Settings() {
                     </div>
                     <Switch
                       checked={notifications.emailDigest}
-                      onCheckedChange={(checked) => setNotifications({...notifications, emailDigest: checked})}
+                      onCheckedChange={(checked) => setNotifications({ ...notifications, emailDigest: checked })}
                     />
                   </div>
                 </div>
@@ -493,70 +677,8 @@ export default function Settings() {
             </Card>
           </TabsContent>
 
-          {/* Appearance */}
-          <TabsContent value="appearance" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Palette className="w-5 h-5" />
-                  <span>Appearance & Theme</span>
-                </CardTitle>
-                <CardDescription>Customize the look and feel of your dashboard</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-base">Theme Mode</Label>
-                    <p className="text-sm text-muted-foreground mb-3">Choose your preferred color scheme</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <Button variant="outline" className="h-20 flex-col space-y-2">
-                        <Sun className="w-6 h-6" />
-                        <span>Light</span>
-                      </Button>
-                      <Button variant="outline" className="h-20 flex-col space-y-2">
-                        <Moon className="w-6 h-6" />
-                        <span>Dark</span>
-                      </Button>
-                      <Button variant="outline" className="h-20 flex-col space-y-2">
-                        <Monitor className="w-6 h-6" />
-                        <span>System</span>
-                      </Button>
-                    </div>
-                  </div>
 
-                  <Separator />
 
-                  <div>
-                    <Label className="text-base">Sidebar Density</Label>
-                    <p className="text-sm text-muted-foreground mb-3">Adjust navigation spacing</p>
-                    <Select defaultValue="comfortable">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="compact">Compact</SelectItem>
-                        <SelectItem value="comfortable">Comfortable</SelectItem>
-                        <SelectItem value="spacious">Spacious</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="text-base">Color Scheme</Label>
-                    <p className="text-sm text-muted-foreground mb-3">Primary color for accents and highlights</p>
-                    <div className="flex space-x-2">
-                      {['blue', 'green', 'purple', 'orange', 'red'].map((color) => (
-                        <div
-                          key={color}
-                          className={`w-8 h-8 rounded-full cursor-pointer border-2 border-muted-foreground bg-chart-${['blue', 'green', 'purple', 'orange', 'red'].indexOf(color) + 1}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           {/* System Settings */}
           <TabsContent value="system" className="space-y-6">
@@ -569,28 +691,31 @@ export default function Settings() {
                 <CardDescription>Configure system settings and data management</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Select value={systemSettings.timezone} onValueChange={(value) => setSystemSettings({...systemSettings, timezone: value})}>
+                    <Label htmlFor="timezone" className="mb-2">Timezone</Label>
+                    <Select value={systemSettings.timezone} onValueChange={(value) => setSystemSettings({ ...systemSettings, timezone: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="Asia/Kolkata">India Standard Time (IST)</SelectItem>
                         <SelectItem value="America/New_York">Eastern Time</SelectItem>
                         <SelectItem value="America/Chicago">Central Time</SelectItem>
                         <SelectItem value="America/Denver">Mountain Time</SelectItem>
                         <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                        <SelectItem value="UTC">UTC</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="currency">Currency</Label>
-                    <Select value={systemSettings.currency} onValueChange={(value) => setSystemSettings({...systemSettings, currency: value})}>
+                    <Label htmlFor="currency" className="mb-2">Currency</Label>
+                    <Select value={systemSettings.currency} onValueChange={(value) => setSystemSettings({ ...systemSettings, currency: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="INR">INR - Indian Rupee</SelectItem>
                         <SelectItem value="USD">USD ($)</SelectItem>
                         <SelectItem value="EUR">EUR (€)</SelectItem>
                         <SelectItem value="GBP">GBP (£)</SelectItem>
@@ -599,8 +724,8 @@ export default function Settings() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="date-format">Date Format</Label>
-                    <Select value={systemSettings.dateFormat} onValueChange={(value) => setSystemSettings({...systemSettings, dateFormat: value})}>
+                    <Label htmlFor="date-format" className="mb-2">Date Format</Label>
+                    <Select value={systemSettings.dateFormat} onValueChange={(value) => setSystemSettings({ ...systemSettings, dateFormat: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -612,8 +737,8 @@ export default function Settings() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="time-format">Time Format</Label>
-                    <Select value={systemSettings.timeFormat} onValueChange={(value) => setSystemSettings({...systemSettings, timeFormat: value})}>
+                    <Label htmlFor="time-format" className="mb-2">Time Format</Label>
+                    <Select value={systemSettings.timeFormat} onValueChange={(value) => setSystemSettings({ ...systemSettings, timeFormat: value })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -630,12 +755,12 @@ export default function Settings() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>Automatic Backup</Label>
+                      <Label >Automatic Backup</Label>
                       <p className="text-sm text-muted-foreground">Daily backup of restaurant data</p>
                     </div>
                     <Switch
                       checked={systemSettings.autoBackup}
-                      onCheckedChange={(checked) => setSystemSettings({...systemSettings, autoBackup: checked})}
+                      onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, autoBackup: checked })}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -645,7 +770,7 @@ export default function Settings() {
                     </div>
                     <Switch
                       checked={systemSettings.maintenanceMode}
-                      onCheckedChange={(checked) => setSystemSettings({...systemSettings, maintenanceMode: checked})}
+                      onCheckedChange={(checked) => setSystemSettings({ ...systemSettings, maintenanceMode: checked })}
                     />
                   </div>
                 </div>

@@ -16,6 +16,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store/store"; // Adjust path to your store
 import { useDispatch } from "react-redux";
 import { toggleEditModal } from "@/store/slices/hotel-store"; // Adjust path to your hotel slice
+import { useSearchParams } from "next/navigation";
 
 // Move these to a constants file or keep here if specific to this page
 export const statusColorStyles: { [key: string]: string } = {
@@ -41,6 +42,7 @@ export default function HotelsPage() {
   const [showViewModal, setShowViewModal] = useState(false);
   const isEditModelOpen = useSelector((state: RootState) => (state.hotel as { isEditModelOpen: boolean }).isEditModelOpen);
   const dispatch = useDispatch();
+    const searchParams = useSearchParams();
 
   const filteredHotels = hotelsData && hotelsData.length > 0
     ? hotelsData.filter((hotel) => {
@@ -147,6 +149,13 @@ export default function HotelsPage() {
     if (!open) dispatch(toggleEditModal(false));
     if (open) setSelectedHotel(null);
   };
+
+  useEffect(() => {
+    if (searchParams.get("add") === "true") {
+      setShowAddModal(true);
+    }
+  }, [searchParams]);
+
   return (
     <div className="bg-background text-foreground min-h-screen p-4 lg:p-6 space-y-6">
       <HotelStats stats={stats} />

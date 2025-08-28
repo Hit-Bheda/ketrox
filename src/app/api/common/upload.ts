@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.SUPABASE_SERVICE_ROLE_KEY as string // service role key
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string 
 )
 
 export async function POST(request: Request) {
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const filePath = `uploads/${fileName}`
 
     const { error } = await supabase.storage
-      .from('mybucket')
+      .from('my-bucket')
       .upload(filePath, file, {
         contentType: file.type,
       })
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     const { data } = supabase.storage
-      .from('mybucket')
+      .from('my-bucket')
       .getPublicUrl(filePath)
 
     return Response.json({ url: data.publicUrl }, { status: 200 })

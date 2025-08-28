@@ -7,12 +7,10 @@ import {
   ClipboardList, 
   QrCode, 
   Bell, 
-  Settings, 
   LogOut,
   User,
   Clock,
   Wifi,
-  Battery,
   Menu,
   X
 } from "lucide-react";
@@ -75,16 +73,6 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-
-  // for handling hydration error because time is not match in ssr and csr
-  // const [currentTime, setCurrentTime] = useState('');
-
-  // useEffect(() => {
-  //   const now = new Date();
-  //   const formatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  //   setCurrentTime(formatted);
-  // }, []);
 
 
   interface NavigationItem {
@@ -233,43 +221,6 @@ export default function WaiterLayout({ children }: WaiterLayoutProps) {
             </div>
           </div>
         </div>
-
-        {/* Desktop Header */}
-        {/* <div className="hidden md:block px-8 py-6 bg-gradient-to-r from-[var(--sidebar)] to-[var(--sidebar-accent)] border-b border-[var(--sidebar-border)]">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-white">Good Evening</h1>
-              <p className="text-sm text-[var(--secondary)] font-medium">Alex Rivera • Evening Shift</p>
-            </div>
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3 text-sm">
-                <div className="flex items-center space-x-2">
-                  <Wifi className="w-4 h-4 text-[var(--primary)]" />
-                  <span className="text-white">Restaurant WiFi</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Battery className="w-4 h-4 text-[var(--primary)]" />
-                  <span className="text-white">85%</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4 text-[var(--secondary)]" />
-                  <span className="font-semibold text-[var(--secondary)]">
-                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-[var(--primary)] rounded-full animate-pulse"></div>
-                  <span className="text-xs text-white font-medium">Online</span>
-                </div>
-                <div className="w-10 h-10 bg-[var(--secondary)] rounded-xl flex items-center justify-center">
-                  <User className="w-5 h-5 text-[var(--secondary-foreground)]" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div> */}
 
         {/* Emergency Alert Banner */}
         <div className="bg-gradient-to-r from-[var(--destructive)] to-[#DC2626] px-4 md:px-8 py-3">

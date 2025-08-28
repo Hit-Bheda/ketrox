@@ -1,31 +1,22 @@
 "use client";
-
-import { useState, useRef, useEffect } from "react";
-import { z } from "zod";
+import { useState, useEffect } from "react";
 import {
   Plus,
   Search,
   MoreHorizontal,
-  Edit,
-  Trash2,
   Users,
-  Clock,
   MapPin,
-  Calendar,
   CheckCircle,
   AlertCircle,
   XCircle,
   QrCode,
-  Download,
-  Printer,
   Check,
   Table,
   CircleDot,
   UserCheck,
-  Wrench
+  Wrench,
+  BookOpen,
 } from "lucide-react";
-import QRCode from "qrcode";
-import { useReactToPrint } from "react-to-print";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,25 +36,12 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
-import AddTableDialog from "@/components/table/add-table-modal";
-import EditTableDialog from "@/components/table/edit-table-modal";
 import { toast } from "sonner";
-import { tableSchema } from "@/schemas";
+import BookOrderModal from "@/components/order/add-order-modal";
+import { betterFetch } from "@better-fetch/fetch";
 
-// Table state (dynamic)
-const initialTables = [
-  {
-    id: 1,
-    number: "T001",
-    name: "Window Side",
-    capacity: 4,
-    status: "available",
-  },
-
-];
 
 const locations = ["Main Dining", "Patio", "Private Room", "Bar Area", "Outdoor", "VIP Section"];
-const capacities = [2, 3, 4, 6, 8];
 
 type Table = {
   id: string;
@@ -76,20 +54,31 @@ type Table = {
   status?: "available" | "occupied" | "unavailable" | string;
 };
 
+type Ordertype = {
+  id: string;
+  tableId: string;
+  tableNumber: string;
+  tenantId: string;
+  managerId: string;
+  customerName: string;
+  items: string[];
+  quantity: string[];
+  status: "pending" | "completed" | "cancelled" | string;
+  totalPrice: string;
+  createdAt: string;
+  updatedAt: string;
+  managerName: string;
+  orderNumber: string;
+  itemNames: string[];
+};
+
 export default function Tables() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tableItem, setTableItem] = useState<Table[]>([])
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [editLoading, setEditLoading] = useState(false);
-  const [editTableForm, setEditTableForm] = useState({
-    id: "",
-    number: "",
-    name: "",
-    capacity: 2,
-    notes: ""
-  });
+  const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string } | null>(null);
+  const [editingOrder, setEditingOrder] = useState<Ordertype | null>(null);
 
   async function fetchTables() {
     try {
@@ -97,15 +86,22 @@ export default function Tables() {
       if (match) {
         setTenantId(decodeURIComponent(match[1]));
       }
-      const res = await fetch("/api/admin/table"); // GET all
+      const res = await fetch("/api/admin/table");
       const data = await res.json();
       console.log("Fetched tables:", data);
-      setTableItem(data.tables || []);
+      setTableItem(
+        (data.tables || []).map((table: Table) => ({
+          ...table,
+          status: table.maintenance
+            ? "maintenance"
+            : table.available
+              ? "available"
+              : "occupied"
+        }))
+      );
     } catch (error) {
       console.error("Error fetching tables:", error);
-    } finally {
-      setLoading(false);
-    }
+    } 
   }
 
   useEffect(() => {
@@ -116,26 +112,8 @@ export default function Tables() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
-  const [showAddModal, setShowAddModal] = useState(false);
 
-  // Form state for add table modal
-  const [tableForm, setTableForm] = useState({
-    number: "",
-    name: "",
-    capacity: 2,
-    notes: ""
-  });
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const clearForm = () => {
-    setTableForm({
-      number: "",
-      name: "",
-      capacity: 2,
-      notes: ""
-    });
-    setErrors({});
-  };
 
   const filteredTables = tableItem.filter(table => {
     const matchesSearch =
@@ -157,86 +135,8 @@ export default function Tables() {
   });
 
 
-
-  const handleAddTable = async () => {
-    if (!tenantId) {
-      setError("Tenant ID not found. Please login again.");
-      return;
-    }
-
-    // Validate with Zod
-    const result = tableSchema.safeParse({
-      ...tableForm, tenantId, available: true,
-      maintenance: false,
-    });
-    if (!result.success) {
-      const fieldErrors: { [key: string]: string } = {};
-      result.error.issues.forEach(err => {
-        if (err.path[0]) {
-          if (err.path[0] === "number") fieldErrors.tableNumber = err.message;
-          if (err.path[0] === "name") fieldErrors.tableName = err.message;
-          if (err.path[0] === "notes") fieldErrors.tableNotes = err.message;
-        }
-      });
-      setErrors(fieldErrors);
-      return;
-    }
-
-    setErrors({});
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/admin/table", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...tableForm, tenantId })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to add table");
-        toast.error(data.error || "Failed to add table");
-
-        return;
-      }
-
-      setShowAddModal(false);
-      clearForm();
-      await fetchTables();
-      toast.success(data.message);
-    } catch (err) {
-      setError("Network error");
-      toast.error("Network error");
-    } finally {
-      setLoading(false);
-    }
-  };
-  const handleEditTable = async () => {
-    setEditLoading(true);
-    try {
-      const res = await fetch("/api/admin/table", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editTableForm)
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to update table");
-        toast.error(data.error || "Failed to delete table");
-      } else {
-        setEditModalOpen(false);
-        fetchTables();
-        toast.success(data.message);
-      }
-    } catch (err) {
-      setError("Network error");
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
   const handleToggleTableStatus = async (table: Table, field: "available" | "maintenance") => {
-    setEditLoading(true);
+
     try {
       const res = await fetch("/api/admin/table", {
         method: "PUT",
@@ -252,54 +152,50 @@ export default function Tables() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to update table status");
+  
         toast.error(data.error || "Failed to update table status");
       } else {
         fetchTables();
         toast.success(data.message || "Table status updated");
       }
     } catch (err) {
-      setError("Network error");
+      console.log(err);
       toast.error("Network error");
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
-  const handleDeleteTable = async (id: string) => {
-    setEditLoading(true);
-    try {
-      const res = await fetch("/api/admin/table", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Failed to delete table");
-        toast.error(data.error || "Failed to delete table");
-      } else {
-        setEditModalOpen(false);
-        fetchTables();
-        toast.success(data.message || "Table deleted successfully");
-      }
-    } catch (err) {
-      setError("Network error");
-      toast.error("Network error");
-    } finally {
-      setEditLoading(false);
-    }
+    } 
   };
 
   const stats = {
     total: tableItem.length,
     available: tableItem.filter(t => t.available && !t.maintenance).length,
-    occupied: tableItem.filter(t => t.status === "occupied").length,
-    reserved: tableItem.filter(t => t.status === "reserved").length,
+    occupied: tableItem.filter(t => !t.available && !t.maintenance).length,
     maintenance: tableItem.filter(t => t.maintenance).length,
   };
+
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const { data: session } = await betterFetch<{
+          user: { id: string; name: string; role: string; image?: string }
+        }>("/api/auth/get-session", {
+          baseURL: window.location.origin,
+          credentials: "include"
+        });
+
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            name: session.user.name,
+            role: session.user.role,
+          });
+        }
+        console.log("Fetched user session:", session);
+      } catch (error) {
+        console.error("Error fetching session:", error);
+      }
+    };
+    fetchUserData();
+  }, []);
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-6">
@@ -373,14 +269,6 @@ export default function Tables() {
               <CardTitle className="text-card-foreground">Table Management</CardTitle>
               <CardDescription>Manage restaurant tables, capacity, and bookings</CardDescription>
             </div>
-
-            <Button
-              onClick={() => setShowAddModal(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              <Plus className="w-4 h-4" />
-              Add Table
-            </Button>
           </div>
         </CardHeader>
 
@@ -446,24 +334,32 @@ export default function Tables() {
                         className="bg-popover border-border text-popover-foreground"
                       >
 
-
                         <DropdownMenuItem
-                          onClick={() => {
-                            setEditTableForm({
-                              id: String(table.id),
-                              number: table.number,
-                              name: table.name,
-                              capacity: table.capacity,
-                              notes: table.notes || ""
-                            });
-                            setEditModalOpen(true);
+                          onClick={async () => {
+                            setSelectedTableId(table.id);
+                            if (table.status === "occupied") {
+                              // Fetch the active order for this table (status: pending or preparing)
+                              const res = await fetch(`/api/manager/order?tableId=${table.id}&status=pending`);
+                              const data = await res.json();
+                              setEditingOrder(data.orders?.[0] || null);
+                            } else {
+                              setEditingOrder(null);
+                            }
+                            setOrderModalOpen(true);
                           }}
-                          className="focus:bg-accent focus:text-accent-foreground"
                         >
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Details
+                          {table.status === "occupied" ? (
+                            <>
+                              <BookOpen className="mr-2 h-4 w-4 text-blue-500" />
+                              Update Order
+                            </>
+                          ) : (
+                            <>
+                              <BookOpen className="mr-2 h-4 w-4 text-blue-500" />
+                              Book Order
+                            </>
+                          )}
                         </DropdownMenuItem>
-
                         <DropdownMenuItem
                           onClick={() => handleToggleTableStatus(table, "available")}
                           className="focus:bg-accent focus:text-accent-foreground"
@@ -479,31 +375,6 @@ export default function Tables() {
                               Mark Available
                             </>
                           )}
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() => handleToggleTableStatus(table, "maintenance")}
-                          className="focus:bg-accent focus:text-accent-foreground"
-                        >
-                          {table.maintenance ? (
-                            <>
-                              <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                              Mark as Not in Maintenance
-                            </>
-                          ) : (
-                            <>
-                              <AlertCircle className="w-4 h-4 mr-2 text-amber-500" />
-                              Mark as Maintenance
-                            </>
-                          )}
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteTable(table.id.toString())}
-                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Remove Table
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -530,27 +401,27 @@ export default function Tables() {
                       <Badge
                         variant="outline"
                         className={
-                          table.maintenance
+                          table.status === "maintenance"
                             ? "bg-amber-500/15 text-amber-700 border border-amber-500/30"
-                            : table.available
+                            : table.status === "available"
                               ? "bg-green-500/15 text-green-700 dark:text-green-300 border border-green-500/30"
                               : "bg-destructive/15 text-destructive border border-destructive/30"
                         }
                       >
-                        {table.maintenance ? (
+                        {table.status === "maintenance" ? (
                           <>
                             <AlertCircle className="w-4 h-4" />
                             <span className="ml-1">Maintenance</span>
                           </>
-                        ) : table.available ? (
+                        ) : table.status === "available" ? (
                           <>
                             <CheckCircle className="w-4 h-4" />
                             <span className="ml-1">Available</span>
                           </>
                         ) : (
                           <>
-                            <XCircle className="w-4 h-4" />
-                            <span className="ml-1">Unavailable</span>
+                            <Users className="w-4 h-4" />
+                            <span className="ml-1">Occupied</span>
                           </>
                         )}
                       </Badge>
@@ -594,27 +465,17 @@ export default function Tables() {
         </CardContent>
       </Card>
 
-      <AddTableDialog
-        showAddModal={showAddModal}
-        setShowAddModal={setShowAddModal}
-        tableForm={tableForm}
-        setTableForm={setTableForm}
-        capacities={capacities}
-        handleAddTable={handleAddTable}
-        errors={errors}
-        setErrors={setErrors}
-        clearForm={clearForm}
-      />
-      <EditTableDialog
-        open={editModalOpen}
-        setOpen={setEditModalOpen}
-        tableForm={editTableForm}
-        setTableForm={setEditTableForm}
-        capacities={capacities}
-        onSave={handleEditTable}
-        onDelete={() => handleDeleteTable(editTableForm.id)}
-        loading={editLoading}
-      />
+      {selectedTableId && (
+        <BookOrderModal
+          open={orderModalOpen}
+          setOpen={setOrderModalOpen}
+          tableId={selectedTableId}
+          tenantId={tenantId!}
+          managerId={user?.id ?? ""}
+          onOrderAdded={fetchTables}
+          order={editingOrder ?? undefined}
+        />
+      )}
     </div>
   );
 }

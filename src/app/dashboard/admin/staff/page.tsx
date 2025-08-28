@@ -10,16 +10,13 @@ import {
   UserCheck,
   UserX,
   Shield,
-  Clock,
-  Phone,
-  Mail
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -52,15 +49,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { staffSchema } from "@/schemas";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import UpdateStaffModal from "@/components/staff/edit-staff-modal";
-import Image from "next/image";
 import { AvatarImage } from "@radix-ui/react-avatar";
 
 
@@ -148,8 +142,7 @@ export default function Staff() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   type StaffType = typeof staffData[0];
   const [staffList, setStaffList] = useState<StaffType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
+ 
 
   const {
     register,
@@ -170,7 +163,6 @@ export default function Staff() {
     },
   });
 
-
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "active":
@@ -181,7 +173,6 @@ export default function Staff() {
         return "bg-gray-300 text-gray-800 border-gray-400";
     }
   };
-
 
   const stats = {
     total: staffList.length,
@@ -208,8 +199,6 @@ export default function Staff() {
       setStaffList(result.staff);
     } catch (error) {
       console.error("Error fetching staff:", error);
-    } finally {
-      setIsLoading(false);
     }
   }
 

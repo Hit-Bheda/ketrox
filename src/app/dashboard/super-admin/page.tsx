@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { 
-  DollarSign, 
+import {
+  DollarSign,
   TrendingUp,
-  TrendingDown,
   Plus,
   UserPlus,
   FileText,
@@ -13,7 +12,6 @@ import {
   Edit,
   Trash2,
   Building,
-  Users as UsersIcon,
   Calendar,
   Activity
 } from "lucide-react";
@@ -24,36 +22,39 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   Area,
   AreaChart
 } from "recharts";
+import Link from "next/link";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
+import UpdateHotelModal from "@/components/hotels/edit-hotel-modal";
+import { toggleEditModal, setSelectedHotel } from "@/store/slices/hotel-store";
+import { RootState } from "@/store/store";
 
 // Enhanced dummy data with different time periods
 const overviewData = {
@@ -105,19 +106,7 @@ const chartData = {
   ]
 };
 
-const pieData = [
-  { name: 'Direct Bookings', value: 45, color: 'var(--primary)' },
-  { name: 'OTA Partners', value: 35, color: 'var(--destructive)' },
-  { name: 'Walk-ins', value: 20, color: 'var(--accent)' },
-];
-
-const hotels = [
-  { id: 1, name: "Grand Plaza Hotel", status: "active", plan: "Pro", owner: "Sarah Johnson", revenue: 45000, logo: "GP" },
-  { id: 2, name: "Ocean View Resort", status: "active", plan: "Standard", owner: "Mike Chen", revenue: 32000, logo: "OV" },
-  { id: 3, name: "City Center Inn", status: "trial", plan: "Free", owner: "Anna Rodriguez", revenue: 12000, logo: "CC" },
-  { id: 4, name: "Mountain Lodge", status: "active", plan: "Pro", owner: "David Wilson", revenue: 28000, logo: "ML" },
-  { id: 5, name: "Business Suites", status: "active", plan: "Standard", owner: "Lisa Thompson", revenue: 35000, logo: "BS" },
-];
+// Dynamic hotels will be loaded from API into hotelsData
 
 const subscriptionPlans = [
   { name: "Free", hotels: 45, maxBandwidth: 100, usedBandwidth: 65, color: "bg-" },
@@ -143,7 +132,7 @@ export default function Dashboard() {
     status: string;
     plan?: string;
     tenant_id?: string;
-    [key: string]: unknown; // fallback for extra fields
+    [key: string]: unknown;
   };
   const [selectedPeriod, setSelectedPeriod] = useState("monthly");
   const [selectedPlan, setSelectedPlan] = useState("All");
@@ -152,36 +141,42 @@ export default function Dashboard() {
   const currentData = overviewData[selectedPeriod as keyof typeof overviewData];
   const currentChartData = chartData[selectedPeriod as keyof typeof chartData];
 
-  const filteredHotels = hotels.filter(hotel =>
-    selectedPlan === "All" || hotel.plan === selectedPlan
-  );
-  
-const getHotelsData = async () => {
-  try {
-    const res = await fetch("/api/super-admin/hotels");
-    if (!res.ok) {
-      throw new Error("Failed to fetch hotels");
+  const dispatch = useDispatch();
+  const isEditModelOpen = useSelector((state: RootState) => (state.hotel as { isEditModelOpen: boolean }).isEditModelOpen);
+
+  const filteredHotels = hotelsData.filter((hotel) => {
+    if (selectedPlan === "All") return true;
+    const plan = (hotel as unknown as { plan?: string }).plan?.toLowerCase();
+    const wanted = selectedPlan.toLowerCase();
+    return plan === wanted;
+  });
+
+  const getHotelsData = async () => {
+    try {
+      const res = await fetch("/api/super-admin/hotels");
+      if (!res.ok) {
+        throw new Error("Failed to fetch hotels");
+      }
+      const data = await res.json();
+      console.log("Fetched hotels data:", data);
+      return Array.isArray(data.hotels) ? data.hotels : [];
+    } catch (error) {
+      console.error("Error fetching hotels:", error);
+      return [];
     }
-    const data = await res.json();
-    console.log("Fetched hotels data:", data);
-    return Array.isArray(data.hotels) ? data.hotels : [];
-  } catch (error) {
-    console.error("Error fetching hotels:", error);
-    return [];
-  }
-};
+  };
 
 
-useEffect(() => {
-  getHotelsData().then(data => setHotelsData(data));
-}, []);
+  useEffect(() => {
+    getHotelsData().then(data => setHotelsData(data));
+  }, []);
 
-const stats = {
-  total: hotelsData.length,
-  active: hotelsData.filter(h => h.status === "active").length,
-  trial: hotelsData.filter(h => h.status === "trial").length,
-  suspended: hotelsData.filter(h => h.status === "suspended").length,
-};
+  const stats = {
+    total: hotelsData.length,
+    active: hotelsData.filter(h => h.status === "active").length,
+    trial: hotelsData.filter(h => h.status === "trial").length,
+    suspended: hotelsData.filter(h => h.status === "suspended").length,
+  };
 
 
   const getStatusBadgeVariant = (status: string) => {
@@ -209,7 +204,50 @@ const stats = {
         return "text-gray-600";
     }
   };
- return (
+
+  const handleEditHotel = (hotel: HotelType) => {
+    dispatch(setSelectedHotel(hotel as unknown as HotelType));
+    dispatch(toggleEditModal(true));
+  };
+
+  const handleDeleteHotel = async (hotelId: string) => {
+    try {
+      const res = await fetch("/api/super-admin/hotels", {
+        method: "DELETE",
+        body: JSON.stringify({ id: hotelId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete hotel");
+        return;
+      }
+      toast.success("Hotel deleted successfully");
+      getHotelsData().then(data => setHotelsData(data));
+    } catch {
+      toast.error("An error occurred while deleting the hotel");
+    }
+  };
+
+  const handleUpdateHotel = async (formData: Partial<HotelType> & { id: string }) => {
+    try {
+      const res = await fetch("/api/super-admin/hotels", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update hotel");
+        return;
+      }
+      toast.success("Hotel updated successfully");
+      dispatch(toggleEditModal(false));
+      getHotelsData().then(data => setHotelsData(data));
+    } catch {
+      toast.error("An error occurred while updating the hotel");
+    }
+  };
+  return (
     <div className="flex-1 space-y-8 p-8 bg-[var(--color-background)] text-[var(--color-foreground)] font-sans">
       {/* Time Period Tabs */}
       <Tabs value={selectedPeriod} onValueChange={setSelectedPeriod} className="space-y-8">
@@ -232,9 +270,11 @@ const stats = {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="rounded-xl shadow-lg bg-[var(--color-popover)]">
-                <DropdownMenuItem>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Hotel
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/super-admin/hotels?add=true" className="flex items-center">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Hotel
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <UserPlus className="w-4 h-4 mr-2" />
@@ -268,14 +308,14 @@ const stats = {
                     <AreaChart data={currentChartData.slice(-4)}>
                       <defs>
                         <linearGradient id="revenue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.5}/>
-                          <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.5} />
+                          <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <Area 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        stroke="var(--primary)" 
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="var(--primary)"
                         fillOpacity={1}
                         fill="url(#revenue)"
                         strokeWidth={2}
@@ -306,69 +346,11 @@ const stats = {
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-semibold text-[var(--color-primary)]">Bookings</CardTitle>
-                <Calendar className="h-5 w-5 text-[var(--color-primary)]" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-[var(--color-foreground)]">{currentData.monthlyBookings.toLocaleString()}</div>
-                <div className="flex items-center text-xs text-[var(--color-muted-foreground)] mt-1">
-                  <TrendingDown className="mr-1 h-3 w-3 text-red-500" />
-                  <span className="font-medium">-3.1%</span> from last {selectedPeriod.slice(0, -2)}
-                </div>
-                <div className="mt-4 h-[60px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={currentChartData.slice(-4)}>
-                      <Line 
-                        type="monotone" 
-                        dataKey="bookings" 
-                        stroke="var(--destructive)" 
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-semibold text-[var(--color-primary)]">Staff Count</CardTitle>
-                <UsersIcon className="h-5 w-5 text-[var(--color-primary)]" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-[var(--color-foreground)]">{currentData.staffCount.toLocaleString()}</div>
-                <div className="flex items-center text-xs text-[var(--color-muted-foreground)] mt-1">
-                  <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
-                  <span className="font-medium">+5.4%</span> from last {selectedPeriod.slice(0, -2)}
-                </div>
-                <div className="mt-4 h-[60px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={currentChartData.slice(-4)}>
-                      <defs>
-                        <linearGradient id="occupancy" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--secondary)" stopOpacity={0.5}/>
-                          <stop offset="95%" stopColor="var(--secondary)" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <Area 
-                        type="monotone" 
-                        dataKey="occupancy" 
-                        stroke="var(--secondary)" 
-                        fillOpacity={1}
-                        fill="url(#occupancy)"
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+
           </div>
 
           {/* Charts Section */}
-          <div className="grid gap-8 md:grid-cols-7">
+          <div className="grid gap-8 md:grid-cols">
             <Card className="col-span-4 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-[var(--color-primary)]">Analytics Overview</CardTitle>
@@ -381,16 +363,16 @@ const stats = {
                 <ResponsiveContainer width="100%" height={350}>
                   <LineChart data={currentChartData}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-[var(--color-muted)]" />
-                    <XAxis 
-                      dataKey="name" 
+                    <XAxis
+                      dataKey="name"
                       className="stroke-[var(--color-muted-foreground)]"
                       fontSize={12}
                     />
-                    <YAxis 
+                    <YAxis
                       className="stroke-[var(--color-muted-foreground)]"
                       fontSize={12}
                     />
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{
                         backgroundColor: 'var(--background)',
                         border: '1px solid var(--border)',
@@ -398,19 +380,19 @@ const stats = {
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                       }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="bookings" 
-                      stroke="var(--primary)" 
+                    <Line
+                      type="monotone"
+                      dataKey="bookings"
+                      stroke="var(--primary)"
                       strokeWidth={2}
                       dot={{ fill: 'var(--primary)', strokeWidth: 0, r: 4 }}
                       activeDot={{ r: 6, stroke: 'var(--primary)', strokeWidth: 2, fill: 'var(--background)' }}
                       name="Bookings"
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="revenue" 
-                      stroke="var(--secondary)" 
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="var(--secondary)"
                       strokeWidth={2}
                       dot={{ fill: 'var(--secondary)', strokeWidth: 0, r: 4 }}
                       activeDot={{ r: 6, stroke: 'var(--secondary)', strokeWidth: 2, fill: 'var(--background)' }}
@@ -420,47 +402,7 @@ const stats = {
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-            <Card className="col-span-3 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-[var(--color-primary)]">Booking Sources</CardTitle>
-                <CardDescription className="text-[var(--color-muted-foreground)]">Distribution by channel</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* ...existing pie chart code... */}
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-2">
-                  {pieData.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center space-x-2">
-                        <div 
-                          className="h-2 w-2 rounded-full" 
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="text-[var(--color-muted-foreground)]">{item.name}</span>
-                      </div>
-                      <span className="font-medium">{item.value}%</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+
           </div>
 
           {/* Hotels and Activity */}
@@ -484,7 +426,6 @@ const stats = {
                       <DropdownMenuItem onClick={() => setSelectedPlan("All")}>All Plans</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSelectedPlan("Free")}>Free</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSelectedPlan("Standard")}>Standard</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSelectedPlan("Pro")}>Pro</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -501,55 +442,91 @@ const stats = {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredHotels.slice(0, 3).map((hotel) => (
-                      <TableRow key={hotel.id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="h-8 w-8 rounded-lg">
-                              <AvatarFallback className="text-xs font-medium">{hotel.logo}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium text-[var(--color-foreground)]">{hotel.name}</div>
-                              <div className="text-sm text-[var(--color-muted-foreground)]">{hotel.owner}</div>
+                    {filteredHotels.length > 0 ? (
+                      filteredHotels.slice(0, 5).map((hotel) => (
+                        <TableRow key={hotel.id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-8 w-8 rounded-lg">
+                                <AvatarFallback className="text-xs font-medium">
+                                  {(hotel.name || "")
+                                    .split(" ")
+                                    .map((w: string) => w[0])
+                                    .join("")
+                                    .slice(0, 2)
+                                    .toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium text-[var(--color-foreground)]">
+                                  {hotel.name}
+                                </div>
+                                <div className="text-sm text-[var(--color-muted-foreground)]">
+                                  {(hotel as unknown as { owner_name?: string }).owner_name}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadgeVariant(hotel.status)} className="rounded-lg">
-                            {hotel.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="rounded-lg">{hotel.plan}</Badge>
-                        </TableCell>
-                        <TableCell className="font-medium text-[var(--color-foreground)]">
-                          ${hotel.revenue.toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="rounded-lg">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={getStatusBadgeVariant(hotel.status as string)}
+                              className="rounded-lg"
+                            >
+                              {hotel.status as string}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="rounded-lg">
+                              {(hotel as unknown as { plan?: string }).plan}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium text-[var(--color-foreground)]">
+                            -
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="rounded-lg">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditHotel(hotel)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => handleDeleteHotel(hotel.id as string)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-6">
+                          <p className="text-sm text-[var(--color-muted-foreground)]">
+                            No hotels match your filter
+                          </p>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
+
                 </Table>
               </CardContent>
             </Card>
+            {/* Edit Hotel Modal */}
+            <UpdateHotelModal
+              open={isEditModelOpen}
+              onOpenChange={(open) => dispatch(toggleEditModal(open))}
+              onSubmit={handleUpdateHotel}
+            />
             <Card className="col-span-3 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
               {/* ...existing activity code, update icon and text classes for color/contrast... */}
               <CardHeader>
@@ -606,8 +583,8 @@ const stats = {
                           {plan.usedBandwidth}GB / {plan.maxBandwidth}GB
                         </span>
                       </div>
-                      <Progress 
-                        value={(plan.usedBandwidth / plan.maxBandwidth) * 100} 
+                      <Progress
+                        value={(plan.usedBandwidth / plan.maxBandwidth) * 100}
                         className="h-2 rounded-full bg-[var(--color-muted)]"
                       />
                     </div>

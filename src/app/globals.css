@@ -162,3 +162,8 @@
 body {
   letter-spacing: var(--tracking-normal);
 }   
+
+[data-slot="select-trigger"] svg {
+color: #fff !important;
+ 
+}

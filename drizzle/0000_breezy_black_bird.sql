@@ -16,7 +16,7 @@ CREATE TABLE "account" (
 --> statement-breakpoint
 CREATE TABLE "menu" (
 	"id" text PRIMARY KEY NOT NULL,
-	"Item_logo" text NOT NULL,
+	"item_logo" text[] NOT NULL,
 	"item_name" text NOT NULL,
 	"category" text NOT NULL,
 	"description" text NOT NULL,
@@ -27,6 +27,31 @@ CREATE TABLE "menu" (
 	"is_available" boolean NOT NULL,
 	"created_at" timestamp NOT NULL,
 	"updated_at" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "order" (
+	"id" text PRIMARY KEY NOT NULL,
+	"order_number" text NOT NULL,
+	"table_id" text NOT NULL,
+	"tenant_id" text NOT NULL,
+	"manager_id" text,
+	"customer_name" text NOT NULL,
+	"items" text[] NOT NULL,
+	"quantity" text[] NOT NULL,
+	"status" text DEFAULT 'pending' NOT NULL,
+	"total_price" text NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	CONSTRAINT "order_order_number_unique" UNIQUE("order_number")
+);
+--> statement-breakpoint
+CREATE TABLE "password_reset_token" (
+	"id" text PRIMARY KEY NOT NULL,
+	"token" text NOT NULL,
+	"user_id" text NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"created_at" timestamp NOT NULL,
+	CONSTRAINT "password_reset_token_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
 CREATE TABLE "session" (
@@ -63,7 +88,7 @@ CREATE TABLE "tenants" (
 	"owner_name" varchar(255) NOT NULL,
 	"phone" varchar(256) NOT NULL,
 	"address" text,
-	"plam" text DEFAULT 'free' NOT NULL,
+	"plan" text DEFAULT 'free' NOT NULL,
 	"status" text DEFAULT 'active' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now(),
 	"updated_at" timestamp with time zone DEFAULT now(),
@@ -96,6 +121,10 @@ CREATE TABLE "verification" (
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "menu" ADD CONSTRAINT "menu_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "order" ADD CONSTRAINT "order_table_id_table_id_fk" FOREIGN KEY ("table_id") REFERENCES "public"."table"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "order" ADD CONSTRAINT "order_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "order" ADD CONSTRAINT "order_manager_id_user_id_fk" FOREIGN KEY ("manager_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "password_reset_token" ADD CONSTRAINT "password_reset_token_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "table" ADD CONSTRAINT "table_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user" ADD CONSTRAINT "user_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE no action ON UPDATE no action;

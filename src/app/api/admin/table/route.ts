@@ -35,6 +35,16 @@ export async function POST(request: Request) {
 
 
 export async function GET(request: Request) {
+  let tenantId = "";
+  if (typeof request !== "undefined" && "headers" in request) {
+    const cookieHeader = request.headers.get("cookie") || "";
+    const match = cookieHeader.match(/(?:^|; )tenantId=([^;]*)/);
+    if (match) tenantId = decodeURIComponent(match[1]);
+    
+  }
+  if (!tenantId) {
+    return Response.json({ error: "tenantId is required for menu fetch" }, { status: 400 });
+  }
   try {
     const { searchParams } = new URL(request.url);
     const tableId = searchParams.get("id");
@@ -52,7 +62,10 @@ export async function GET(request: Request) {
       return Response.json({ table: result[0] });
     }
 
-    const result = await db.select().from(table);
+       const result = await db
+      .select()
+      .from(table)
+      .where(eq(table.tenantId, tenantId));
 
     return Response.json({ tables: result });
   } catch (err) {
@@ -76,7 +89,7 @@ export async function PUT(request: Request) {
       return Response.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
 
-  
+
     const existing = await db.select().from(table).where(eq(table.id, id));
     if (!existing || existing.length === 0) {
       return Response.json({ error: "Table not found" }, { status: 404 });
@@ -86,6 +99,7 @@ export async function PUT(request: Request) {
       .update(table)
       .set({
         ...parsed.data,
+        capacity: parsed.data.capacity !== undefined ? parsed.data.capacity.toString() : undefined,
       })
       .where(eq(table.id, id))
       .returning();

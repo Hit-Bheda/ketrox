@@ -13,10 +13,10 @@ import { HotelType } from "@/types";
 const getInitials = (name: string) =>
   typeof name === "string"
     ? name
-        .trim()
-        .split(/\s+/)
-        .map((w) => w[0].toUpperCase())
-        .join("")
+      .trim()
+      .split(/\s+/)
+      .map((w) => w[0].toUpperCase())
+      .join("")
     : "";
 
 type HotelDetailsModalProps = {
@@ -33,7 +33,7 @@ export default function HotelDetailsModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[640px] bg-card/80 backdrop-blur-md text-card-foreground rounded-2xl shadow-2xl border border-border/50 p-0 overflow-hidden">
-        
+
         {/* Header */}
         <DialogHeader className="relative px-6 py-5 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-border/40">
           {hotel && (
@@ -84,10 +84,7 @@ export default function HotelDetailsModal({
           >
             Close
           </Button>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Hotel
-          </Button>
+
         </DialogFooter>
       </DialogContent>
     </Dialog>

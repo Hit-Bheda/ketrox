@@ -1,3 +1,4 @@
+import { id } from "date-fns/locale";
 import { z } from "zod";
 
 export const signinSchema = z.object({
@@ -70,23 +71,35 @@ export const tableSchema = z.object({
 });
 
 export const menuSchema = z.object({
-  item_logo: z.array(z.string().url()).min(1, "At least one image is required!"),
-  item_name: z.string().min(1, "Item name is required!"),
-  category: z.string().min(1, "Category is required!"),
-  description: z.string().min(1, "Description is required!"),
-  price: z
-    .string()
-    .min(1, "Price is required") 
-    .transform((val) => Number(val))
-    .refine((val) => !Number.isNaN(val), { message: "Price must be a number" })
-    .refine((val) => val >= 0, { message: "Price must be non-negative or zero" }),
- prepTime: z
-    .string()
-    .min(1, "Prep time is required")
-    .transform((val) => Number(val))
-    .refine((val) => !Number.isNaN(val), { message: "Prep time must be a number" })
-    .refine((val) => val >= 1, { message: "Prep time must be at least 1 minute" }),
-  dietary: z.array(z.string()).optional(),
-  tenantId: z.string().uuid("Invalid tenant ID"),
-  isAvailable: z.boolean().optional(),
+    item_logo: z.array(z.string().url()).min(1, "At least one image is required!"),
+    item_name: z.string().min(1, "Item name is required!"),
+    category: z.string().min(1, "Category is required!"),
+    description: z.string().min(1, "Description is required!"),
+    price: z
+        .string()
+        .min(1, "Price is required")
+        .transform((val) => Number(val))
+        .refine((val) => !Number.isNaN(val), { message: "Price must be a number" })
+        .refine((val) => val >= 0, { message: "Price must be non-negative or zero" }),
+    prepTime: z
+        .string()
+        .min(1, "Prep time is required")
+        .transform((val) => Number(val))
+        .refine((val) => !Number.isNaN(val), { message: "Prep time must be a number" })
+        .refine((val) => val >= 1, { message: "Prep time must be at least 1 minute" }),
+    dietary: z.array(z.string()).optional(),
+    tenantId: z.string().uuid("Invalid tenant ID"),
+    isAvailable: z.boolean().optional(),
+});
+
+export const orderSchema = z.object({
+     order_number: z.string().optional(),
+    table_id: z.uuid("Invalid table ID").optional(),
+    tenant_id: z.uuid("Invalid tenant ID").optional(),
+    manager_id: z.string().min(1, "Invalid manager ID").optional(),
+    customer_name: z.string().min(1, "Customer name is required"),
+    items: z.array(z.string()).min(1, "At least one item is required"),
+    quantity: z.array(z.string()).min(1, "At least one quantity is required"),
+    status: z.enum(["pending", "preparing", "delivered", "cancelled"]).default("pending"),
+    total_price: z.string().min(1, "Total price is required"),
 });

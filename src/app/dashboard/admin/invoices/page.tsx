@@ -411,7 +411,7 @@ export default function Invoices() {
                   <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="customer-name">Customer Name</Label>
+                        <Label htmlFor="customer-name" className="text-foreground mb-2">Customer Name</Label>
                         <Input
                           id="customer-name"
                           value={invoiceForm.customerName}
@@ -420,7 +420,7 @@ export default function Invoices() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="customer-email">Customer Email</Label>
+                        <Label htmlFor="customer-email" className="text-foreground mb-2">Customer Email</Label>
                         <Input
                           id="customer-email"
                           type="email"
@@ -433,7 +433,7 @@ export default function Invoices() {
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="table-number">Table Number</Label>
+                        <Label htmlFor="table-number" className="text-foreground mb-2">Table Number</Label>
                         <Input
                           id="table-number"
                           value={invoiceForm.tableNumber}
@@ -442,7 +442,7 @@ export default function Invoices() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="payment-method">Payment Method</Label>
+                        <Label htmlFor="payment-method" className="text-foreground mb-2">Payment Method</Label>
                         <Select value={invoiceForm.paymentMethod} onValueChange={(value) => setInvoiceForm({...invoiceForm, paymentMethod: value})}>
                           <SelectTrigger>
                             <SelectValue />
@@ -457,7 +457,7 @@ export default function Invoices() {
                     </div>
                     
                     <div>
-                      <Label htmlFor="notes">Notes</Label>
+                      <Label htmlFor="notes" className="text-foreground mb-2">Notes</Label>
                       <Textarea
                         id="notes"
                         value={invoiceForm.notes}

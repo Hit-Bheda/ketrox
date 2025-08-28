@@ -1,7 +1,7 @@
-import { tableSchema } from "@/schemas";
+
 import { db } from "@/db";
-import { user, tenants, table, menu } from "@/db/schema";
-import { staffSchema, menuSchema } from "@/schemas";
+import { user, tenants} from "@/db/schema";
+import { staffSchema } from "@/schemas";
 import { eq, or, and } from "drizzle-orm";
 import z from "zod";
 

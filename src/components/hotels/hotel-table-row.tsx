@@ -1,4 +1,4 @@
-"use "
+"use client";
 
 import { TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -10,11 +10,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Edit, Trash2, MapPin, Calendar } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Trash2, Calendar } from "lucide-react";
 import { HotelType } from "@/types"; // Adjust path
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/store/store";
 import { setSelectedHotel, toggleEditModal } from "@/store/slices/hotel-store";
+import { AddressPopover } from "./AddressPopover";
 
 // Move to utils or keep here if specific
 function formatISODate(isoString: string): string {
@@ -68,10 +69,7 @@ export default function HotelTableRow({ hotel, onView, onDelete, statusColorStyl
         </Badge>
       </TableCell>
       <TableCell>
-        <div className="flex items-center space-x-1">
-          <MapPin className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm">{hotel.address}</span>
-        </div>
+        <AddressPopover address={hotel.address} />
       </TableCell>
       <TableCell>
         <Badge
