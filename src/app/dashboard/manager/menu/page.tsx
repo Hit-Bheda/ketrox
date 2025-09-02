@@ -106,7 +106,6 @@ export default function Menu() {
       });
       if (!response.ok) throw new Error('Failed to fetch menu items');
       const data = await response.json();
-      console.log("Fetched menu items:", data.menu);
       const mappedMenu: MenuItem[] = (data.menu || []).map((item: ApiMenuItem) => ({
         id: String(item.id),
         name: item.item_name || item.name || "",
@@ -122,7 +121,6 @@ export default function Menu() {
         available: item.isAvailable ?? true,
       }));
       setMenuItems(mappedMenu);
-      console.log("menuuu itemmmmmmms:", mappedMenu);
 
     } catch (error) {
       console.error("Error fetching menu items:", error);

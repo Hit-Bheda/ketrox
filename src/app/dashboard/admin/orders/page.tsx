@@ -13,7 +13,8 @@ import {
   DollarSign,
   User,
   MapPin,
-  Calendar
+  Calendar,
+  Trash2
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +56,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { toast } from "sonner";
 
 type Order = {
   id: string;
@@ -75,6 +77,7 @@ type Order = {
 };
 
 export default function Orders() {
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [timeFilter, setTimeFilter] = useState("all");
@@ -82,10 +85,7 @@ export default function Orders() {
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
 
-
   const now = new Date();
-
-
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch =
@@ -142,8 +142,29 @@ export default function Orders() {
     }
   };
 
-  const updateOrderStatus = (orderId: string, newStatus: string) => {
-    // console.log(`Updating order ${orderId} to ${newStatus}`);
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const res = await fetch("/api/orders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderId, status: newStatus }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "Order updated successfully");
+        setOrders(prev =>
+          prev.map(order =>
+            order.id === orderId ? { ...order, status: newStatus } : order
+          )
+        );
+      } else {
+        toast.error(data.error || "Failed to update status");
+        console.error(data.error || "Failed to update status");
+      }
+    } catch (error) {
+      toast.error("Something went wrong while updating order status");
+      console.error("Error updating status:", error);
+    }
   };
 
   const viewOrderDetails = (order: Order) => {
@@ -162,10 +183,9 @@ export default function Orders() {
 
   useEffect(() => {
     const fetchOrders = async () => {
-
       try {
         const res = await fetch(
-          "/api/manager/order",
+          "/api/orders",
           {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -181,6 +201,29 @@ export default function Orders() {
     };
     fetchOrders();
   }, []);
+
+
+
+  const deleteOrder = async (orderId: string) => {
+    try {
+      const res = await fetch("/api/orders", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderId }),
+      });
+      if (res.ok) {
+        const data = await res.json(); 
+        setOrders(prev => prev.filter(o => o.id !== orderId));
+        toast.success(data.message );
+      } else {
+        const error = await res.json();
+        toast.error(error.error || "Failed to delete order");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
+  };
+
   return (
     <>
       <div className="flex-1 space-y-6 p-6 animate-fadeIn">
@@ -366,7 +409,7 @@ export default function Orders() {
                           onValueChange={(value) => updateOrderStatus(order.id, value)}
                         >
                           <SelectTrigger
-                            className={`w-28 px-2 py-0 justify-center ${getStatusBadgeColor(order.status)} text-white rounded-full text-xs`}
+                            className={`w-28 px-2 py-0 justify-center ${getStatusBadgeColor(order.status)} text-white rounded-full text-xs  cursor-pointer`}
                             style={{ minHeight: "1.5rem" }}
                           >
                             <div className="flex items-center space-x-1">
@@ -426,6 +469,10 @@ export default function Orders() {
                             <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'cancelled')}>
                               <CheckCircle className="w-4 h-4 mr-2" />
                               Cancelled
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => deleteOrder(order.id)} className="text-destructive">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Order
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

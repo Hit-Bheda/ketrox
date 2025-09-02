@@ -1,4 +1,4 @@
-import { Item } from "@radix-ui/react-select";
+
 import {
   pgTable,
   text,
@@ -16,7 +16,7 @@ export const tenants = pgTable('tenants', {
   owner_name: varchar('owner_name', { length: 255 }).notNull(),
   owner_phone: varchar('phone', { length: 256 }).notNull(),
   address: text('address'),
-  plan: text('plan', {               // keeping your column name as-is
+  plan: text('plan', {            
     enum: ["free", "standard"]
   }).notNull().default("free"),
   status: text('status', { enum: ["active", "trial", "suspended", "expired"] }).notNull().default("active"),
@@ -136,21 +136,42 @@ export const order = pgTable("order", {
   customerName: text("customer_name").notNull(),
   items: text("items").array().notNull(),
   quantity: text("quantity").array().notNull(),
+  prices: text("prices").array().notNull(),
   status: text("status", { enum: ["pending", "preparing", "delivered", "cancelled"] })
     .notNull()
     .default("pending"),
+  paymentStatus: text("payment_status", { enum: ["unpaid", "paid", "refunded"] })
+    .notNull()
+    .default("unpaid"),
+  subtotal: text("subtotal").notNull(),
+  tax: text("tax").notNull().default("0"),
   totalPrice: text("total_price").notNull(),
   createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
   updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });
 
-
-export const passwordResetToken = pgTable("password_reset_token", {
+export const invoice = pgTable("invoice", {
   id: text("id").primaryKey(),
-  token: text("token").notNull().unique(),
-  userId: text("user_id")
+  invoiceNumber: text("invoice_number").notNull().unique(),
+  orderId: text("order_id").references(() => order.id),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  adminId: text("admin_id").references(() => user.id),
+  customerName: text("customer_name").notNull(),
+  tableNumber: text("table_number").notNull(),
+  items: text("items").array().notNull(),
+  quantities: text("quantities").array().notNull(),
+  prices: text("prices").array().notNull(),
+  subtotal: text("subtotal").notNull(),
+  totalAmount: text("total_amount").notNull(),
+  paymentMethod: text("payment_method", { enum: ["cash", "card", "upi", "other"] })
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  expiresAt: timestamp("expires_at").notNull(),
+    .default("cash"),
+  paymentStatus: text("payment_status", { enum: ["pending", "paid", "failed", "refunded"] })
+    .notNull()
+    .default("pending"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+  updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });
+
+

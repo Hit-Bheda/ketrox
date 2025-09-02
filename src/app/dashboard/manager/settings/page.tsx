@@ -7,6 +7,7 @@ import {
   EyeOff,
   Upload,
   Trash2,
+  Shield,
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,15 +36,6 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-// User profile data
-const userProfile = {
-  name: "John Mitchell",
-  email: "john.mitchell@restaurant.com",
-  role: "Restaurant Manager",
-  phone: "+1 (555) 123-4567",
-  avatar: "/api/placeholder/100/100",
-  lastLogin: "2024-01-15 14:30:00"
-};
 
 
 export default function Settings() {
@@ -55,19 +47,105 @@ export default function Settings() {
   const [isUploading, setIsUploading] = useState(false);
 
   const [profileForm, setProfileForm] = useState({
-    name: userProfile.name,
-    email: userProfile.email,
-    phone: userProfile.phone,
+    name: "",
+    email: "",
+    phone: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: ""
   });
 
+  const handleChangePassword = async () => {
+    try {
+      if (!profileForm.currentPassword || !profileForm.newPassword || !profileForm.confirmPassword) {
+        toast.error("All password fields are required");
+        return;
+      }
+
+      if (profileForm.newPassword !== profileForm.confirmPassword) {
+        toast.error("New passwords do not match");
+        return;
+      }
+
+      if (profileForm.newPassword.length < 6) {
+        toast.error("New password must be at least 6 characters long");
+        return;
+      }
+
+      setIsUploading(true);
+
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: profileForm.currentPassword,
+          newPassword: profileForm.newPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to change password");
+        setIsUploading(false);
+        return;
+      }
+
+      // Clear password fields
+      setProfileForm(prev => ({
+        ...prev,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      }));
+
+      setIsUploading(false);
+      toast.success("Password changed successfully");
+    } catch (error) {
+      console.error("Password change error:", error);
+      toast.error("Failed to change password");
+      setIsUploading(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     try {
+      if (!user) {
+        toast.error("User not found");
+        return;
+      }
+
+      setIsUploading(true);
+
+      // Update profile information using staff API
+      const res = await fetch("/api/admin/hotel", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user.id,
+          name: profileForm.name,
+          email: profileForm.email,
+          phone: profileForm.phone,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update profile");
+        setIsUploading(false);
+        return;
+      }
+
+      // Update local user state
+      setUser(prev => prev ? { 
+        ...prev, 
+        name: profileForm.name, 
+        email: profileForm.email,
+        phone: profileForm.phone 
+      } : prev);
+
+      // Handle photo upload if selected
       let imageUrl: string | null = null;
       if (selectedFile) {
-        setIsUploading(true);
         const fileExt = selectedFile.name.split(".").pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `uploads/${fileName}`;
@@ -90,41 +168,32 @@ export default function Settings() {
           return;
         }
         imageUrl = data.signedUrl as string;
-        // Get session user id
-        const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
-        const sessJson = await sess.json();
-        const uid = sessJson?.user?.id;
-        if (!uid) {
-          toast.error('User not found');
-          setIsUploading(false);
-          return;
-        }
-        const res = await fetch('/api/user/photo', {
+        
+        const photoRes = await fetch('/api/user/photo', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: uid, imageUrl })
+          body: JSON.stringify({ userId: user.id, imageUrl })
         });
-        const j = await res.json();
-        if (!res.ok) {
-          toast.error(j.error || 'Failed to save photo');
+        const photoData = await photoRes.json();
+        if (!photoRes.ok) {
+          toast.error(photoData.error || 'Failed to save photo');
           setIsUploading(false);
           return;
         }
+        
         // Clear local state after successful save
         setSelectedFile(null);
-        setIsUploading(false);
         // Update user state to reflect the new image
-        if (imageUrl) {
-          setUser(prev => prev ? { ...prev, image: imageUrl as string } : null);
-          // Dispatch custom event to update sidebar photo
-          window.dispatchEvent(new CustomEvent('profile-photo-updated'));
-        }
-      }
-      toast.success('Profile updated successfully');
-      if (imageUrl) {
+        setUser(prev => prev ? { ...prev, image: imageUrl as string } : null);
+        // Dispatch custom event to update sidebar photo
+        window.dispatchEvent(new CustomEvent('profile-photo-updated'));
         setPreviewUrl(imageUrl);
       }
-    } catch {
+
+      setIsUploading(false);
+      toast.success('Profile updated successfully');
+    } catch (error) {
+      console.error("Profile update error:", error);
       toast.error('Failed to update profile');
       setIsUploading(false);
     }
@@ -157,6 +226,19 @@ export default function Settings() {
     };
     fetchUserData();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+    }
+  }, [user]);
 
   // Show existing saved image on UI when page loads, keep preview when selecting a new file
   useEffect(() => {
@@ -209,7 +291,7 @@ export default function Settings() {
                       <img src={previewUrl} alt="Profile" className="h-full w-full object-cover" />
                     ) : (
                       <Avatar className="w-20 h-20">
-                        <AvatarImage src={user?.image || userProfile.avatar} alt={user?.name} />
+                        <AvatarImage src={user?.image || "/images/user.png"} alt={user?.name} />
                         <AvatarFallback>{user?.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                       </Avatar>
                     )}
@@ -288,7 +370,7 @@ export default function Settings() {
                     <Label htmlFor="name" className="mb-2">Full Name</Label>
                     <Input
                       id="name"
-                      value={user?.name}
+                      value={profileForm.name}
                       onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
                     />
                   </div>
@@ -297,7 +379,7 @@ export default function Settings() {
                     <Input
                       id="email"
                       type="email"
-                      value={user?.email}
+                      value={profileForm.email}
                       onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
                     />
                   </div>
@@ -305,7 +387,7 @@ export default function Settings() {
                     <Label htmlFor="phone" className="mb-2">Phone</Label>
                     <Input
                       id="phone"
-                      value={user?.phone}
+                      value={profileForm.phone}
                       onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
                     />
                   </div>
@@ -363,17 +445,30 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-between">
                   <Button onClick={handleSaveProfile} disabled={isUploading}>
                     {isUploading ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Saving changes...
+                        Saving Profile...
                       </>
                     ) : (
                       <>
                         <Save className="w-4 h-4 mr-2" />
-                        Save Changes
+                        Save Profile
+                      </>
+                    )}
+                  </Button>
+                  <Button onClick={handleChangePassword} disabled={isUploading}>
+                    {isUploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Changing Password...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="w-4 h-4 mr-2" />
+                        Change Password
                       </>
                     )}
                   </Button>

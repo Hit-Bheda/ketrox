@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       tenantId: tenantId,
       isAvailable: isAvailable ?? true
     }).returning();
-    console.log("Inserted menu item:", inserted[0]);
+    // console.log("Inserted menu item:", inserted[0]);
     return Response.json({ message: "Menu item created successfully", menu: inserted[0] });
   } catch (err) {
     console.error("Error creating menu item:", err);

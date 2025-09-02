@@ -132,7 +132,7 @@ export default function Dashboard() {
     status: string;
     plan?: string;
     tenant_id?: string;
-    [key: string]: unknown;
+    [key: string]: unknown; 
   };
   const [selectedPeriod, setSelectedPeriod] = useState("monthly");
   const [selectedPlan, setSelectedPlan] = useState("All");
@@ -444,10 +444,10 @@ export default function Dashboard() {
                   <TableBody>
                     {filteredHotels.length > 0 ? (
                       filteredHotels.slice(0, 5).map((hotel) => (
-                        <TableRow key={hotel.id}>
-                          <TableCell>
-                            <div className="flex items-center space-x-3">
-                              <Avatar className="h-8 w-8 rounded-lg">
+                      <TableRow key={hotel.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-8 w-8 rounded-lg">
                                 <AvatarFallback className="text-xs font-medium">
                                   {(hotel.name || "")
                                     .split(" ")
@@ -456,56 +456,56 @@ export default function Dashboard() {
                                     .slice(0, 2)
                                     .toUpperCase()}
                                 </AvatarFallback>
-                              </Avatar>
-                              <div>
+                            </Avatar>
+                            <div>
                                 <div className="font-medium text-[var(--color-foreground)]">
                                   {hotel.name}
                                 </div>
                                 <div className="text-sm text-[var(--color-muted-foreground)]">
                                   {(hotel as unknown as { owner_name?: string }).owner_name}
                                 </div>
-                              </div>
                             </div>
-                          </TableCell>
-                          <TableCell>
+                          </div>
+                        </TableCell>
+                        <TableCell>
                             <Badge
                               variant={getStatusBadgeVariant(hotel.status as string)}
                               className="rounded-lg"
                             >
                               {hotel.status as string}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                             <Badge variant="outline" className="rounded-lg">
                               {(hotel as unknown as { plan?: string }).plan}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium text-[var(--color-foreground)]">
+                        </TableCell>
+                        <TableCell className="font-medium text-[var(--color-foreground)]">
                             -
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="rounded-lg">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="rounded-lg">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditHotel(hotel)}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-destructive"
                                   onClick={() => handleDeleteHotel(hotel.id as string)}
                                 >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
                       ))
                     ) : (
                       <TableRow>

@@ -35,6 +35,7 @@ import {
   Pie,
   Cell
 } from "recharts";
+import { HotelType } from "@/types";
 
 type ApiOrder = {
   id: string;
@@ -84,7 +85,7 @@ export default function Dashboard() {
   const [staff, setStaff] = useState<ApiStaff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -317,7 +318,7 @@ export default function Dashboard() {
                 <YAxis
                   stroke="rgb(117, 117, 117)"
                   fontSize={12}
-                  tickFormatter={(value) => value.toFixed(2)} 
+                  tickFormatter={(value) => value.toFixed(2)}
                 />
 
                 <Tooltip
@@ -329,9 +330,9 @@ export default function Dashboard() {
                   }}
                   formatter={(value: number, name: string) => {
                     if (name === "Revenue ($)") {
-                      return [`$${value.toFixed(2)}`, name]; 
+                      return [`$${value.toFixed(2)}`, name];
                     }
-                    return [value, name]; 
+                    return [value, name];
                   }}
                 />
                 <Area
@@ -435,8 +436,11 @@ export default function Dashboard() {
                       <span className="text-xs text-muted-foreground">{order.time}</span>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getStatusColor(order.status)}>
+                  <div className="flex items-center cursor-pointer space-x-2">
+                    <Badge
+                      className={`${getStatusColor(order.status)} cursor-pointer`}
+                      onClick={() => console.log("Clicked Badge")}
+                    >
                       {order.status}
                     </Badge>
                     <Select

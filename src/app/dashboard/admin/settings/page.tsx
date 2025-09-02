@@ -48,29 +48,7 @@ import { HotelType } from "@/types";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
-// User profile data
-const userProfile = {
-  name: "John Mitchell",
-  email: "john.mitchell@restaurant.com",
-  role: "Restaurant Manager",
-  phone: "+1 (555) 123-4567",
-  avatar: "/api/placeholder/100/100",
-  lastLogin: "2024-01-15 14:30:00"
-};
 
-// Restaurant settings data
-const restaurantSettings = {
-  name: "The Gourmet Haven",
-  description: "Fine dining experience with contemporary cuisine",
-  address: "123 Restaurant Street, City, State 12345",
-  phone: "+1 (555) 987-6543",
-  email: "info@gourmethaven.com",
-  website: "www.gourmethaven.com",
-  cuisine: "Contemporary",
-  priceRange: "$$$",
-  capacity: 120,
-  logo: "/api/placeholder/150/150"
-};
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -80,6 +58,10 @@ export default function Settings() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
   const [notifications, setNotifications] = useState({
     newOrders: true,
     customerMessages: true,
@@ -92,26 +74,20 @@ export default function Settings() {
   });
 
   const [profileForm, setProfileForm] = useState({
-    name: userProfile.name,
-    email: userProfile.email,
-    phone: userProfile.phone,
+    name: "",
+    email: "",
+    phone: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: ""
   });
 
   const [restaurantForm, setRestaurantForm] = useState({
-    name: restaurantSettings.name,
-    description: restaurantSettings.description,
-    address: restaurantSettings.address,
-    phone: restaurantSettings.phone,
-    email: restaurantSettings.email,
-    website: restaurantSettings.website,
-    cuisine: restaurantSettings.cuisine,
-    priceRange: restaurantSettings.priceRange,
-    capacity: restaurantSettings.capacity
+    name: "",
+    owner_name: "",
+    address: "",
+    owner_phone: "",
   });
-
   const [systemSettings, setSystemSettings] = useState({
     timezone: "Asia/Kolkata",
     dateFormat: "MM/DD/YYYY",
@@ -123,12 +99,6 @@ export default function Settings() {
     maintenanceMode: false
   });
 
-
-
-  const handleSaveRestaurant = () => {
-    console.log("Saving restaurant settings:", restaurantForm);
-    // In a real app, this would save to backend
-  };
 
   const handleSaveNotifications = () => {
     console.log("Saving notification settings:", notifications);
@@ -184,7 +154,7 @@ export default function Settings() {
         throw new Error("Failed to fetch hotels");
       }
       const data = await res.json();
-      console.log("Fetched hotels dataaaaaaaaaaaa:", data);
+
       return Array.isArray(data.hotels) ? data.hotels : [];
     } catch (error) {
       console.error("Error fetching hotels:", error);
@@ -199,7 +169,6 @@ export default function Settings() {
       }
     });
   }, []);
-
 
 
   useEffect(() => {
@@ -221,8 +190,89 @@ export default function Settings() {
     };
   }, [selectedFile]);
 
+  const handleChangePassword = async () => {
+    try {
+      if (!profileForm.currentPassword || !profileForm.newPassword || !profileForm.confirmPassword) {
+        toast.error("All password fields are required");
+        return;
+      }
+
+      if (profileForm.newPassword !== profileForm.confirmPassword) {
+        toast.error("New passwords do not match");
+        return;
+      }
+
+      if (profileForm.newPassword.length < 6) {
+        toast.error("New password must be at least 6 characters long");
+        return;
+      }
+
+      setIsUploading(true);
+
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: profileForm.currentPassword,
+          newPassword: profileForm.newPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to change password");
+        setIsUploading(false);
+        return;
+      }
+
+      // Clear password fields
+      setProfileForm(prev => ({
+        ...prev,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      }));
+
+      setIsUploading(false);
+      toast.success("Password changed successfully");
+    } catch (error) {
+      console.error("Password change error:", error);
+      toast.error("Failed to change password");
+      setIsUploading(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     try {
+      // Update basic profile (except role)
+      if (!user) {
+        toast.error("User not found");
+        return;
+      }
+
+      const res = await fetch("/api/super-admin/hotels", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: hotelsData?.id,
+          name: hotelsData?.name,
+          logoUrl: hotelsData?.logo_url,
+          ownerName: profileForm.name,
+          ownerPhone: profileForm.phone,
+          address: hotelsData?.address,
+          email: profileForm.email,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update profile");
+        return;
+      }
+
+      setUser(prev => prev ? { ...prev, name: profileForm.name, email: profileForm.email } : prev);
+      toast.success("Profile updated successfully");
+
+      // Photo upload flow (if any selected)
       let imageUrl: string | null = null;
       if (selectedFile) {
         setIsUploading(true);
@@ -248,7 +298,6 @@ export default function Settings() {
           return;
         }
         imageUrl = data.signedUrl as string;
-        // Get session user id
         const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
         const sessJson = await sess.json();
         const uid = sessJson?.user?.id;
@@ -257,34 +306,158 @@ export default function Settings() {
           setIsUploading(false);
           return;
         }
-        const res = await fetch('/api/user/photo', {
+        const res2 = await fetch('/api/user/photo', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: uid, imageUrl })
         });
-        const j = await res.json();
-        if (!res.ok) {
-          toast.error(j.error || 'Failed to save photo');
+        const j2 = await res2.json();
+        if (!res2.ok) {
+          toast.error(j2.error || 'Failed to save photo');
           setIsUploading(false);
           return;
         }
-        // Clear local state after successful save
         setSelectedFile(null);
         setIsUploading(false);
-        // Update user state to reflect the new image
         if (imageUrl) {
           setUser(prev => prev ? { ...prev, image: imageUrl as string } : null);
-          // Dispatch custom event to update sidebar photo
           window.dispatchEvent(new CustomEvent('profile-photo-updated'));
+          setPreviewUrl(imageUrl);
         }
-      }
-      toast.success('Profile updated successfully');
-      if (imageUrl) {
-        setPreviewUrl(imageUrl);
       }
     } catch {
       toast.error('Failed to update profile');
       setIsUploading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (hotelsData) {
+      setRestaurantForm({
+        name: hotelsData.name || "",
+        owner_name: hotelsData.owner_name || "",
+        address: hotelsData.address || "",
+        owner_phone: hotelsData.owner_phone || "",
+      });
+    }
+  }, [hotelsData]);
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name || "",
+        email: user.email || "",
+        phone: hotelsData?.owner_phone || "",
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+    }
+  }, [user, hotelsData]);
+
+  const handleLogoUpload = async () => {
+    if (!selectedLogoFile || !hotelsData?.id) {
+      toast.error("Please select a logo file");
+      return;
+    }
+
+    try {
+      setIsUploadingLogo(true);
+
+      // Upload to Supabase
+      const fileExt = selectedLogoFile.name.split(".").pop();
+      const fileName = `logo_${hotelsData.id}_${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+
+      const supabaseClient = supabase();
+      const { error } = await supabaseClient.storage
+        .from("mybucket")
+        .upload(filePath, selectedLogoFile, { contentType: selectedLogoFile.type });
+
+      if (error) {
+        toast.error(error.message || 'Logo upload failed');
+        setIsUploadingLogo(false);
+        return;
+      }
+
+      const { data, error: signedUrlError } = await supabaseClient.storage
+        .from("mybucket")
+        .createSignedUrl(filePath, 1577880000);
+
+      if (signedUrlError || !data) {
+        toast.error(signedUrlError?.message || 'Failed to create signed URL');
+        setIsUploadingLogo(false);
+        return;
+      }
+
+      const logoUrl = data.signedUrl as string;
+
+      // Update hotel with new logo URL
+      const res = await fetch("/api/super-admin/hotels", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: hotelsData.id,
+          name: hotelsData.name,
+          logoUrl: logoUrl,
+          ownerName: hotelsData.owner_name,
+          ownerPhone: hotelsData.owner_phone,
+          address: hotelsData.address,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        toast.error(result.error || "Failed to update logo");
+        setIsUploadingLogo(false);
+        return;
+      }
+
+      // Update local state
+      setHotelsData(prev => prev ? { ...prev, logo_url: logoUrl } : prev);
+      setSelectedLogoFile(null);
+      setLogoPreviewUrl(null);
+      setIsUploadingLogo(false);
+
+      // Dispatch event to update layout logo
+      window.dispatchEvent(new CustomEvent('tenant-logo-updated', { detail: { logoUrl } }));
+
+      toast.success("Logo updated successfully");
+    } catch (error) {
+      console.error("Logo upload error:", error);
+      toast.error("Failed to upload logo");
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleSaveRestaurant = async () => {
+    try {
+      if (!hotelsData?.id) {
+        toast.error("Hotel id not found");
+        return;
+      }
+      const res = await fetch("/api/super-admin/hotels", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: hotelsData.id,
+          name: restaurantForm.name,
+          logoUrl: hotelsData.logo_url,
+          ownerName: restaurantForm.owner_name,
+          ownerPhone: restaurantForm.owner_phone,
+          address: restaurantForm.address,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update restaurant");
+        return;
+      }
+
+      toast.success("Restaurant updated successfully");
+    } catch {
+      toast.error("Failed to update restaurant");
     }
   };
 
@@ -326,7 +499,7 @@ export default function Settings() {
                       <img src={previewUrl} alt="Profile" className="h-full w-full object-cover" />
                     ) : (
                       <Avatar className="w-20 h-20">
-                        <AvatarImage src={user?.image || userProfile.avatar} alt={user?.name} />
+                        <AvatarImage src={user?.image || "/images/user.png"} alt={user?.name} />
                         <AvatarFallback>{user?.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                       </Avatar>
                     )}
@@ -405,7 +578,7 @@ export default function Settings() {
                     <Label htmlFor="name" className="mb-2">Full Name</Label>
                     <Input
                       id="name"
-                      value={user?.name}
+                      value={profileForm.name}
                       onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
                     />
                   </div>
@@ -414,7 +587,7 @@ export default function Settings() {
                     <Input
                       id="email"
                       type="email"
-                      value={user?.email}
+                      value={profileForm.email}
                       onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
                     />
                   </div>
@@ -422,7 +595,7 @@ export default function Settings() {
                     <Label htmlFor="phone" className="mb-2">Phone</Label>
                     <Input
                       id="phone"
-                      value={hotelsData?.owner_phone}
+                      value={profileForm.phone}
                       onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
                     />
                   </div>
@@ -480,17 +653,30 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-between">
                   <Button onClick={handleSaveProfile} disabled={isUploading}>
                     {isUploading ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Saving changes...
+                        Saving Profile...
                       </>
                     ) : (
                       <>
                         <Save className="w-4 h-4 mr-2" />
-                        Save Changes
+                        Save Profile
+                      </>
+                    )}
+                  </Button>
+                  <Button onClick={handleChangePassword} disabled={isUploading}>
+                    {isUploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Changing Password...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="w-4 h-4 mr-2" />
+                        Change Password
                       </>
                     )}
                   </Button>
@@ -512,25 +698,62 @@ export default function Settings() {
               <CardContent className="space-y-6">
                 {/* Logo Section */}
                 <div className="flex items-center space-x-4">
-                  {hotelsData?.logo_url ? (
-                    <Image
-                      src={hotelsData.logo_url}
-                      width={100}
-                      height={100}
-                      
-                      alt={hotelsData?.name}
-                      className="w-20 h-20 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 border-2 border-dashed border-muted rounded-lg flex items-center justify-center">
-                      <Building2 className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    <Button variant="outline" size="sm">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Logo
-                    </Button>
+                  <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted overflow-hidden">
+                    {logoPreviewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={logoPreviewUrl} alt="Logo Preview" className="h-full w-full object-cover" />
+                    ) : hotelsData?.logo_url ? (
+                      <Image
+                        src={hotelsData.logo_url}
+                        width={100}
+                        height={100}
+                        alt={hotelsData?.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full border-2 border-dashed border-muted rounded-lg flex items-center justify-center">
+                        <Building2 className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2 flex flex-col gap-2">
+                    <label className="inline-flex">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setSelectedLogoFile(file);
+                          const url = URL.createObjectURL(file);
+                          setLogoPreviewUrl(url);
+                        }}
+                      />
+                      <Button asChild variant="outline" size="sm">
+                        <span><Upload className="w-4 h-4 mr-2" />Upload Logo</span>
+                      </Button>
+                    </label>
+                    {selectedLogoFile && (
+                      <Button
+                        onClick={handleLogoUpload}
+                        disabled={isUploadingLogo}
+                        size="sm"
+                        className="w-full"
+                      >
+                        {isUploadingLogo ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            Save Logo
+                          </>
+                        )}
+                      </Button>
+                    )}
                     <p className="text-xs text-muted-foreground">Recommended: 300x300px, PNG or JPG</p>
                   </div>
                 </div>
@@ -539,54 +762,82 @@ export default function Settings() {
 
                 {/* Restaurant Form */}
                 <div className="grid gap-6 md:grid-cols-2">
+
                   <div>
                     <Label htmlFor="restaurant-name" className="mb-2">Restaurant Name</Label>
                     <Input
-                      id="restaurant-name"
-                      value={hotelsData?.name}
-                      onChange={(e) => setRestaurantForm({ ...restaurantForm, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="Owner-name" className="mb-2">Owner Name</Label>
-                    <Input
-                      id="Owner-name"
-                      value={hotelsData?.owner_name}
-                      onChange={(e) => setRestaurantForm({ ...restaurantForm, name: e.target.value })}
+                      type="text"
+                      value={restaurantForm.name}
+
+                      onChange={(e) =>
+                        setRestaurantForm({ ...restaurantForm, name: e.target.value })
+                      }
                     />
                   </div>
 
+                  {/* Owner Name (editable) */}
+                  <div>
+                    <Label htmlFor="owner-name" className="mb-2">Owner Name</Label>
+                    <Input
+                      id="owner-name"
+                      value={restaurantForm.owner_name || ""}
+                      onChange={(e) =>
+                        setRestaurantForm({ ...restaurantForm, owner_name: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  {/* Address (editable) */}
                   <div className="md:col-span-2">
                     <Label htmlFor="address" className="mb-2">Address</Label>
                     <Input
                       id="address"
-                      value={hotelsData?.address}
-                      onChange={(e) => setRestaurantForm({ ...restaurantForm, address: e.target.value })}
+                      value={restaurantForm.address}
+                      onChange={(e) =>
+                        setRestaurantForm({ ...restaurantForm, address: e.target.value })
+                      }
                     />
                   </div>
+
+                  {/* Phone (editable) */}
                   <div>
                     <Label htmlFor="restaurant-phone" className="mb-2">Phone</Label>
                     <Input
-                      id="restaurant-phone"
-                      value={hotelsData?.owner_phone}
-                      onChange={(e) => setRestaurantForm({ ...restaurantForm, phone: e.target.value })}
+                      type="text"
+                      value={restaurantForm.owner_phone}
+                      onChange={(e) =>
+                        setRestaurantForm({ ...restaurantForm, owner_phone: e.target.value })
+                      }
                     />
                   </div>
+
+                  {/* Email (read-only) */}
                   <div>
                     <Label htmlFor="restaurant-email" className="mb-2">Email</Label>
                     <Input
                       id="restaurant-email"
                       type="email"
-                      value={hotelsData?.email}
-                      onChange={(e) => setRestaurantForm({ ...restaurantForm, email: e.target.value })}
+                      value={hotelsData?.email || ""}
+                      readOnly
                     />
                   </div>
                 </div>
 
+
                 <div className="flex justify-end">
-                  <Button onClick={handleSaveRestaurant}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
+
+                  <Button onClick={handleSaveRestaurant} disabled={isUploading}>
+                    {isUploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Saving changes...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>

@@ -1,4 +1,3 @@
-import { id } from "date-fns/locale";
 import { z } from "zod";
 
 export const signinSchema = z.object({
@@ -93,13 +92,46 @@ export const menuSchema = z.object({
 });
 
 export const orderSchema = z.object({
-     order_number: z.string().optional(),
+    order_number: z.string().optional(),
     table_id: z.uuid("Invalid table ID").optional(),
     tenant_id: z.uuid("Invalid tenant ID").optional(),
     manager_id: z.string().min(1, "Invalid manager ID").optional(),
     customer_name: z.string().min(1, "Customer name is required"),
     items: z.array(z.string()).min(1, "At least one item is required"),
     quantity: z.array(z.string()).min(1, "At least one quantity is required"),
+    prices: z.array(z.string()).min(1, "At least one price is required"),
     status: z.enum(["pending", "preparing", "delivered", "cancelled"]).default("pending"),
+    payment_status: z.enum(["unpaid", "paid", "refunded"]).default("unpaid"),
+    subtotal: z.string().min(1, "Subtotal is required"),
+    tax: z.string().default("0"),
     total_price: z.string().min(1, "Total price is required"),
+});
+
+export const invoiceSchema = z.object({
+    invoice_number: z.string().optional(),
+    order_id: z.uuid("Invalid order ID").optional(),
+    tenant_id: z.uuid("Invalid tenant ID").optional(),
+    admin_id: z.string().min(1, "Invalid admin ID").optional(),
+    customer_name: z.string().min(1, "Customer name is required"),
+    table_number: z.string().min(1, "Table number is required"),
+    items: z.array(z.string()).min(1, "At least one item is required"),
+    quantities: z.array(z.string()).min(1, "At least one quantity is required"),
+    prices: z.array(z.string()).min(1, "At least one price is required"),
+    subtotal: z.string().min(1, "Subtotal is required"),
+    tax: z.string().default("0"),
+    total_amount: z.string().min(1, "Total amount is required"),
+    payment_method: z.enum(["cash", "card", "upi", "other"]).default("cash"),
+    payment_status: z.enum(["pending", "paid", "failed", "refunded"]).default("pending"),
+    notes: z.string().optional(),
+});
+
+export const updateTableStatusSchema = z.object({
+    table_id: z.uuid("Invalid table ID"),
+    available: z.boolean(),
+});
+
+export const updateOrderStatusSchema = z.object({
+    order_id: z.uuid("Invalid order ID"),
+    status: z.enum(["pending", "preparing", "delivered", "cancelled"]),
+    payment_status: z.enum(["unpaid", "paid", "refunded"]).optional(),
 });

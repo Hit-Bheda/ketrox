@@ -170,24 +170,26 @@ export default function Orders() {
 
 const updateOrderStatus = async (orderId: string, newStatus: string) => {
   try {
-    const res = await fetch("/api/manager/order", {
+    const res = await fetch("/api/orders", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: orderId, status: newStatus }),
+      body: JSON.stringify({ order_id: orderId, status: newStatus }),
     });
     const data = await res.json();
     if (res.ok) {
-    toast.success("Order status updated!");
+  toast.success(data.message || "Order updated successfully");
       setOrders(prev =>
         prev.map(order =>
           order.id === orderId ? { ...order, status: newStatus } : order
         )
       );
     } else {
+  toast.error(data.error || "Failed to update status");
       console.error(data.error || "Failed to update status");
-      toast.error(data.error || "Failed to update status");
+      
     }
   } catch (error) {
+    toast.error("Something went wrong while updating order status");
     console.error("Error updating status:", error);
   }
 };
@@ -213,7 +215,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         const managerId = user?.id;
               // console.log("Fetching orders for managerId:", managerId)
         const res = await fetch(
-          `/api/manager/order?managerId=${managerId}`,
+          `/api/orders?managerId=${managerId}`,
           {
             method: "GET",  
             headers: { "Content-Type": "application/json" },
@@ -365,7 +367,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredOrders.map((order, idx) => (
+                  {filteredOrders.map((order) => (
                     <TableRow key={order.id} className="hover:bg-accent transition-colors">
                       <TableCell>
                         <div>
@@ -417,7 +419,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
                           onValueChange={(value) => updateOrderStatus(order.id, value)}
                         >
                           <SelectTrigger
-                            className={`w-28 px-2 py-0 justify-center ${getStatusBadgeColor(order.status)} text-white rounded-full text-xs`}
+                            className={`w-28 px-2 py-0 justify-center ${getStatusBadgeColor(order.status)} text-white rounded-full text-xs cursor-pointer`}
                             style={{ minHeight: "1.5rem" }}
                           >
                             <div className="flex items-center space-x-1">
@@ -433,8 +435,6 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
                           </SelectContent>
                         </Select>
                       </TableCell>
-
-
                       <TableCell>
                         <div className="flex items-center space-x-1 text-sm">
                           <Calendar className="w-3 h-3 text-muted-foreground" />

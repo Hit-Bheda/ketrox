@@ -39,6 +39,7 @@ import {
 import { toast } from "sonner";
 import BookOrderModal from "@/components/order/add-order-modal";
 import { betterFetch } from "@better-fetch/fetch";
+import { NotesPopover } from "@/components/table/NotesPopover";
 
 
 const locations = ["Main Dining", "Patio", "Private Room", "Bar Area", "Outdoor", "VIP Section"];
@@ -125,7 +126,7 @@ export default function Tables() {
       matchesStatus = table.available && !table.maintenance;
     } else if (statusFilter === "maintenance") {
       matchesStatus = table.maintenance;
-    } else if (statusFilter === "unavailable") {
+    } else if (statusFilter === "occupied") {
       matchesStatus = !table.available && !table.maintenance;
     } // add more status if needed
 
@@ -292,7 +293,7 @@ export default function Tables() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="available">Available</SelectItem>
                 <SelectItem value="occupied">Occupied</SelectItem>
-                <SelectItem value="reserved">Reserved</SelectItem>
+              
                 <SelectItem value="maintenance">Maintenance</SelectItem>
               </SelectContent>
             </Select>
@@ -338,10 +339,31 @@ export default function Tables() {
                           onClick={async () => {
                             setSelectedTableId(table.id);
                             if (table.status === "occupied") {
-                              // Fetch the active order for this table (status: pending or preparing)
-                              const res = await fetch(`/api/manager/order?tableId=${table.id}&status=pending`);
-                              const data = await res.json();
-                              setEditingOrder(data.orders?.[0] || null);
+                              try {
+                                // Fetch the active order for this table (status: pending or preparing)
+                                const res = await fetch(`/api/orders?tableId=${table.id}`);
+                                const data = await res.json();
+                                console.log("Fetched order data:", data);
+                                
+                                if (res.ok && data.orders && data.orders.length > 0) {
+                                  // Find the most recent active order (pending or preparing)
+                                  const activeOrder = data.orders.find((order: Ordertype) => 
+                                    order.status === "pending" || order.status === "preparing"
+                                  ) || data.orders[0];
+                                  
+                                  setEditingOrder(activeOrder);
+                                  console.log("Setting editing order:", activeOrder);
+                                } else {
+                                  setEditingOrder(null);
+                                  if (!res.ok) {
+                                    toast.error(data.error || "Failed to fetch order data");
+                                  }
+                                }
+                              } catch (error) {
+                                console.error("Error fetching order:", error);
+                                toast.error("Failed to fetch order data");
+                                setEditingOrder(null);
+                              }
                             } else {
                               setEditingOrder(null);
                             }
@@ -429,7 +451,7 @@ export default function Tables() {
                   </div>
 
                   <p className="text-sm font-medium text-muted-foreground">{table.name}</p>
-                  <p className="text-sm font-medium text-muted-foreground">{table.notes}</p>
+                <NotesPopover notes={table.notes || ""} />
                 </CardHeader>
 
                 <CardContent className="space-y-3">

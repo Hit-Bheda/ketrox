@@ -174,8 +174,8 @@ export default function Layout({ children }: LayoutProps) {
             image: session.user.image
           });
         }
-        console.log("sfvfvgreerf",session);
-        
+        console.log("sfvfvgreerf", session);
+
       } catch (error) {
         console.error("Error fetching session:", error);
       }
@@ -208,7 +208,20 @@ export default function Layout({ children }: LayoutProps) {
       }
     };
     fetchTenantLogo();
+    const handleTenantLogoUpdate = (event: CustomEvent) => {
+      const { logoUrl } = event.detail;
+      if (logoUrl) {
+        setTenantLogoUrl(logoUrl);
+      }
+    };
+
+    window.addEventListener('tenant-logo-updated', handleTenantLogoUpdate as EventListener);
+    return () => {
+      window.removeEventListener('tenant-logo-updated', handleTenantLogoUpdate as EventListener);
+    };
   }, []);
+
+
 
   // Notification functions
   const getNotificationIcon = (type: Notification['type']) => {
@@ -268,15 +281,17 @@ export default function Layout({ children }: LayoutProps) {
           {/* Logo */}
           <div className="p-6 border-b border-sidebar-border">
             <div className="flex items-center justify-center h-20">
-              <Image
-                src={tenantLogoUrl || ""}
-                alt="Hotel Logo"
-                width={200}
-                height={64}
-                unoptimized={true}
-                priority={true}
-                className="h-full w-auto object-contain"
-              />
+              {tenantLogoUrl && (
+                <Image
+                  src={tenantLogoUrl}
+                  alt="Hotel Logo"
+                  width={200}
+                  height={64}
+                  unoptimized
+                  priority
+                  className="h-full w-auto object-contain"
+                />
+              )}
             </div>
           </div>
 
@@ -493,9 +508,9 @@ export default function Layout({ children }: LayoutProps) {
               </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="hover:bg-transparent hover:text-inherit">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder.svg" />
+
                       <AvatarFallback className="bg-muted text-muted-foreground">
                         <User className="w-4 h-4" />
                       </AvatarFallback>
@@ -506,7 +521,7 @@ export default function Layout({ children }: LayoutProps) {
                   align="end"
                   className="bg-popover border-border text-popover-foreground"
                 >
-                       <DropdownMenuItem className="hover:bg-accent hover:text-accent-foreground">
+                  <DropdownMenuItem className="hover:bg-accent hover:text-accent-foreground">
                     <Link href="/dashboard/manager/settings">
                       Account Settings
                     </Link>

@@ -437,7 +437,7 @@ export default function Menu() {
                           <div className="absolute top-2 right-2 z-10">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="secondary" size="sm" className="h-8 w-8 p-0 rounded-full bg-white/90 backdrop-blur-sm shadow">
+                                <Button variant="secondary" size="sm" className="h-8 w-8 p-0 rounded-full bg-[#b91c1c]  shadow">
                                   <MoreHorizontal className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>

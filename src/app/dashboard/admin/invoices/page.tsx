@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { 
-  Plus, 
-  Search, 
-  MoreHorizontal, 
-  Edit, 
-  Trash2, 
+import { useState, useRef, useEffect } from "react";
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Edit,
+  Trash2,
   Eye,
   FileText,
   Download,
@@ -19,25 +19,24 @@ import {
   TrendingUp,
   AlertTriangle
 } from "lucide-react";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -52,120 +51,47 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import { HotelType } from "@/types";
+import * as pdfMake from "pdfmake/build/pdfmake";
+import * as pdfFonts from "pdfmake/build/vfs_fonts";
 
-// Realistic invoice data
-const invoicesData = [
-  {
-    id: "INV-2024-001",
-    customerName: "Sarah Johnson",
-    customerEmail: "sarah.johnson@email.com",
-    tableNumber: "T001",
-    date: "2024-01-15",
-    dueDate: "2024-01-30",
-    status: "paid",
-    items: [
-      { name: "Truffle Burrata", quantity: 2, price: 18.00 },
-      { name: "Dry-Aged Ribeye", quantity: 1, price: 65.00 },
-      { name: "Chocolate Soufflé", quantity: 2, price: 16.00 },
-      { name: "Châteauneuf-du-Pape 2018", quantity: 1, price: 85.00 }
-    ],
-    subtotal: 200.00,
-    tax: 18.00,
-    tip: 36.00,
-    total: 254.00,
-    paymentMethod: "Credit Card",
-    paymentStatus: "completed",
-    notes: "Anniversary dinner - complimentary dessert included"
-  },
-  {
-    id: "INV-2024-002",
-    customerName: "Michael Chen",
-    customerEmail: "m.chen@company.com",
-    tableNumber: "T002",
-    date: "2024-01-15",
-    dueDate: "2024-01-30",
-    status: "pending",
-    items: [
-      { name: "Seared Scallops", quantity: 1, price: 24.00 },
-      { name: "Chilean Sea Bass", quantity: 1, price: 42.00 },
-      { name: "Craft Cold Brew", quantity: 2, price: 6.50 }
-    ],
-    subtotal: 79.00,
-    tax: 7.11,
-    tip: 15.80,
-    total: 101.91,
-    paymentMethod: "Cash",
-    paymentStatus: "pending",
-    notes: "Business lunch"
-  },
-  {
-    id: "INV-2024-003",
-    customerName: "Emma Wilson",
-    customerEmail: "emma.wilson@email.com",
-    tableNumber: "T007",
-    date: "2024-01-14",
-    dueDate: "2024-01-29",
-    status: "overdue",
-    items: [
-      { name: "Wagyu Beef Carpaccio", quantity: 1, price: 32.00 },
-      { name: "Lobster Risotto", quantity: 1, price: 48.00 },
-      { name: "Tiramisu", quantity: 1, price: 12.00 },
-      { name: "Dom Pérignon", quantity: 1, price: 280.00 }
-    ],
-    subtotal: 372.00,
-    tax: 33.48,
-    tip: 74.40,
-    total: 479.88,
-    paymentMethod: "Credit Card",
-    paymentStatus: "failed",
-    notes: "Birthday celebration - special wine selection"
-  },
-  {
-    id: "INV-2024-004",
-    customerName: "David Brown",
-    customerEmail: "david.brown@email.com",
-    tableNumber: "T003",
-    date: "2024-01-14",
-    dueDate: "2024-01-29",
-    status: "draft",
-    items: [
-      { name: "Truffle Burrata", quantity: 1, price: 18.00 },
-      { name: "Chilean Sea Bass", quantity: 1, price: 42.00 },
-      { name: "Artisan Hot Chocolate", quantity: 1, price: 8.00 }
-    ],
-    subtotal: 68.00,
-    tax: 6.12,
-    tip: 13.60,
-    total: 87.72,
-    paymentMethod: "Credit Card",
-    paymentStatus: "pending",
-    notes: "Romantic dinner for two"
-  },
-  {
-    id: "INV-2024-005",
-    customerName: "Alex Murphy",
-    customerEmail: "alex.murphy@email.com",
-    tableNumber: "T005",
-    date: "2024-01-13",
-    dueDate: "2024-01-28",
-    status: "paid",
-    items: [
-      { name: "Seared Scallops", quantity: 2, price: 24.00 },
-      { name: "Dry-Aged Ribeye", quantity: 1, price: 65.00 },
-      { name: "Chocolate Soufflé", quantity: 1, price: 16.00 }
-    ],
-    subtotal: 129.00,
-    tax: 11.61,
-    tip: 25.80,
-    total: 166.41,
-    paymentMethod: "Credit Card",
-    paymentStatus: "completed",
-    notes: "Regular customer - preferred seating"
-  }
-];
 
-const paymentMethods = ["Credit Card", "Cash", "Bank Transfer", "Mobile Payment"];
-const statusOptions = ["draft", "pending", "paid", "overdue", "cancelled"];
+
+type Order = {
+  id: string;
+  orderNumber: string;
+  tableId: string;
+  customerName: string;
+  items: string[];
+  quantity: string[];
+  prices: string[];
+  status: string;
+  paymentStatus: string;
+  subtotal: string;
+  tax: string;
+  totalPrice: string;
+  createdAt: string;
+};
+
+type Invoice = {
+  id: string;
+  invoiceNumber: string;
+  orderId: string;
+  customerName: string;
+  tableNumber: string;
+  items: string[];
+  quantities: string[];
+  prices: string[];
+  subtotal: string;
+  totalAmount: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  notes?: string;
+  createdAt: string;
+};
+
+const statusOptions = ["all", "pending", "paid", "failed", "refunded"];
 
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -173,52 +99,256 @@ export default function Invoices() {
   const [dateFilter, setDateFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<typeof invoicesData[0] | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
-  
+
+  const [hotelsData, setHotelsData] = useState<HotelType | null>(null);
+
+  const [menuMap, setMenuMap] = useState<{ [id: string]: string }>({});
+
+  useEffect(() => {
+    fetch("/api/admin/menu")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.menu)) {
+          const map: { [id: string]: string } = {};
+          type MenuItem = { id: string; item_name: string };
+          data.menu.forEach((item: MenuItem) => {
+            map[item.id] = item.item_name;
+          });
+          setMenuMap(map);
+        }
+      });
+  }, []);
+
   // Form state for create invoice modal
   const [invoiceForm, setInvoiceForm] = useState({
     customerName: "",
-    customerEmail: "",
     tableNumber: "",
     items: [{ name: "", quantity: 1, price: 0 }],
     notes: "",
-    paymentMethod: "Credit Card"
+    paymentMethod: "cash" as "cash" | "card" | "upi" | "other",
+    paymentStatus: "pending" as "pending" | "paid" | "failed" | "refunded"
   });
 
-  const filteredInvoices = invoicesData.filter(invoice => {
-    const matchesSearch = invoice.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         invoice.customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
-    
-    let matchesDate = true;
-    if (dateFilter !== "all") {
-      const invoiceDate = new Date(invoice.date);
-      const today = new Date();
-      const diffTime = today.getTime() - invoiceDate.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      switch (dateFilter) {
-        case "today":
-          matchesDate = diffDays <= 1;
-          break;
-        case "week":
-          matchesDate = diffDays <= 7;
-          break;
-        case "month":
-          matchesDate = diffDays <= 30;
-          break;
+  // Form state for edit invoice modal
+  const [editForm, setEditForm] = useState({
+    customerName: "",
+    tableNumber: "",
+    paymentMethod: "cash" as "cash" | "card" | "upi" | "other",
+    paymentStatus: "pending" as "pending" | "paid" | "failed" | "refunded",
+    notes: ""
+  });
+
+  // Auto-fill customer order data
+  const handleCustomerNameChange = async (customerName: string) => {
+    setInvoiceForm(prev => ({ ...prev, customerName }));
+
+    if (customerName.trim()) {
+      try {
+        // Fetch orders for this customer (any recent orders)
+        const response = await fetch(`/api/orders?customer_name=${encodeURIComponent(customerName)}`);
+        const data = await response.json();
+        console.log("data", data);
+
+        if (response.ok && data.orders && data.orders.length > 0) {
+          const latestOrder = data.orders[0]; // Get the most recent order
+
+          // Fetch table details to get the actual table number
+          let tableNumber = latestOrder.tableId;
+          try {
+            const tableResponse = await fetch(`/api/tables/${latestOrder.tableId}`);
+            if (tableResponse.ok) {
+              const tableData = await tableResponse.json();
+              tableNumber = tableData.table?.number || latestOrder.tableId;
+            }
+          } catch {
+            console.log("Could not fetch table details, using table ID");
+          }
+
+          setInvoiceForm(prev => ({
+            ...prev,
+            tableNumber: tableNumber,
+            items: latestOrder.items.map((item: string, index: number) => ({
+              name: item,
+              quantity: parseInt(latestOrder.quantity[index]) || 1,
+              price: parseFloat(latestOrder.prices[index]) || 0
+            }))
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching customer orders:", error);
       }
     }
-    
+  };
+
+  // Fetch orders that can be invoiced (delivered and unpaid)
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/orders");
+      const data = await response.json();
+      if (response.ok) {
+        setOrders(data.orders || []);
+      } else {
+        toast.error("Failed to fetch orders");
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to fetch orders");
+    } finally {
+      setLoading(false);
+    }
+
+  };
+
+  // Fetch existing invoices
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/admin/invoices");
+      const data = await response.json();
+      if (response.ok) {
+        setInvoices(data.invoices || []);
+      } else {
+        toast.error("Failed to fetch invoices");
+      }
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      toast.error("Failed to fetch invoices");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  // Create invoice from form data
+  const handleCreateInvoice = async () => {
+    try {
+      setLoading(true);
+
+      // Validate required fields
+      if (!invoiceForm.customerName || !invoiceForm.tableNumber || invoiceForm.items.length === 0) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+
+      // Calculate totals
+      const subtotal = invoiceForm.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+      const tax = subtotal * 0.18; // 18% tax
+      const totalAmount = subtotal + tax;
+
+      const payload = {
+        customer_name: invoiceForm.customerName,
+        table_number: invoiceForm.tableNumber,
+        items: invoiceForm.items.map(item => item.name),
+        quantities: invoiceForm.items.map(item => item.quantity.toString()),
+        prices: invoiceForm.items.map(item => item.price.toString()),
+        subtotal: subtotal.toString(),
+        tax: tax.toString(),
+        total_amount: totalAmount.toString(),
+        payment_method: invoiceForm.paymentMethod,
+        payment_status: "paid",
+        notes: invoiceForm.notes
+      };
+
+      const response = await fetch("/api/admin/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        toast.success("Invoice created successfully");
+        setShowCreateModal(false);
+        resetForm();
+        fetchInvoices();
+      } else {
+        toast.error(data.error || "Failed to create invoice");
+      }
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      toast.error("Failed to create invoice");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+    fetchOrders();
+  }, []);
+
+
+  const getHotelsData = async () => {
+    try {
+      const res = await fetch("/api/super-admin/hotels");
+      if (!res.ok) {
+        throw new Error("Failed to fetch hotels");
+      }
+      const data = await res.json();
+      setHotelsData(data.hotels[0]);
+
+      return Array.isArray(data.hotels) ? data.hotels : [];
+    } catch (error) {
+      console.error("Error fetching hotels:", error);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    getHotelsData();
+  }, []);
+
+  const filteredInvoices = invoices.filter(invoice => {
+    const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || invoice.paymentStatus === statusFilter;
+
+    let matchesDate = true;
+    const invoiceDate = new Date(invoice.createdAt);
+    const now = new Date();
+
+    switch (dateFilter) {
+      case "today": {
+        matchesDate = invoiceDate.getUTCFullYear() === now.getUTCFullYear() &&
+          invoiceDate.getUTCMonth() === now.getUTCMonth() &&
+          invoiceDate.getUTCDate() === now.getUTCDate();
+        break;
+      }
+      case "week": {
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 6);
+        weekAgo.setHours(0, 0, 0, 0);
+        const invoiceDateOnly = new Date(invoiceDate);
+        invoiceDateOnly.setHours(0, 0, 0, 0);
+        matchesDate = invoiceDateOnly >= weekAgo && invoiceDateOnly <= now;
+        break;
+      }
+      case "month": {
+        const monthAgo = new Date(now);
+        monthAgo.setDate(now.getDate() - 29);
+        monthAgo.setHours(0, 0, 0, 0);
+        const invoiceDateOnly = new Date(invoiceDate);
+        invoiceDateOnly.setHours(0, 0, 0, 0);
+        matchesDate = invoiceDateOnly >= monthAgo && invoiceDateOnly <= now;
+        break;
+      }
+    }
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string) => {  
     switch (status) {
       case "paid":
-        return <Badge className="bg-chart-3 text-foreground"><CheckCircle className="w-3 h-3 mr-1" />Paid</Badge>;
+        return <Badge className="bg-chart-3  text-white"><CheckCircle className="w-3 h-3 mr-1" />Paid</Badge>;
       case "pending":
         return <Badge className="bg-chart-4 text-foreground"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
       case "overdue":
@@ -232,60 +362,99 @@ export default function Invoices() {
     }
   };
 
-  const handleCreateInvoice = () => {
-    console.log("Creating invoice:", invoiceForm);
-    setShowCreateModal(false);
-    resetForm();
-  };
 
   const resetForm = () => {
     setInvoiceForm({
       customerName: "",
-      customerEmail: "",
       tableNumber: "",
       items: [{ name: "", quantity: 1, price: 0 }],
       notes: "",
-      paymentMethod: "Credit Card"
+      paymentMethod: "cash",
+      paymentStatus: "pending"
     });
   };
 
-  const viewInvoice = (invoice: typeof invoicesData[0]) => {
+  const viewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setShowInvoiceModal(true);
   };
 
-  const downloadPDF = async () => {
-    if (!invoiceRef.current || !selectedInvoice) return;
+
+  // @ts-expect-error: pdfmake types mismatch, manually assigning vfs
+  if (pdfMake.default) {
+    // @ts-expect-error: pdfmake types mismatch, manually assigning vfs
+    pdfMake.default.vfs = pdfFonts.vfs;
+  } else {
+    // @ts-expect-error: pdfmake types mismatch, manually assigning vfs
+    pdfMake.vfs = pdfFonts.vfs;
+  }
+
+  const downloadPDF = (selectedInvoice: Invoice) => {
+    if (!selectedInvoice) return;
 
     try {
-      const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF();
-      const imgWidth = 190;
-      const pageHeight = pdf.internal.pageSize.height;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      
-      let position = 10;
-      
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight + 10;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      pdf.save(`invoice-${selectedInvoice.id}.pdf`);
+      // Defensive checks for items, quantities, prices
+      const items = Array.isArray(selectedInvoice.items) ? selectedInvoice.items : [];
+      const quantities = Array.isArray(selectedInvoice.quantities) ? selectedInvoice.quantities : [];
+      const prices = Array.isArray(selectedInvoice.prices) ? selectedInvoice.prices : [];
+
+      const itemsTable = [
+        ["Item", "Qty", "Price", "Total"],
+        ...items.map((itemId, idx) => [
+          menuMap[itemId] || itemId,
+          quantities[idx] ?? "",
+          `$${parseFloat(prices[idx] ?? "0").toFixed(2)}`,
+          `$${((parseInt(quantities[idx] ?? "0") * parseFloat(prices[idx] ?? "0")) || 0).toFixed(2)}`,
+        ]),
+      ];
+
+      const docDefinition = {
+        content: [
+          { text: "Invoice", style: "header" },
+          {
+            text: `Invoice Number: ${selectedInvoice.invoiceNumber || selectedInvoice.id}`,
+            style: "subheader",
+          },
+          { text: `Date: ${formatDate(selectedInvoice.createdAt)}` },
+          { text: `Customer: ${selectedInvoice.customerName}` },
+          { text: `Table: ${selectedInvoice.tableNumber}` },
+          { text: `Payment Method: ${selectedInvoice.paymentMethod}` },
+          { text: `Payment Status: ${selectedInvoice.paymentStatus}` },
+
+          { text: "\nItems:", style: "subheader" },
+          {
+            table: {
+              headerRows: 1,
+              widths: ["*", "auto", "auto", "auto"],
+              body: itemsTable,
+            },
+          },
+
+          {
+            text: `\nSubtotal: $${parseFloat(selectedInvoice.subtotal ?? "0").toFixed(2)}`,
+            style: "total",
+          },
+          {
+            text: `Tax: $${getInvoiceTax().toFixed(2)}`,
+            style: "total",
+          },
+          {
+            text: `Grand Total: $${parseFloat(selectedInvoice.totalAmount ?? "0").toFixed(2)}`,
+            style: "total",
+          },
+        ],
+        styles: {
+          header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] as [number, number, number, number] },
+          subheader: { fontSize: 14, bold: true, margin: [0, 10, 0, 5] as [number, number, number, number] },
+          total: { fontSize: 14, bold: true, alignment: "right", margin: [0, 20, 0, 0] as [number, number, number, number] },
+        },
+      };
+
+      // @ts-expect-error: pdfmake types mismatch, manually assigning vfs
+
+      pdfMake.createPdf(docDefinition).download(`invoice-${selectedInvoice.invoiceNumber || selectedInvoice.id}.pdf`);
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error("Error generating PDF:", error);
     }
   };
 
@@ -293,36 +462,154 @@ export default function Invoices() {
     if (!invoiceRef.current) return;
     const printContent = invoiceRef.current.innerHTML;
     const originalContent = document.body.innerHTML;
-    
+
     document.body.innerHTML = printContent;
     window.print();
     document.body.innerHTML = originalContent;
     window.location.reload();
   };
 
-  const sendInvoice = (invoice: typeof invoicesData[0]) => {
-    console.log(`Sending invoice ${invoice.id} to ${invoice.customerEmail}`);
-    // In a real app, this would send email
+  const markAsPaid = async (invoiceId: string) => {
+    try {
+      const response = await fetch('/api/admin/invoices', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invoice_id: invoiceId,
+          payment_status: 'paid'
+        }),
+      });
+
+      if (response.ok) {
+        setInvoices(invoices.map(inv =>
+          inv.id === invoiceId
+            ? { ...inv, paymentStatus: 'paid' }
+            : inv
+        ));
+        toast.success("Invoice marked as paid");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update invoice");
+      }
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      toast.error("Failed to update invoice");
+    }
   };
 
-  const markAsPaid = (invoiceId: string) => {
-    console.log(`Marking invoice ${invoiceId} as paid`);
-    // In a real app, this would update the backend
+  const openEditModal = (invoice: Invoice) => {
+    setEditingInvoice(invoice);
+    setEditForm({
+      customerName: invoice.customerName,
+      tableNumber: invoice.tableNumber,
+      paymentMethod: invoice.paymentMethod as "cash" | "card" | "upi" | "other",
+      paymentStatus: invoice.paymentStatus as "pending" | "paid" | "failed" | "refunded",
+      notes: invoice.notes || ""
+    });
+    setShowEditModal(true);
   };
 
-  const deleteInvoice = (invoiceId: string) => {
-    console.log(`Deleting invoice ${invoiceId}`);
-    // In a real app, this would delete from backend
+  const updateInvoice = async () => {
+    if (!editingInvoice) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/admin/invoices', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invoice_id: editingInvoice.id,
+          customer_name: editForm.customerName,
+          table_number: editForm.tableNumber,
+          payment_status: editForm.paymentStatus,
+          payment_method: editForm.paymentMethod,
+          notes: editForm.notes
+        }),
+      });
+
+      if (response.ok) {
+        setInvoices(invoices.map(inv =>
+          inv.id === editingInvoice.id
+            ? {
+              ...inv,
+              customerName: editForm.customerName,
+              tableNumber: editForm.tableNumber,
+              paymentStatus: editForm.paymentStatus,
+              paymentMethod: editForm.paymentMethod,
+              notes: editForm.notes
+            }
+            : inv
+        ));
+        setShowEditModal(false);
+        setEditingInvoice(null);
+        toast.success("Invoice updated successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update invoice");
+      }
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      toast.error("Failed to update invoice");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteInvoice = async (invoiceId: string) => {
+    try {
+      const response = await fetch('/api/admin/invoices', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ invoice_id: invoiceId }),
+      });
+
+      if (response.ok) {
+        setInvoices(invoices.filter(inv => inv.id !== invoiceId));
+        toast.success("Invoice deleted successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to delete invoice");
+      }
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      toast.error("Failed to delete invoice");
+    }
   };
 
   const stats = {
-    totalInvoices: invoicesData.length,
-    paidInvoices: invoicesData.filter(inv => inv.status === "paid").length,
-    pendingInvoices: invoicesData.filter(inv => inv.status === "pending").length,
-    overdueInvoices: invoicesData.filter(inv => inv.status === "overdue").length,
-    totalRevenue: invoicesData.filter(inv => inv.status === "paid").reduce((sum, inv) => sum + inv.total, 0),
-    pendingAmount: invoicesData.filter(inv => inv.status === "pending").reduce((sum, inv) => sum + inv.total, 0)
+    totalInvoices: invoices.length,
+    paidInvoices: invoices.filter(inv => inv.paymentStatus === "paid").length,
+    totalRevenue: invoices.filter(inv => inv.paymentStatus === "paid").reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0),
   };
+
+  function formatDate(dateString: string): string {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  }
+
+  const getInvoiceTax = () => {
+    if (selectedInvoice?.orderId) {
+      const orderObj = orders.find(o => o.id === selectedInvoice.orderId);
+      if (orderObj) return parseFloat(orderObj.tax);
+    }
+    // Fallback: calculate from subtotal
+    if (selectedInvoice?.subtotal) {
+      return parseFloat(selectedInvoice.subtotal) * 0.18;
+    }
+    return 0;
+  };
+
 
   return (
     <>
@@ -349,26 +636,14 @@ export default function Invoices() {
               <DollarSign className="h-4 w-4 text-chart-3" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-chart-3">${stats.totalRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-chart-3">${stats.totalRevenue.toFixed(2)}</div>
               <div className="text-xs text-muted-foreground mt-1">
                 From paid invoices
               </div>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Amount</CardTitle>
-              <Clock className="h-4 w-4 text-chart-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-chart-4">${stats.pendingAmount.toLocaleString()}</div>
-              <div className="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
-                <AlertTriangle className="w-3 h-3 text-destructive" />
-                <span>{stats.overdueInvoices} overdue</span>
-              </div>
-            </CardContent>
-          </Card>
+
 
           <Card className="hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -377,7 +652,9 @@ export default function Invoices() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-chart-2">
-                {Math.round((stats.paidInvoices / stats.totalInvoices) * 100)}%
+                {stats.totalInvoices > 0
+                  ? Math.round((stats.paidInvoices / stats.totalInvoices) * 100)
+                  : 0}%
               </div>
               <div className="text-xs text-muted-foreground mt-1">
                 Payment success rate
@@ -390,13 +667,13 @@ export default function Invoices() {
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle>Invoice Management</CardTitle>
-                <CardDescription>Create, track, and manage customer invoices</CardDescription>
-              </div>
-              <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+              <h2 className="text-2xl font-bold">Invoices</h2>
+              <Dialog open={showCreateModal} onOpenChange={(isOpen) => {
+                if (!isOpen) resetForm();
+                setShowCreateModal(isOpen);
+              }}>
                 <DialogTrigger asChild>
-                  <Button className="hover:scale-105 transition-transform">
+                  <Button className="hover:scale-105 transition-transform ">
                     <Plus className="w-4 h-4 mr-2" />
                     Create Invoice
                   </Button>
@@ -408,75 +685,89 @@ export default function Invoices() {
                       Generate a new invoice for a customer order.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-6 py-4">
+                    <div className="grid grid-cols gap-4">
                       <div>
                         <Label htmlFor="customer-name" className="text-foreground mb-2">Customer Name</Label>
                         <Input
                           id="customer-name"
                           value={invoiceForm.customerName}
-                          onChange={(e) => setInvoiceForm({...invoiceForm, customerName: e.target.value})}
+                          onChange={(e) => handleCustomerNameChange(e.target.value)}
                           placeholder="John Doe"
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="customer-email" className="text-foreground mb-2">Customer Email</Label>
-                        <Input
-                          id="customer-email"
-                          type="email"
-                          value={invoiceForm.customerEmail}
-                          onChange={(e) => setInvoiceForm({...invoiceForm, customerEmail: e.target.value})}
-                          placeholder="john@example.com"
-                        />
-                      </div>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
+
+                    <div className="grid grid-cols gap-4">
                       <div>
                         <Label htmlFor="table-number" className="text-foreground mb-2">Table Number</Label>
                         <Input
                           id="table-number"
                           value={invoiceForm.tableNumber}
-                          onChange={(e) => setInvoiceForm({...invoiceForm, tableNumber: e.target.value})}
+                          onChange={(e) => setInvoiceForm({ ...invoiceForm, tableNumber: e.target.value })}
                           placeholder="T001"
                         />
                       </div>
+
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="payment-method" className="text-foreground mb-2">Payment Method</Label>
-                        <Select value={invoiceForm.paymentMethod} onValueChange={(value) => setInvoiceForm({...invoiceForm, paymentMethod: value})}>
-                          <SelectTrigger>
+                        <Select value={invoiceForm.paymentMethod} onValueChange={(value: "cash" | "card" | "upi" | "other") => setInvoiceForm({ ...invoiceForm, paymentMethod: value })} >
+                          <SelectTrigger className="cursor-pointer">
                             <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {paymentMethods.map((method) => (
-                              <SelectItem key={method} value={method}>{method}</SelectItem>
-                            ))}
+                          </SelectTrigger >
+                          <SelectContent >
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="card">Card</SelectItem>
+                            <SelectItem value="upi">UPI</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
+                      <div>
+                        <Label htmlFor="payment-status" className="text-foreground mb-2">Payment Status</Label>
+                        <Select value={invoiceForm.paymentStatus} onValueChange={(value: "pending" | "paid" | "failed" | "refunded") => setInvoiceForm({ ...invoiceForm, paymentStatus: value })}>
+                          <SelectTrigger className="cursor-pointer">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="refunded">Refunded</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="notes" className="text-foreground mb-2">Notes</Label>
                       <Textarea
                         id="notes"
                         value={invoiceForm.notes}
-                        onChange={(e) => setInvoiceForm({...invoiceForm, notes: e.target.value})}
+                        onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
                         placeholder="Special instructions or notes..."
                       />
+
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                    <Button variant="outline" onClick={() => {
+                      resetForm();
+                      setShowCreateModal(false);
+                    }}>
                       Cancel
                     </Button>
-                    <Button onClick={handleCreateInvoice}>Create Invoice</Button>
+                    <Button onClick={handleCreateInvoice} disabled={loading}>Create Invoice</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
             </div>
           </CardHeader>
-          
+
           <CardContent>
             {/* Filters Row */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -495,7 +786,7 @@ export default function Invoices() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  {statusOptions.map((status) => (
+                  {statusOptions.slice(1).map((status) => (
                     <SelectItem key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</SelectItem>
                   ))}
                 </SelectContent>
@@ -514,7 +805,7 @@ export default function Invoices() {
             </div>
 
             {/* Invoices Table */}
-            <div className="rounded-md border">
+            <div className="rounded-lg border overflow-hidden rounded-b-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -524,24 +815,25 @@ export default function Invoices() {
                     <TableHead>Date</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredInvoices.map((invoice) => (
-                    <TableRow key={invoice.id} className="hover:bg-muted/50">
-                      <TableCell className="font-medium">{invoice.id}</TableCell>
+                    <TableRow key={invoice.invoiceNumber} className="hover:bg-muted/50 ">
+
+                      <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{invoice.customerName}</div>
-                          <div className="text-sm text-muted-foreground">{invoice.customerEmail}</div>
+
                         </div>
                       </TableCell>
                       <TableCell>{invoice.tableNumber}</TableCell>
-                      <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="font-medium">${invoice.total.toFixed(2)}</TableCell>
-                      <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell>{formatDate(invoice.createdAt)}</TableCell>
+                      <TableCell className="font-medium">${parseFloat(invoice.totalAmount).toFixed(2)}</TableCell>
+                      <TableCell>{getStatusBadge(invoice.paymentStatus)}</TableCell>
+                      <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
@@ -553,17 +845,14 @@ export default function Invoices() {
                               <Eye className="w-4 h-4 mr-2" />
                               View Invoice
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => sendInvoice(invoice)}>
-                              <Send className="w-4 h-4 mr-2" />
-                              Send Email
-                            </DropdownMenuItem>
-                            {invoice.status !== "paid" && (
+
+                            {invoice.paymentStatus !== "paid" && (
                               <DropdownMenuItem onClick={() => markAsPaid(invoice.id)}>
                                 <CheckCircle className="w-4 h-4 mr-2" />
                                 Mark as Paid
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEditModal(invoice)}>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit Invoice
                             </DropdownMenuItem>
@@ -584,8 +873,8 @@ export default function Invoices() {
               <div className="text-center py-8">
                 <FileText className="w-12 h-12 text-muted mx-auto mb-4" />
                 <p className="text-muted-foreground">No invoices found matching your criteria.</p>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="mt-4"
                   onClick={() => {
                     setSearchTerm("");
@@ -600,29 +889,133 @@ export default function Invoices() {
           </CardContent>
         </Card>
 
+        {/* Edit Invoice Modal */}
+        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Edit Invoice</DialogTitle>
+              <DialogDescription>
+                Update invoice payment details and notes
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Customer Name</label>
+                <Input
+                  value={editForm.customerName}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, customerName: e.target.value }))}
+                  placeholder="Enter customer name"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Table Number</label>
+                <Input
+                  value={editForm.tableNumber}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, tableNumber: e.target.value }))}
+                  placeholder="Enter table number"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-sm font-medium">Payment Method</label>
+                  <Select
+
+                    value={editForm.paymentMethod}
+                    onValueChange={(value) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        paymentMethod: value as "cash" | "card" | "upi" | "other",
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex-1">
+                  <label className="text-sm font-medium">Payment Status</label>
+                  <Select
+                    value={editForm.paymentStatus}
+                    onValueChange={(value) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        paymentStatus: value as
+                          | "pending"
+                          | "paid"
+                          | "failed"
+                          | "refunded",
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="failed">Failed</SelectItem>
+                      <SelectItem value="refunded">Refunded</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Notes</label>
+                <Textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Add any notes..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={updateInvoice} disabled={loading}>
+                Update Invoice
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Invoice Detail Modal */}
         <Dialog open={showInvoiceModal} onOpenChange={setShowInvoiceModal}>
           <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Invoice Details</DialogTitle>
               <DialogDescription>
-                View and manage invoice {selectedInvoice?.id}
+                View and manage invoice {selectedInvoice?.invoiceNumber}
               </DialogDescription>
             </DialogHeader>
-            
+
             {selectedInvoice && (
               <div ref={invoiceRef} className="space-y-6 p-6 bg-white text-black rounded-lg">
                 {/* Invoice Header */}
                 <div className="flex justify-between items-start">
                   <div>
                     <h1 className="text-2xl font-bold text-gray-900">INVOICE</h1>
-                    <p className="text-gray-600">Ketrox</p>
-                    <p className="text-sm text-gray-500">123 Restaurant Street, City, State 12345</p>
+                    <p className="text-gray-600">{hotelsData?.name}</p>
+                    <p className="text-sm text-gray-500">{hotelsData?.address}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-semibold text-gray-900">{selectedInvoice.id}</p>
-                    <p className="text-sm text-gray-600">Date: {new Date(selectedInvoice.date).toLocaleDateString()}</p>
-                    <p className="text-sm text-gray-600">Due: {new Date(selectedInvoice.dueDate).toLocaleDateString()}</p>
+                    <p className="text-lg font-semibold text-gray-900">{selectedInvoice.invoiceNumber}</p>
+                    <p className="text-sm text-gray-600">Date: {formatDate(selectedInvoice.createdAt)}</p>
+
                   </div>
                 </div>
 
@@ -631,16 +1024,15 @@ export default function Invoices() {
                 {/* Bill To */}
                 <div className="grid grid-cols-2 gap-8">
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Bill To:</h3>
-                    <p className="text-gray-900">{selectedInvoice.customerName}</p>
-                    <p className="text-gray-600">{selectedInvoice.customerEmail}</p>
+                    <h3 className="font-semibold text-gray-900 mb-2">Bill To: {selectedInvoice.customerName}</h3>
+
                     <p className="text-gray-600">Table: {selectedInvoice.tableNumber}</p>
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Payment Info:</h3>
                     <p className="text-gray-600">Method: {selectedInvoice.paymentMethod}</p>
-                    <p className="text-gray-600">Status: {selectedInvoice.paymentStatus}</p>
-                    {getStatusBadge(selectedInvoice.status)}
+                    <p className="text-gray-600 ">Status:  {getStatusBadge(selectedInvoice.paymentStatus)}</p>
+
                   </div>
                 </div>
 
@@ -656,12 +1048,12 @@ export default function Invoices() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedInvoice.items.map((item, index) => (
+                      {selectedInvoice.items.map((itemId, index) => (
                         <TableRow key={index} className="border-gray-200">
-                          <TableCell className="text-gray-900">{item.name}</TableCell>
-                          <TableCell className="text-gray-600">{item.quantity}</TableCell>
-                          <TableCell className="text-gray-600">${item.price.toFixed(2)}</TableCell>
-                          <TableCell className="text-gray-900 text-right">${(item.quantity * item.price).toFixed(2)}</TableCell>
+                          <TableCell>{menuMap[itemId] || itemId}</TableCell>
+                          <TableCell className="text-gray-600">{selectedInvoice.quantities[index]}</TableCell>
+                          <TableCell className="text-gray-600">${parseFloat(selectedInvoice.prices[index]).toFixed(2)}</TableCell>
+                          <TableCell className="text-gray-900 font-medium text-right">${(parseInt(selectedInvoice.quantities[index]) * parseFloat(selectedInvoice.prices[index])).toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -673,20 +1065,17 @@ export default function Invoices() {
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-gray-600">
                       <span>Subtotal:</span>
-                      <span>${selectedInvoice.subtotal.toFixed(2)}</span>
+                      <span>${parseFloat(selectedInvoice.subtotal).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Tax:</span>
-                      <span>${selectedInvoice.tax.toFixed(2)}</span>
+                      <span>${getInvoiceTax().toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Tip:</span>
-                      <span>${selectedInvoice.tip.toFixed(2)}</span>
-                    </div>
+
                     <Separator className="border-gray-400" />
                     <div className="flex justify-between text-lg font-bold text-gray-900">
                       <span>Total:</span>
-                      <span>${selectedInvoice.total.toFixed(2)}</span>
+                      <span>${parseFloat(selectedInvoice.totalAmount).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -694,38 +1083,50 @@ export default function Invoices() {
                 {/* Notes */}
                 {selectedInvoice.notes && (
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Notes:</h3>
-                    <p className="text-gray-600">{selectedInvoice.notes}</p>
+                    <span className="font-semibold text-gray-900 mb-2">Notes: </span>
+                    <span className="text-gray-600">{selectedInvoice.notes}</span>
                   </div>
                 )}
 
                 {/* Footer */}
                 <div className="text-center text-sm text-gray-500 pt-4 border-t border-gray-300">
                   <p>Thank you for dining with us!</p>
-                  <p>Contact: info@restaurant.com | (555) 123-4567</p>
+
                 </div>
               </div>
             )}
-            
+
             <DialogFooter className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowInvoiceModal(false)}>
+              <Button
+                variant="outline"
+                className="bg-red-500 text-white hover:bg-red-600 hover:text-white"
+                onClick={() => setShowInvoiceModal(false)}
+              >
                 Close
               </Button>
-              <Button variant="outline" onClick={downloadPDF}>
+
+              <Button
+                variant="outline"
+                className="bg-blue-500 text-white hover:bg-blue-600 hover:text-white disabled:bg-gray-400"
+                onClick={() => {
+                  if (selectedInvoice) downloadPDF(selectedInvoice);
+                }}
+                disabled={!selectedInvoice}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Download PDF
               </Button>
-              <Button variant="outline" onClick={printInvoice}>
+
+              <Button
+                variant="outline"
+                className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
+                onClick={printInvoice}
+              >
                 <Printer className="w-4 h-4 mr-2" />
                 Print
               </Button>
-              {selectedInvoice && (
-                <Button onClick={() => sendInvoice(selectedInvoice)}>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Email
-                </Button>
-              )}
             </DialogFooter>
+
           </DialogContent>
         </Dialog>
       </div>

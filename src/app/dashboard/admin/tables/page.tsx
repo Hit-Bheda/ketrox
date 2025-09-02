@@ -8,14 +8,14 @@ import {
   Edit,
   Trash2,
   Users,
- 
+
   MapPin,
 
   CheckCircle,
   AlertCircle,
   XCircle,
   QrCode,
-  
+
   Check,
   Table,
   CircleDot,
@@ -46,9 +46,8 @@ import AddTableDialog from "@/components/table/add-table-modal";
 import EditTableDialog from "@/components/table/edit-table-modal";
 import { toast } from "sonner";
 import { tableSchema } from "@/schemas";
+import { NotesPopover } from "@/components/table/NotesPopover";
 
-
-const locations = ["Main Dining", "Patio", "Private Room", "Bar Area", "Outdoor", "VIP Section"];
 const capacities = [2, 3, 4, 6, 8];
 
 type Table = {
@@ -66,7 +65,7 @@ export default function Tables() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tableItem, setTableItem] = useState<Table[]>([])
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [editTableForm, setEditTableForm] = useState({
@@ -83,7 +82,7 @@ export default function Tables() {
       if (match) {
         setTenantId(decodeURIComponent(match[1]));
       }
-      const res = await fetch("/api/admin/table"); 
+      const res = await fetch("/api/admin/table");
       const data = await res.json();
       console.log("Fetched tables:", data);
       setTableItem(
@@ -98,8 +97,6 @@ export default function Tables() {
       );
     } catch (error) {
       console.error("Error fetching tables:", error);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -110,7 +107,7 @@ export default function Tables() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [locationFilter, setLocationFilter] = useState("all");
+
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Form state for add table modal
@@ -142,16 +139,14 @@ export default function Tables() {
       matchesStatus = table.available && !table.maintenance;
     } else if (statusFilter === "maintenance") {
       matchesStatus = table.maintenance;
-    } else if (statusFilter === "unavailable") {
+    } else if (statusFilter === "occupied") {
       matchesStatus = !table.available && !table.maintenance;
-    } // add more status if needed
+    }
 
     if (statusFilter === "all") matchesStatus = true;
 
     return matchesSearch && matchesStatus;
   });
-
-
 
   const handleAddTable = async () => {
     if (!tenantId) {
@@ -178,7 +173,7 @@ export default function Tables() {
     }
 
     setErrors({});
-    setLoading(true);
+
     setError(null);
 
     try {
@@ -202,10 +197,9 @@ export default function Tables() {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       toast.error("Network error");
-    } finally {
-      setLoading(false);
     }
   };
+
   const handleEditTable = async () => {
     setEditLoading(true);
     try {
@@ -224,7 +218,8 @@ export default function Tables() {
         toast.success(data.message);
       }
     } catch (err) {
-      setError("Network error");
+      setError(err instanceof Error ? err.message : String(err));
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setEditLoading(false);
     }
@@ -254,8 +249,8 @@ export default function Tables() {
         toast.success(data.message || "Table status updated");
       }
     } catch (err) {
-      setError("Network error");
-      toast.error("Network error");
+      setError(err instanceof Error ? err.message : String(err));
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setEditLoading(false);
     }
@@ -281,8 +276,8 @@ export default function Tables() {
         toast.success(data.message || "Table deleted successfully");
       }
     } catch (err) {
-      setError("Network error");
-      toast.error("Network error");
+      setError(err instanceof Error ? err.message : String(err));
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setEditLoading(false);
     }
@@ -294,6 +289,7 @@ export default function Tables() {
     occupied: tableItem.filter(t => !t.available && !t.maintenance).length,
     maintenance: tableItem.filter(t => t.maintenance).length,
   };
+
   return (
     <div className="flex-1 space-y-6 p-4 md:p-6">
       {/* Stats Cards */}
@@ -397,21 +393,11 @@ export default function Tables() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="available">Available</SelectItem>
                 <SelectItem value="occupied">Occupied</SelectItem>
-                <SelectItem value="reserved">Reserved</SelectItem>
+
                 <SelectItem value="maintenance">Maintenance</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
-              <SelectTrigger className="w-full sm:w-[150px] bg-background border-input text-foreground">
-                <SelectValue placeholder="All Locations" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border text-popover-foreground">
-                <SelectItem value="all">All Locations</SelectItem>
-                {locations.map((location) => (
-                  <SelectItem key={location} value={location}>{location}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
           </div>
 
           {/* Tables Grid */}
@@ -551,7 +537,8 @@ export default function Tables() {
                   </div>
 
                   <p className="text-sm font-medium text-muted-foreground">{table.name}</p>
-                  <p className="text-sm font-medium text-muted-foreground">{table.notes}</p>
+
+                  <NotesPopover notes={table.notes || ""} />
                 </CardHeader>
 
                 <CardContent className="space-y-3">
@@ -577,7 +564,6 @@ export default function Tables() {
                 onClick={() => {
                   setSearchTerm("");
                   setStatusFilter("all");
-                  setLocationFilter("all");
                 }}
               >
                 Clear Filters

@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { tenants, user } from "@/db/schema";
+import { tenants, user, account } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -53,10 +53,20 @@ export async function POST(request: Request) {
       return Response.json({ error: message }, { status: 400 });
     }
 
+    const userId = signupResult?.data?.user?.id ?? signupResult?.user?.id ?? null;
+
+    // Ensure the email credential row has accountId set to the email
+    if (userId) {
+      await db
+        .update(account)
+        .set({ accountId: email })
+        .where(and(eq(account.userId, userId), eq(account.providerId, "email")));
+    }
+
     return Response.json({
       message: "Tenant and admin user created successfully",
       tenantId,
-      userId: signupResult?.data?.user?.id ?? signupResult?.user?.id ?? null,
+      userId,
     });
 
   } catch {
@@ -65,13 +75,8 @@ export async function POST(request: Request) {
 }
 
 
-
 export async function PUT(request: Request) {
     const { id, name, email, logoUrl, ownerName, ownerPhone, address, plan, status } = await request.json();
-
-    if (!id || !name || !email || !logoUrl || !ownerName || !ownerPhone || !address || !plan || !status) {
-        return Response.json({ error: "All fields are required" }, { status: 400 });
-    }
 
     const hotelData = {
         name: name as string,
