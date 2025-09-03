@@ -103,3 +103,22 @@ export const orderSchema = z.object({
     status: z.enum(["pending", "preparing", "delivered", "cancelled"]).default("pending"),
     total_price: z.string().min(1, "Total price is required"),
 });
+
+// Ticketing schemas
+export const ticketCreateSchema = z.object({
+  subject: z.string().min(1, "Subject is required"),
+  priority: z.enum(["low", "medium", "high"]).default("medium"),
+  message: z.string().min(1, "Initial message is required"),
+  tenantId: z.string().uuid("Invalid tenant ID").optional(),
+});
+
+export const ticketReplySchema = z.object({
+  ticketId: z.string().min(1, "Ticket ID is required"),
+  content: z.string().min(1, "Message content is required"),
+});
+
+export const ticketUpdateSchema = z.object({
+  id: z.string().min(1, "Ticket ID is required"),
+  status: z.enum(["open", "in_progress", "resolved"]).optional(),
+  priority: z.enum(["low", "medium", "high"]).optional(),
+});

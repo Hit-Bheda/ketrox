@@ -36,6 +36,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${spaceGrotesk.variable} ${plusJakarta.variable} ${sourceCodePro.variable} antialiased bg-background`}
+        suppressHydrationWarning
       >
         <ThemeProvider
           attribute="class"
