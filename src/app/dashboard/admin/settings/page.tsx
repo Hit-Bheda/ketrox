@@ -512,9 +512,9 @@ export default function Settings() {
               <CardContent className="space-y-6">
                 {/* Logo Section */}
                 <div className="flex items-center space-x-4">
-                  {hotelsData?.logo_url ? (
+                  {/* {hotelsData?.logo_url ? (
                     <Image
-                      src={hotelsData.logo_url}
+                      src={hotelsData?.logo_url}
                       width={100}
                       height={100}
                       
@@ -525,7 +525,7 @@ export default function Settings() {
                     <div className="w-20 h-20 border-2 border-dashed border-muted rounded-lg flex items-center justify-center">
                       <Building2 className="w-8 h-8 text-muted-foreground" />
                     </div>
-                  )}
+                  )} */}
                   <div className="space-y-2">
                     <Button variant="outline" size="sm">
                       <Upload className="w-4 h-4 mr-2" />
