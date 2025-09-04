@@ -144,4 +144,5 @@ export const qrCodeSchema = z.object({
   qrPath: z.string().optional(), 
   createdAt: z.date().optional(), 
   updatedAt: z.date().optional(), 
+
 });

@@ -183,3 +183,24 @@ export const qr_codes = pgTable("qr_codes", {
   createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
   updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });
+
+// Messaging/Ticketing
+export const ticket = pgTable("ticket", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").references(() => tenants.id),
+  createdById: text("created_by_id").references(() => user.id),
+  subject: text("subject").notNull(),
+  status: text("status", { enum: ["open", "in_progress", "resolved"] }).notNull().default("open"),
+  priority: text("priority", { enum: ["low", "medium", "high"] }).notNull().default("medium"),
+  createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+  updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+});
+
+export const ticketMessage = pgTable("ticket_message", {
+  id: text("id").primaryKey(),
+  ticketId: text("ticket_id").notNull().references(() => ticket.id, { onDelete: "cascade" }),
+  senderId: text("sender_id").references(() => user.id),
+  senderRole: text("sender_role", { enum: ["super-admin", "admin", "manager", "waiter", "customer", "support"] }),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+});

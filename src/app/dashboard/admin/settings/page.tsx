@@ -754,6 +754,7 @@ export default function Settings() {
                         )}
                       </Button>
                     )}
+
                     <p className="text-xs text-muted-foreground">Recommended: 300x300px, PNG or JPG</p>
                   </div>
                 </div>

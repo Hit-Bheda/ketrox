@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { 
   Send, 
   Search, 
@@ -37,140 +37,28 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase/client";
 
-interface Message {
-  id: number;
-  sender: string;
-  content: string;
-  timestamp: string;
-  type: 'customer' | 'support';
-}
-
-interface Ticket {
-  id: number;
+interface ApiTicket {
+  id: string;
   subject: string;
-  sender: string;
-  senderEmail: string;
-  hotel: string;
-  priority: 'high' | 'medium' | 'low';
-  status: 'open' | 'in_progress' | 'resolved';
-  lastMessage: string;
-  timestamp: string;
-  unread: boolean;
-  messages: Message[];
+  priority: "high" | "medium" | "low";
+  status: "open" | "in_progress" | "resolved";
+  createdAt?: string;
 }
 
-// Dummy message data
-const tickets: Ticket[] = [
-  {
-    id: 1,
-    subject: "Payment processing issue",
-    sender: "You",
-    senderEmail: "your-email@example.com",
-    hotel: "Grand Plaza Hotel",
-    priority: "high",
-    status: "open",
-    lastMessage: "The payment gateway is not working for our bookings...",
-    timestamp: "2024-01-15 14:30",
-    unread: true,
-    messages: [
-      {
-        id: 1,
-        sender: "You",
-        content: "Hi, we're experiencing issues with our payment gateway. Customers can't complete their bookings.",
-        timestamp: "2024-01-15 14:30",
-        type: "customer"
-      },
-      {
-        id: 2,
-        sender: "Support Team",
-        content: "Hi there! Thank you for reaching out. I'm looking into this issue right away. Can you please provide more details about the error message customers are seeing?",
-        timestamp: "2024-01-15 14:45",
-        type: "support"
-      },
-      {
-        id: 3,
-        sender: "You",
-        content: "They see 'Payment failed - please try again' but it happens with all payment methods.",
-        timestamp: "2024-01-15 15:00",
-        type: "customer"
-      }
-    ]
-  },
-  {
-    id: 2,
-    subject: "Need help with room management setup",
-    sender: "You",
-    senderEmail: "your-email@example.com",
-    hotel: "Ocean View Resort",
-    priority: "medium",
-    status: "resolved",
-    lastMessage: "Perfect, thank you for the detailed documentation!",
-    timestamp: "2024-01-15 10:20",
-    unread: false,
-    messages: [
-      {
-        id: 1,
-        sender: "You",
-        content: "Hi, I need assistance setting up room types and seasonal rates for our resort. The interface is a bit confusing.",
-        timestamp: "2024-01-15 10:20",
-        type: "customer"
-      },
-      {
-        id: 2,
-        sender: "Support Team",
-        content: "Hello! I'd be happy to help you set up your room management. Let me schedule a quick call to walk you through the process.",
-        timestamp: "2024-01-15 10:35",
-        type: "support"
-      },
-      {
-        id: 3,
-        sender: "You",
-        content: "Perfect, thank you for the detailed documentation!",
-        timestamp: "2024-01-15 11:15",
-        type: "customer"
-      }
-    ]
-  },
-  {
-    id: 3,
-    subject: "API documentation request",
-    sender: "You",
-    senderEmail: "your-email@example.com",
-    hotel: "City Center Inn",
-    priority: "low",
-    status: "in_progress",
-    lastMessage: "I'm waiting for the documentation you mentioned...",
-    timestamp: "2024-01-14 16:45",
-    unread: true,
-    messages: [
-      {
-        id: 1,
-        sender: "You",
-        content: "I need access to API documentation for integrating our existing POS system.",
-        timestamp: "2024-01-14 15:30",
-        type: "customer"
-      },
-      {
-        id: 2,
-        sender: "Support Team",
-        content: "Hi! I've sent you the complete API documentation to your email. Please let me know if you need any clarification.",
-        timestamp: "2024-01-14 16:00",
-        type: "support"
-      },
-      {
-        id: 3,
-        sender: "You",
-        content: "I'm waiting for the documentation you mentioned...",
-        timestamp: "2024-01-14 16:45",
-        type: "customer"
-      }
-    ]
-  }
-];
+interface ApiMessage {
+  id: string;
+  ticketId: string;
+  content: string;
+  senderRole?: string;
+  createdAt?: string;
+}
 
 export default function UserMessages() {
-  const [selectedTicket, setSelectedTicket] = useState<Ticket>(tickets[0]);
+  const [tickets, setTickets] = useState<ApiTicket[]>([]);
+  const [selectedTicket, setSelectedTicket] = useState<ApiTicket | null>(null);
+  const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -178,20 +66,115 @@ export default function UserMessages() {
   const [showNewTicketDialog, setShowNewTicketDialog] = useState(false);
   const [newTicketForm, setNewTicketForm] = useState({
     subject: "",
-    hotel: "",
     priority: "medium" as "high" | "medium" | "low",
     message: ""
   });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch = ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         ticket.hotel.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
-    const matchesPriority = priorityFilter === "all" || ticket.priority === priorityFilter;
+  // Auto-scroll to bottom when messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    const load = async () => {
+      const res = await fetch("/api/admin/messages", { cache: "no-store" });
+      const data = await res.json();
+      setTickets(data.tickets || []);
+      if ((data.tickets || []).length > 0) setSelectedTicket(data.tickets[0]);
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    const loadMessages = async () => {
+      if (!selectedTicket) return;
+      const res = await fetch(`/api/ticket/${selectedTicket.id}/messages`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(data.messages || []);
+      } else {
+        setMessages([]);
+      }
+    };
+    loadMessages();
+
+    // polling fallback every 3s
+    const interval = setInterval(loadMessages, 3000);
+    return () => clearInterval(interval);
+  }, [selectedTicket?.id]);
+
+  useEffect(() => {
+    if (!selectedTicket) return;
+    const client = supabase();
+    const channel = client
+      .channel(`ticket_messages_${selectedTicket.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'ticket_message',
+        filter: `ticket_id=eq.${selectedTicket.id}`,
+      }, (payload) => {
+        const row = payload.new as any;
+        setMessages((prev) => [...prev, {
+          id: row.id,
+          ticketId: row.ticket_id,
+          content: row.content,
+          senderRole: row.sender_role,
+          createdAt: row.created_at,
+          senderId: row.sender_id,
+        }]);
+      })
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [selectedTicket?.id]);
+
+  useEffect(() => {
+    const client = supabase();
+    const channel = client
+      .channel('tickets_admin')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'ticket',
+      }, (payload) => {
+        const row = payload.new as any;
+        setTickets((prev) => {
+          const exists = prev.some((t) => t.id === row.id);
+          if (payload.eventType === 'INSERT' && !exists) {
+            return [{ ...(row as any) }, ...prev];
+          }
+          if (payload.eventType === 'UPDATE') {
+            return prev.map((t) => t.id === row.id ? { ...t, status: row.status, priority: row.priority, subject: row.subject, createdAt: row.created_at } : t);
+          }
+          if (payload.eventType === 'DELETE') {
+            return prev.filter((t) => t.id !== (payload.old as any).id);
+          }
+          return prev;
+        });
+      })
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, []);
+
+  const filteredTickets = tickets.filter(t => {
+    const matchesSearch = t.subject.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    const matchesPriority = priorityFilter === "all" || t.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  const getPriorityColor = (priority: Ticket['priority'] | 'default') => {
+  const getPriorityColor = (priority: ApiTicket['priority'] | 'default') => {
     switch (priority) {
       case "high":
         return "bg-destructive/10 text-destructive border-destructive/20";
@@ -204,7 +187,7 @@ export default function UserMessages() {
     }
   };
 
-  const getStatusColor = (status: Ticket['status'] | 'default') => {
+  const getStatusColor = (status: ApiTicket['status'] | 'default') => {
     switch (status) {
       case "open":
         return "bg-primary/10 text-primary border-primary/20";
@@ -217,7 +200,7 @@ export default function UserMessages() {
     }
   };
 
-  const getStatusIcon = (status: Ticket['status'] | 'default') => {
+  const getStatusIcon = (status: ApiTicket['status'] | 'default') => {
     switch (status) {
       case "open":
         return <AlertCircle className="w-4 h-4" />;
@@ -230,23 +213,76 @@ export default function UserMessages() {
     }
   };
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      console.log("Sending message:", newMessage);
-      setNewMessage("");
-      // Here you would typically send the message to the backend
+  const updateTicketPreview = (ticketId: string, content: string, createdAtIso: string, senderRole?: string) => {
+    setTickets((prev) => prev.map((t) => (
+      t.id === ticketId
+        ? ({
+            ...(t as any),
+            lastMessage: content,
+            lastMessageAt: createdAtIso,
+            lastMessageSenderRole: senderRole || (t as any).lastMessageSenderRole || null,
+          } as any)
+        : t
+    )));
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedTicket) return;
+    
+    const messageContent = newMessage.trim();
+    setNewMessage(""); // Clear input immediately for better UX
+    
+    try {
+      const res = await fetch("/api/admin/messages", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: selectedTicket.id, content: messageContent }),
+      });
+      
+      if (res.ok) {
+        // Add the message optimistically to the UI immediately
+        const tempMessage: ApiMessage = {
+          id: `temp-${Date.now()}`,
+          ticketId: selectedTicket.id,
+          content: messageContent,
+          senderRole: "admin",
+          createdAt: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, tempMessage]);
+        updateTicketPreview(selectedTicket.id, messageContent, tempMessage.createdAt!, "admin");
+        
+        // Refresh messages to get the actual message from server
+        const refreshRes = await fetch(`/api/ticket/${selectedTicket.id}/messages`);
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          setMessages(data.messages || []);
+          const latest = (data.messages || []).slice(-1)[0];
+          if (latest) updateTicketPreview(selectedTicket.id, latest.content, latest.createdAt || tempMessage.createdAt!, latest.senderRole);
+        }
+      } else {
+        // If sending failed, restore the message to input
+        setNewMessage(messageContent);
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      // Restore the message to input if there was an error
+      setNewMessage(messageContent);
     }
   };
 
-  const handleCreateTicket = () => {
-    console.log("Creating ticket:", newTicketForm);
-    setShowNewTicketDialog(false);
-    setNewTicketForm({
-      subject: "",
-      hotel: "",
-      priority: "medium",
-      message: ""
+  const handleCreateTicket = async () => {
+    const res = await fetch("/api/admin/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newTicketForm),
     });
+    if (res.ok) {
+      const data = await res.json();
+      setTickets((prev) => [data.ticket, ...prev]);
+      setSelectedTicket(data.ticket);
+    }
+    setShowNewTicketDialog(false);
+    setNewTicketForm({ subject: "", priority: "medium", message: "" });
   };
 
   const stats = {
@@ -343,18 +379,7 @@ export default function UserMessages() {
                         placeholder="Brief description of your issue"
                       />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="hotel" className="text-right">
-                        Hotel
-                      </Label>
-                      <Input
-                        id="hotel"
-                        value={newTicketForm.hotel}
-                        onChange={(e) => setNewTicketForm({...newTicketForm, hotel: e.target.value})}
-                        className="col-span-3"
-                        placeholder="Your hotel name"
-                      />
-                    </div>
+                    
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="priority" className="text-right">
                         Priority
@@ -437,7 +462,7 @@ export default function UserMessages() {
                 <div
                   key={ticket.id}
                   className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedTicket.id === ticket.id 
+                    selectedTicket && selectedTicket.id === ticket.id 
                       ? "border-primary/50 bg-primary/5"
                       : "border-input hover:bg-accent"
                   }`}
@@ -447,17 +472,14 @@ export default function UserMessages() {
                     <div className="flex items-center space-x-2">
                       <Avatar className="h-6 w-6">
                         <AvatarFallback className="text-xs">
-                          {ticket.sender.split(' ').map(n => n[0]).join('')}
+                          {ticket.subject.slice(0,2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <span className="font-medium text-sm">{ticket.subject}</span>
-                      {ticket.unread && (
-                        <div className="w-2 h-2 bg-primary rounded-full"></div>
-                      )}
                     </div>
-                    <span className="text-xs text-muted-foreground">{ticket.timestamp.split(' ')[1]}</span>
+                    <span className="text-xs text-muted-foreground">{(ticket as any).lastMessageAt?.split('T')[1]?.slice(0,5) || ticket.createdAt?.split('T')[0]}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{ticket.lastMessage}</p>
+                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{(ticket as any).lastMessage}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex space-x-1">
                       <Badge variant="outline" className={getStatusColor(ticket.status)}>
@@ -499,54 +521,56 @@ export default function UserMessages() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Avatar className="h-10 w-10">
+                {selectedTicket && (<Avatar className="h-10 w-10">
                   <AvatarFallback>
-                    {selectedTicket.sender.split(' ').map(n => n[0]).join('')}
+                    {selectedTicket.subject.slice(0,2).toUpperCase()}
                   </AvatarFallback>
-                </Avatar>
+                </Avatar>)}
                 <div>
-                  <h3 className="font-semibold">{selectedTicket.subject}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedTicket.hotel} • {selectedTicket.timestamp.split(' ')[0]}
-                  </p>
+                  <h3 className="font-semibold">{selectedTicket?.subject}</h3>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Badge variant="outline" className={getStatusColor(selectedTicket.status)}>
-                  {getStatusIcon(selectedTicket.status)}
-                  <span className="ml-1 capitalize">{selectedTicket.status.replace('_', ' ')}</span>
-                </Badge>
-                <Badge variant="outline" className={getPriorityColor(selectedTicket.priority)}>
-                  <Flag className="w-3 h-3 mr-1" />
-                  {selectedTicket.priority}
-                </Badge>
+                {selectedTicket && (
+                  <>
+                    <Badge variant="outline" className={getStatusColor(selectedTicket.status)}>
+                      {getStatusIcon(selectedTicket.status)}
+                      <span className="ml-1 capitalize">{selectedTicket.status.replace('_', ' ')}</span>
+                    </Badge>
+                    <Badge variant="outline" className={getPriorityColor(selectedTicket.priority)}>
+                      <Flag className="w-3 h-3 mr-1" />
+                      {selectedTicket.priority}
+                    </Badge>
+                  </>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {/* Messages */}
             <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
-              {selectedTicket.messages.map((message) => (
+              {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.type === 'customer' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${message.senderRole === 'admin' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
                     className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.type === 'customer'
+                      message.senderRole === 'admin'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     <div className="flex items-center space-x-2 mb-1">
                       <User className="w-3 h-3" />
-                      <span className="text-xs font-medium">{message.sender}</span>
-                      <span className="text-xs opacity-75">{message.timestamp.split(' ')[1]}</span>
+                      <span className="text-xs font-medium">{message.senderRole || 'user'}</span>
+                      <span className="text-xs opacity-75">{message.createdAt?.split('T')[1]?.slice(0,5)}</span>
                     </div>
                     <p className="text-sm">{message.content}</p>
                   </div>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
             
             {/* Message Input */}
@@ -556,6 +580,12 @@ export default function UserMessages() {
                   placeholder="Type your message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
                   className="min-h-[80px] resize-none"
                 />
               </div>
