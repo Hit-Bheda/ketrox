@@ -182,7 +182,7 @@ export default function Layout({ children }: LayoutProps) {
             image: session.user.image
           });
         }
-        console.log("Fetched session:", session);
+        console.log("User session fetched:", session);
 
       } catch (error) {
         console.error("Error fetching session:", error);
@@ -216,6 +216,19 @@ export default function Layout({ children }: LayoutProps) {
       }
     };
     fetchTenantLogo();
+
+    // Listen for tenant logo updates
+    const handleTenantLogoUpdate = (event: CustomEvent) => {
+      const { logoUrl } = event.detail;
+      if (logoUrl) {
+        setTenantLogoUrl(logoUrl);
+      }
+    };
+
+    window.addEventListener('tenant-logo-updated', handleTenantLogoUpdate as EventListener);
+    return () => {
+      window.removeEventListener('tenant-logo-updated', handleTenantLogoUpdate as EventListener);
+    };
   }, []);
 
   // Notification functions
@@ -265,7 +278,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const notifications = mockNotifications;
   const unreadCount = notifications.filter(n => !n.read).length;
-  const urgentNotifications = notifications.filter(n => n.priority === 'urgent' && !n.read);
+  const  urgentNotifications = notifications.filter(n => n.priority === 'urgent' && !n.read);
   const recentNotifications = notifications.slice(0, 6);
 
   return (
@@ -504,9 +517,13 @@ export default function Layout({ children }: LayoutProps) {
               </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-transparent hover:text-inherit"
+                  >
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder.svg" />
+                     
                       <AvatarFallback className="bg-muted text-muted-foreground">
                         <User className="w-4 h-4" />
                       </AvatarFallback>

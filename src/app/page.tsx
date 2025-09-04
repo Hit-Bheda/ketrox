@@ -7,7 +7,6 @@ import Image from "next/image";
 
 export default function Home() {
   const { data: session, isPending, error } = authClient.useSession();
-  console.log("Session data:", session);
 
   useEffect(() => {
     if (!isPending && !error) {

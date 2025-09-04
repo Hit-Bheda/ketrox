@@ -16,13 +16,7 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import {
   XAxis,
   YAxis,
@@ -35,6 +29,7 @@ import {
   Pie,
   Cell
 } from "recharts";
+
 
 type ApiOrder = {
   id: string;
@@ -84,14 +79,14 @@ export default function Dashboard() {
   const [staff, setStaff] = useState<ApiStaff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
   useEffect(() => {
     let mounted = true;
     async function load() {
       try {
         setLoading(true);
         const [ordersRes, staffRes] = await Promise.all([
-          fetch('/api/manager/order'),
+          fetch('/api/orders'),
           fetch('/api/admin/hotel')
         ]);
 
@@ -118,15 +113,15 @@ export default function Dashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'bg-secondary text-secondary-foreground';
+        return 'bg-secondary text-white';
       case 'preparing':
-        return 'bg-primary text-primary-foreground';
+        return 'bg-primary text-white';
       case 'ready':
-        return 'bg-chart-3 text-foreground';
+        return 'bg-chart-3 text-white';
       case 'delivered':
-        return "bg-green-600 text-foreground";
+        return "bg-green-600 text-white";
       default:
-        return 'bg-muted text-muted-foreground';
+        return 'bg-muted text-white';
     }
   };
 
@@ -317,7 +312,7 @@ export default function Dashboard() {
                 <YAxis
                   stroke="rgb(117, 117, 117)"
                   fontSize={12}
-                  tickFormatter={(value) => value.toFixed(2)} 
+                  tickFormatter={(value) => value.toFixed(2)}
                 />
 
                 <Tooltip
@@ -329,9 +324,9 @@ export default function Dashboard() {
                   }}
                   formatter={(value: number, name: string) => {
                     if (name === "Revenue ($)") {
-                      return [`$${value.toFixed(2)}`, name]; 
+                      return [`$${value.toFixed(2)}`, name];
                     }
-                    return [value, name]; 
+                    return [value, name];
                   }}
                 />
                 <Area
@@ -435,24 +430,14 @@ export default function Dashboard() {
                       <span className="text-xs text-muted-foreground">{order.time}</span>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getStatusColor(order.status)}>
+                  <div className="flex items-center cursor-pointer space-x-2">
+                    <Badge
+                      className={`${getStatusColor(order.status)} cursor-pointer`}
+                      onClick={() => console.log("Clicked Badge")}
+                    >
                       {order.status}
                     </Badge>
-                    <Select
-                      value={order.status}
-                      onValueChange={(value) => updateOrderStatus(order.id, value)}
-                    >
-                      <SelectTrigger className="w-32 h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="preparing">Preparing</SelectItem>
-                        <SelectItem value="ready">Ready</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                      </SelectContent>
-                    </Select>
+                
                   </div>
                 </div>
               ))}

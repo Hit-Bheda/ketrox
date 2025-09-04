@@ -14,8 +14,13 @@ import {
   ChefHat,
   CheckCircle,
   XCircle,
-
+  RefreshCw,
+  Download,
+  Copy,
+  ExternalLink,
+  X,
 } from "lucide-react";
+
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -53,7 +58,8 @@ import { MenuImageSlider } from "@/components/menu/MenuImageSlider";
 
 
 import { DescriptionPopover } from "@/components/menu/DescriptionPopover";
-
+import Image from "next/image";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 
 type DietaryOption = "vegetarian" | "vegan" | "glutenFree";
@@ -75,6 +81,7 @@ type MenuItem = {
 
 
 export default function Menu() {
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [availabilityFilter, setAvailabilityFilter] = useState("all");
@@ -84,7 +91,10 @@ export default function Menu() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [viewOpen, setViewOpen] = useState(false);
   const [itemForm, setItemForm] = useState<MenuItem>({
     id: "",
     name: "",
@@ -118,6 +128,7 @@ export default function Menu() {
     vegan: "bg-indigo-700 text-white",
     glutenFree: "bg-amber-700 text-white",
   };
+
   const getDietaryBadges = (item: MenuItem) => {
     if (!item.dietary || !Array.isArray(item.dietary)) return null;
 
@@ -181,6 +192,17 @@ export default function Menu() {
 
   useEffect(() => {
     featchhMenuItems();
+    // Load QR code for tenant on mount
+    const tenantId = getCookie("tenantId");
+    if (tenantId) {
+      fetch(`/api/qr?tenantId=${tenantId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.qr?.qrPath) {
+            setQrCodeUrl(data.qr.qrPath);
+          }
+        });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -203,7 +225,7 @@ export default function Menu() {
         console.error(data.error || "Failed to update availability");
       }
     } catch (err) {
-      console.error(err,"error");
+      console.error(err, "error");
     }
   };
 
@@ -269,9 +291,275 @@ export default function Menu() {
     topRated: menuItems.length > 0 ? menuItems[0] : { popularity: 0, name: "" }
   };
 
+  function getCookie(name: string) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || "";
+    return "";
+  }
+
+  const handleGenerateQr = async () => {
+    try {
+      setLoading(true);
+      const tenantId = getCookie("tenantId");
+      if (!tenantId) {
+        toast.error("Tenant ID not found. Please login again.");
+        setLoading(false);
+        return;
+      }
+      const res = await fetch("/api/qr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantId,
+          url: "/users",
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.qrPath) {
+        setQrCodeUrl(data.qrPath);
+        toast.success(data.message || "QR generated successfully");
+      } else {
+        toast.error(data.message || "Failed to generate QR");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateQr = async () => {
+    try {
+      setLoading(true);
+      const tenantId = getCookie("tenantId");
+      if (!tenantId) {
+        toast.error("Tenant ID not found. Please login again.");
+        setLoading(false);
+        return;
+      }
+      const res = await fetch("/api/qr", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantId,
+          url: "/users",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.qrPath) {
+        setQrCodeUrl(data.qrPath);
+        toast.success(data.message || "QR code updated successfully");
+      } else {
+        toast.error(data.message || "Failed to update QR code");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteQr = async () => {
+    try {
+      setLoading(true);
+      const tenantId = getCookie("tenantId");
+      if (!tenantId) {
+        toast.error("Tenant ID not found. Please login again.");
+        setLoading(false);
+        return;
+      }
+      const res = await fetch("/api/qr", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenantId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setQrCodeUrl(null);
+        toast.success(data.message || "QR code deleted successfully");
+      } else {
+        toast.error(data.error || "Failed to delete QR code");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewQr = () => {
+    if (!qrCodeUrl) {
+      toast.error("No QR code available to view");
+      return;
+    }
+    setViewOpen(true);
+  };
+
+  const handleDownload = () => {
+    if (!qrCodeUrl) {
+      toast.error("No QR code available to download");
+      return;
+    }
+    fetch(qrCodeUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "menu-QR.png";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("QR code downloaded successfully");
+      })
+      .catch(() => {
+        toast.error("Failed to download QR code");
+      });
+  };
+
+  const handleCopy = async () => {
+    if (!qrCodeUrl) {
+      toast.error("No QR code available to copy");
+      return;
+    }
+    await navigator.clipboard.writeText(qrCodeUrl);
+    toast.success("QR link copied to clipboard");
+  };
+
   return (
     <>
       <div className="flex-1 space-y-6 p-6 animate-fadeIn">
+        {/* QR Code for Full Menu */}
+        <Card className="hover:shadow-lg transition-all duration-300">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Menu QR Code</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              {/* QR code preview */}
+              <div className="flex items-center justify-center w-36 h-36 bg-muted rounded-lg border border-muted-foreground">
+                {loading ? (
+                  <span className="text-xs text-muted-foreground animate-pulse">Refreshing...</span>
+                ) : qrCodeUrl ? (
+                  <Image
+                    src={qrCodeUrl}
+                    alt="QR Code"
+                    width={200}
+                    height={200}
+                    style={{ objectFit: "contain" }}
+                    className="w-full h-full"
+                    priority
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">QR Code Preview</span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="font-medium text-sm">Scan to view the full menu</div>
+                <div className="flex gap-2 flex-wrap">
+                  {!qrCodeUrl && (
+                    <Button
+                      onClick={handleGenerateQr}
+                      disabled={loading}
+                      variant="default"
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white hover:text-white"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-1" />
+                      {loading ? "Generating..." : "Generate QR"}
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleUpdateQr}
+                    variant="outline"
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white"
+                    disabled={!qrCodeUrl || loading}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-1" />
+                    Update QR
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                        disabled={!qrCodeUrl || loading}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete QR
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete QR Code?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. The QR code will be permanently deleted.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          disabled={loading}
+                          onClick={handleDeleteQr}
+                          className="bg-red-600 text-white hover:bg-red-700"
+                        >
+                          {loading ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+                    <DialogContent className="sm:max-w-md">
+                      <div className="flex justify-between items-center mb-4">
+                        <DialogTitle className="text-base font-medium">QR Code</DialogTitle>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        {qrCodeUrl && (
+                          <Image
+                            src={qrCodeUrl}
+                            alt="QR Code"
+                            width={300}
+                            height={300}
+                            className="rounded-lg border"
+                          />
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  <Button
+                    onClick={handleViewQr}
+                    variant="outline"
+                    size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white hover:text-white"
+                    disabled={!qrCodeUrl}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-1" />
+                    View QR Code
+                  </Button>
+                  <Button onClick={handleCopy} variant="outline" size="sm" className="bg-purple-600 hover:bg-purple-700 text-white hover:text-white" disabled={!qrCodeUrl}>
+                    <Copy className="w-4 h-4 mr-1" />
+                    Copy/Share Link
+                  </Button>
+                  <Button onClick={handleDownload} variant="outline" size="sm" className="bg-gray-600 hover:bg-gray-700 text-white hover:text-white" disabled={!qrCodeUrl}>
+                    <Download className="w-4 h-4 mr-1" />
+                    Download QR
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  You can print or share this QR code for customers to access your menu online.
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="hover:shadow-lg transition-all duration-300">
@@ -300,7 +588,7 @@ export default function Menu() {
               </div>
             </CardContent>
           </Card>
-{/* 
+          {/* 
           <Card className="hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Top Rated</CardTitle>
@@ -432,12 +720,12 @@ export default function Menu() {
                         <div className="relative rounded-t-xl overflow-hidden">
                           {/* Image */}
 
-                          <MenuImageSlider images={item.image || []} alt={item.name} /> 
+                          <MenuImageSlider images={item.image || []} alt={item.name} />
                           {/* Action Menu (Top Right) */}
                           <div className="absolute top-2 right-2 z-10">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="secondary" size="sm" className="h-8 w-8 p-0 rounded-full bg-white/90 backdrop-blur-sm shadow">
+                                <Button variant="secondary" size="sm" className="h-8 w-8 p-0 rounded-full bg-[#b91c1c]  shadow">
                                   <MoreHorizontal className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -552,7 +840,7 @@ export default function Menu() {
                             <h3 className="font-semibold text-base">{item.name}</h3>
                             <p className="text-xl font-bold text-primary">${item.price}</p>
 
-                        <DescriptionPopover description={item.description} />
+                            <DescriptionPopover description={item.description} />
 
                             <div className="flex flex-wrap gap-1 mt-2">
                               {getDietaryBadges(item)}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -12,20 +12,10 @@ export default function SignupLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="h-screen w-screen flex items-center justify-between">
-        <div className="w-1/2 h-full p-4">
-          <Image
-            src="/images/login-bg.jpg"
-            alt="Logo"
-            width={2000}
-            height={2000}
-            priority
-            className="w-full h-full object-cover rounded-lg"
-          />
-        </div>
-        <div className="w-1/2 h-full flex items-center justify-center p-4">
-          {children}
-        </div>
+    <div className="h-screen overflow-hidden">
+      <div>
+        {children}
+      </div>
     </div>
   );
 }

@@ -130,6 +130,37 @@ export default function Settings() {
     };
   }, [selectedFile]);
 
+  const onSecuritySubmit = async (values: z.infer<typeof securitySettingsSchema>) => {
+    try {
+      setIsUploading(true);
+
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: values.currentPassword,
+          newPassword: values.newPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to change password");
+        setIsUploading(false);
+        return;
+      }
+
+      // Reset form
+      securityForm.reset();
+      setIsUploading(false);
+      toast.success("Password changed successfully");
+    } catch (error) {
+      console.error("Password change error:", error);
+      toast.error("Failed to change password");
+      setIsUploading(false);
+    }
+  };
+
   const onGeneralSubmit = async () => {
     try {
       let imageUrl: string | null = null;
@@ -361,7 +392,7 @@ export default function Settings() {
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
                           ) : (
-                            <span className="text-sm text-muted-foreground">Logo</span>
+                          <span className="text-sm text-muted-foreground">Logo</span>
                           )}
                         </div>
                         <label className="inline-flex">
@@ -379,14 +410,14 @@ export default function Settings() {
                           />
                           <Button asChild variant="outline" type="button">
                             <span><Upload className="w-4 h-4 mr-2" />Upload Profile photo</span>
-                          </Button>
+                        </Button>
                         </label>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-destructive">
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Remove
-                            </Button>
+                        <Button variant="outline" size="sm" className="text-destructive">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Remove
+                    </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
@@ -438,8 +469,8 @@ export default function Settings() {
                         </>
                       ) : (
                         <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Save Configuration
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Configuration
                         </>
                       )}
                     </Button>
@@ -766,7 +797,7 @@ export default function Settings() {
               </CardHeader>
               <CardContent>
                 <Form {...securityForm}>
-                  <form className="space-y-6">
+                  <form onSubmit={securityForm.handleSubmit(onSecuritySubmit)} className="space-y-6">
                     <FormField
                       control={securityForm.control}
                       name="currentPassword"
@@ -806,9 +837,18 @@ export default function Settings() {
                         </FormItem>
                       )}
                     />
-                    <Button type="submit">
-                      <Save className="w-4 h-4 mr-2" />
-                      Update Password
+                    <Button type="submit" disabled={isUploading}>
+                      {isUploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Updating Password...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Update Password
+                        </>
+                      )}
                     </Button>
                   </form>
                 </Form>

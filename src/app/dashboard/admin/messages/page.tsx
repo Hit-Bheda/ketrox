@@ -285,17 +285,17 @@ export default function UserMessages() {
     setNewTicketForm({ subject: "", priority: "medium", message: "" });
   };
 
-//   const stats = {
-//     open: tickets.filter(t => t.status === "open").length,
-//     inProgress: tickets.filter(t => t.status === "in_progress").length,
-//     resolved: tickets.filter(t => t.status === "resolved").length,
-//     unread: tickets.filter(t => t.unread).length,
-//   };
+  const stats = {
+    open: tickets.filter(t => t.status === "open").length,
+    inProgress: tickets.filter(t => t.status === "in_progress").length,
+    resolved: tickets.filter(t => t.status === "resolved").length,
+    unread: tickets.filter(t => t.unread).length,
+  };
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
       {/* Stats Cards */}
-      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -340,7 +340,7 @@ export default function UserMessages() {
             </div>
           </CardContent>
         </Card>
-      </div> */}
+      </div>
 
       {/* Main Messages Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

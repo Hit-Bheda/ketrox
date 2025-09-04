@@ -1,15 +1,15 @@
 "use client";
-import { useState } from "react";
-import { 
-  Download, 
-  TrendingUp, 
-  DollarSign, 
-  ShoppingCart, 
-  Clock, 
-  Star, 
-  Target, 
-  BarChart3, 
-  PieChart, 
+import { useEffect, useState } from "react";
+import {
+  Download,
+  TrendingUp,
+  DollarSign,
+  ShoppingCart,
+  Clock,
+  Star,
+  Target,
+  BarChart3,
+  PieChart,
   FileText,
   RefreshCw,
   Share2
@@ -33,7 +33,7 @@ import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -42,46 +42,9 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "sonner";
 
-// Sample data for charts
-const salesData = [
-  { date: "2024-01-08", revenue: 2400, orders: 42, customers: 38 },
-  { date: "2024-01-09", revenue: 1800, orders: 35, customers: 32 },
-  { date: "2024-01-10", revenue: 3200, orders: 58, customers: 51 },
-  { date: "2024-01-11", revenue: 2800, orders: 48, customers: 44 },
-  { date: "2024-01-12", revenue: 4100, orders: 72, customers: 65 },
-  { date: "2024-01-13", revenue: 3600, orders: 63, customers: 58 },
-  { date: "2024-01-14", revenue: 4500, orders: 79, customers: 71 },
-  { date: "2024-01-15", revenue: 3900, orders: 69, customers: 62 }
-];
 
-const hourlyData = [
-  { hour: "9 AM", orders: 5, revenue: 280 },
-  { hour: "10 AM", orders: 8, revenue: 450 },
-  { hour: "11 AM", orders: 12, revenue: 720 },
-  { hour: "12 PM", orders: 25, revenue: 1450 },
-  { hour: "1 PM", orders: 32, revenue: 1890 },
-  { hour: "2 PM", orders: 28, revenue: 1650 },
-  { hour: "3 PM", orders: 15, revenue: 890 },
-  { hour: "4 PM", orders: 10, revenue: 580 },
-  { hour: "5 PM", orders: 18, revenue: 1040 },
-  { hour: "6 PM", orders: 35, revenue: 2100 },
-  { hour: "7 PM", orders: 42, revenue: 2580 },
-  { hour: "8 PM", orders: 38, revenue: 2350 },
-  { hour: "9 PM", orders: 28, revenue: 1720 },
-  { hour: "10 PM", orders: 15, revenue: 920 }
-];
-
-const topMenuItems = [
-  { name: "Dry-Aged Ribeye", orders: 156, revenue: 10140, rating: 4.9 },
-  { name: "Chocolate Soufflé", orders: 178, revenue: 2848, rating: 4.7 },
-  { name: "Seared Scallops", orders: 89, revenue: 2136, rating: 4.9 },
-  { name: "Lobster Risotto", orders: 134, revenue: 6432, rating: 4.8 },
-  { name: "Truffle Burrata", orders: 142, revenue: 2556, rating: 4.8 },
-  { name: "Chilean Sea Bass", orders: 98, revenue: 4116, rating: 4.6 },
-  { name: "Tiramisu", orders: 203, revenue: 2436, rating: 4.5 },
-  { name: "Craft Cold Brew", orders: 312, revenue: 2028, rating: 4.4 }
-];
 
 const categoryData = [
   { name: "Main Courses", value: 45, color: "#hsl(var(--chart-1))" },
@@ -91,26 +54,49 @@ const categoryData = [
   { name: "Wines", value: 4, color: "#hsl(var(--chart-5))" }
 ];
 
-const paymentMethodData = [
-  { method: "Credit Card", percentage: 68, amount: 15240 },
-  { method: "Cash", percentage: 22, amount: 4920 },
-  { method: "Mobile Pay", percentage: 7, amount: 1560 },
-  { method: "Bank Transfer", percentage: 3, amount: 680 }
-];
+type Order = {
+  id: string;
+  tableId: string;
+  tableNumber: string;
+  tenantId: string;
+  managerId: string;
+  customerName: string;
+  items: string[];
+  quantity: string[];
+  status: "pending" | "completed" | "cancelled" | string;
+  totalPrice: string;
+  createdAt: string;
+  updatedAt: string;
+  managerName: string;
+  orderNumber: string;
+  itemNames: string[];
+};
 
-const tablePerformance = [
-  { table: "T001", orders: 24, revenue: 1890, avgTime: "1h 20m", utilization: 85 },
-  { table: "T002", orders: 28, revenue: 2340, avgTime: "1h 45m", utilization: 92 },
-  { table: "T003", orders: 18, revenue: 1450, avgTime: "55m", utilization: 78 },
-  { table: "T004", orders: 12, revenue: 2100, avgTime: "2h 30m", utilization: 65 },
-  { table: "T005", orders: 32, revenue: 1680, avgTime: "45m", utilization: 95 },
-  { table: "T007", orders: 16, revenue: 1920, avgTime: "1h 15m", utilization: 72 },
-  { table: "T008", orders: 14, revenue: 2580, avgTime: "2h 10m", utilization: 68 }
-];
+type Invoice = {
+  id: string;
+  invoiceNumber: string;
+  orderId: string;
+  customerName: string;
+  tableNumber: string;
+  items: string[];
+  quantities: string[];
+  prices: string[];
+  subtotal: string;
+  totalAmount: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  notes?: string;
+  createdAt: string;
+};
+
 
 export default function Reports() {
-  const [dateRange, setDateRange] = useState("7days");
+  const [dateRange, setDateRange] = useState("today");
   const [activeTab, setActiveTab] = useState("overview");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+     const [menuMap, setMenuMap] = useState<{ [id: string]: string }>({});
+
 
   const exportData = (format: string) => {
     console.log(`Exporting data in ${format} format`);
@@ -122,11 +108,161 @@ export default function Reports() {
     // In a real app, this would fetch fresh data
   };
 
-  // Calculate key metrics
-  const totalRevenue = salesData.reduce((sum, day) => sum + day.revenue, 0);
-  const totalOrders = salesData.reduce((sum, day) => sum + day.orders, 0);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch(
+          "/api/orders",
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store"
+          }
+        );
+        if (!res.ok) throw new Error("Failed to fetch orders");
+        const data = await res.json();
+        setOrders(data.orders || []);
+        console.log("menu", data);
+
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      }
+    };
+    fetchOrders();
+  }, []);
+
+
+    const tablePerformance = (() => {
+    if (!orders.length) return [];
+    const tableStats: Record<string, { orders: number; revenue: number }> = {};
+    orders.forEach((order: Order) => {
+      const table = order.tableNumber || "Unknown";
+      if (!tableStats[table]) tableStats[table] = { orders: 0, revenue: 0 };
+      tableStats[table].orders += 1;
+      tableStats[table].revenue += parseFloat(order.totalPrice);
+    });
+    const maxOrders = Math.max(...Object.values(tableStats).map(t => t.orders), 1);
+    return Object.entries(tableStats).map(([table, stats]) => ({
+      table,
+      orders: stats.orders,
+      revenue: stats.revenue,
+      utilization: Math.round((stats.orders / maxOrders) * 100)
+    }));
+  })();
+
+
+    const fetchInvoices = async () => {
+      try {
+      
+        const response = await fetch("/api/admin/invoices");
+        const data = await response.json();
+        if (response.ok) {
+          setInvoices(data.invoices || []);
+          console.log("invoices", data);
+        } else {
+          toast.error("Failed to fetch invoices");
+        }
+      } catch (error) {
+        console.error("Error fetching invoices:", error);
+        toast.error("Failed to fetch invoices");
+      }
+    };
+
+    useEffect(() => {
+      fetchInvoices();
+    }, []);
+
+   
+
+  useEffect(() => {
+    fetch("/api/admin/menu")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.menu)) {
+          const map: { [id: string]: string } = {};
+          type MenuItem = { id: string; item_name: string };
+          data.menu.forEach((item: MenuItem) => {
+            map[item.id] = item.item_name;
+          });
+          setMenuMap(map);
+        }
+      });
+  }, []);
+
+
+   const topMenuItems = (() => {
+    if (!invoices.length || !Object.keys(menuMap).length) return [];
+    // Aggregate stats for each item
+    const itemStats: Record<string, { name: string; orders: number; revenue: number }> = {};
+    invoices.forEach(inv => {
+      inv.items.forEach((itemId, idx) => {
+        const name = menuMap[itemId] || itemId;
+        const qty = parseInt(inv.quantities[idx] || "1", 10);
+        const price = parseFloat(inv.prices[idx] || "0");
+        if (!itemStats[itemId]) itemStats[itemId] = { name, orders: 0, revenue: 0 };
+        itemStats[itemId].orders += qty;
+        itemStats[itemId].revenue += price * qty;
+      });
+    });
+    // Convert to array and sort by orders desc
+    const itemsArr = Object.values(itemStats).sort((a, b) => b.orders - a.orders);
+    // Add performance label
+    return itemsArr.map(item => ({
+      ...item,
+      performance: item.orders > 150 ? "Excellent" : item.orders > 100 ? "Good" : "Average"
+    })).slice(0, 8); // Top 8 items
+  })();
+
+
+  const salesData = Object.values(
+    orders.reduce((acc: Record<string, { date: string, revenue: number, orders: number }>, order) => {
+      const date = new Date(order.createdAt).toISOString().slice(0, 10);
+      if (!acc[date]) acc[date] = { date, revenue: 0, orders: 0 };
+      acc[date].revenue += parseFloat(order.totalPrice);
+      acc[date].orders += 1;
+      return acc;
+    }, {})
+  );
+
+
+const hourlyData = Array.from({ length: 24 }, (_, i) => {
+  const hourOrders = orders.filter(order => {
+    const orderHour = new Date(order.createdAt).getHours();
+    return orderHour === i;
+  });
+  return {
+    hour: `${i === 0 ? 12 : i > 12 ? i - 12 : i}${i < 12 ? ' AM' : ' PM'}`,
+    orders: hourOrders.length,
+    revenue: hourOrders.reduce((sum, order) => sum + parseFloat(order.totalPrice), 0)
+  };
+}).filter(h => h.orders > 0);
+
+  const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.totalPrice), 0);
+  const totalOrders = orders.length;
   const avgOrderValue = totalRevenue / totalOrders;
-  const peakHour = hourlyData.reduce((max, hour) => hour.orders > max.orders ? hour : max, hourlyData[0]);
+  const peakHour = hourlyData.length > 0 ? hourlyData.reduce((max, hour) => hour.orders > max.orders ? hour : max, hourlyData[0]) : { hour: '-', orders: 0, revenue: 0 };
+
+    const paymentMethodStats = (() => {
+    if (!invoices.length) return [];
+    const totals: Record<string, { amount: number; count: number }> = {};
+    let grandTotal = 0;
+    invoices.forEach(inv => {
+      const method = inv.paymentMethod || "Unknown";
+      const amt = parseFloat(inv.totalAmount) || 0;
+      if (!totals[method]) totals[method] = { amount: 0, count: 0 };
+      totals[method].amount += amt;
+      totals[method].count += 1;
+      grandTotal += amt;
+    });
+    return Object.entries(totals).map(([method, { amount, count }]) => ({
+      method,
+      amount,
+      count,
+      percentage: grandTotal ? Math.round((amount / grandTotal) * 100) : 0
+    }));
+  })();
+ 
 
   return (
     <>
@@ -168,7 +304,7 @@ export default function Reports() {
               <DollarSign className="h-4 w-4 text-chart-1" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-chart-1">${totalRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-chart-1">${totalRevenue.toFixed(2)}</div>
               <div className="flex items-center space-x-1 text-xs text-chart-3 mt-1">
                 <TrendingUp className="w-3 h-3" />
                 <span>+12.5% from last period</span>
@@ -212,7 +348,7 @@ export default function Reports() {
             <CardContent>
               <div className="text-2xl font-bold text-chart-4">{peakHour.hour}</div>
               <div className="text-xs text-muted-foreground mt-1">
-                {peakHour.orders} orders, ${peakHour.revenue}
+                {peakHour.orders} orders, ${peakHour.revenue.toFixed(2)}
               </div>
             </CardContent>
           </Card>
@@ -242,20 +378,26 @@ export default function Reports() {
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={salesData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="date" 
+                      <XAxis
+                        dataKey="date"
                         tickFormatter={(value) => format(new Date(value), 'MMM dd')}
                       />
                       <YAxis />
-                      <Tooltip 
+                      <Tooltip
                         labelFormatter={(value) => format(new Date(value), 'MMM dd, yyyy')}
-                        formatter={(value) => [`$${value}`, 'Revenue']}
+                        formatter={(value) => [
+                          `$${Number(value).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`,
+                          'Revenue',
+                        ]}
                       />
-                      <Area 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        stroke="hsl(var(--chart-1))" 
-                        fill="hsl(var(--chart-1))" 
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="hsl(var(--chart-1))"
+                        fill="hsl(var(--chart-1))"
                         fillOpacity={0.3}
                       />
                     </AreaChart>
@@ -310,8 +452,15 @@ export default function Reports() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="hour" />
                       <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="orders" fill="hsl(var(--chart-2))" />
+                      <Tooltip
+                        formatter={(value: number, name: string) =>
+                          name === 'revenue'
+                            ? [`$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Revenue']
+                            : [value, 'Orders']
+                        }
+                      />
+                      <Bar dataKey="orders" fill="#f59e0a" />
+                      <Bar dataKey="revenue" fill="#f59e0a" />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -324,21 +473,29 @@ export default function Reports() {
                   <CardDescription>Revenue breakdown by payment type</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {paymentMethodData.map((method, index) => (
-                    <div key={method.method} className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>{method.method}</span>
-                        <span className="font-medium">${method.amount.toLocaleString()}</span>
+                  {[
+                    { key: 'Cash', color: 'bg-chart-1' },
+                    { key: 'Card', color: 'bg-chart-2' },
+                    { key: 'UPI', color: 'bg-chart-3' },
+                    { key: 'Bank Transfer', color: 'bg-chart-4' }
+                  ].slice(0, 4).map((pm) => {
+                    const stat = paymentMethodStats.find(m => m.method.toLowerCase() === pm.key.toLowerCase()) || { method: pm.key, amount: 0, percentage: 0 };
+                    return (
+                      <div key={pm.key} className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>{pm.key}</span>
+                          <span className="font-medium">${stat.amount.toFixed(2)}</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${pm.color}`}
+                            style={{ width: `${stat.percentage}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-muted-foreground">{stat.percentage}% of total</div>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full bg-chart-${index + 1}`}
-                          style={{ width: `${method.percentage}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-muted-foreground">{method.percentage}% of total</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </CardContent>
               </Card>
             </div>
@@ -357,7 +514,6 @@ export default function Reports() {
                       <TableHead>Item Name</TableHead>
                       <TableHead>Orders</TableHead>
                       <TableHead>Revenue</TableHead>
-                      <TableHead>Rating</TableHead>
                       <TableHead>Performance</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -374,18 +530,13 @@ export default function Reports() {
                         </TableCell>
                         <TableCell>{item.orders}</TableCell>
                         <TableCell>${item.revenue.toLocaleString()}</TableCell>
+                       
                         <TableCell>
-                          <div className="flex items-center space-x-1">
-                            <Star className="w-4 h-4 text-chart-4 fill-current" />
-                            <span>{item.rating}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
+                          <Badge
                             className={
-                              item.orders > 150 ? "bg-chart-3 text-foreground" :
-                              item.orders > 100 ? "bg-chart-4 text-foreground" :
-                              "bg-chart-5 text-foreground"
+                              item.orders > 150 ? "bg-chart-3 text-white" :
+                                item.orders > 100 ? "bg-chart-4 text-white" :
+                                  "bg-chart-5 text-white"
                             }
                           >
                             {item.orders > 150 ? "Excellent" : item.orders > 100 ? "Good" : "Average"}
@@ -412,7 +563,7 @@ export default function Reports() {
                       <TableHead>Table</TableHead>
                       <TableHead>Orders</TableHead>
                       <TableHead>Revenue</TableHead>
-                      <TableHead>Avg Time</TableHead>
+           
                       <TableHead>Utilization</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -422,16 +573,15 @@ export default function Reports() {
                         <TableCell className="font-medium">{table.table}</TableCell>
                         <TableCell>{table.orders}</TableCell>
                         <TableCell>${table.revenue.toLocaleString()}</TableCell>
-                        <TableCell>{table.avgTime}</TableCell>
+                       
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <div className="w-full bg-muted rounded-full h-2 max-w-[60px]">
-                              <div 
-                                className={`h-2 rounded-full ${
-                                  table.utilization > 90 ? 'bg-chart-3' :
+                              <div
+                                className={`h-2 rounded-full ${table.utilization > 90 ? 'bg-chart-3' :
                                   table.utilization > 75 ? 'bg-chart-4' :
-                                  'bg-chart-5'
-                                }`}
+                                    'bg-chart-5'
+                                  }`}
                                 style={{ width: `${table.utilization}%` }}
                               />
                             </div>

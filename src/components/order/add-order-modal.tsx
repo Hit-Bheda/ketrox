@@ -47,8 +47,6 @@ export default function BookOrderModal({
     const [customerName, setCustomerName] = useState("");
     const [status, setStatus] = useState("pending");
     const [loading, setLoading] = useState(false);
-    const [editingOrder, setEditingOrder] = useState<Ordertype | undefined>(undefined);
-
     // Fetch menu items
     useEffect(() => {
         if (open) {
@@ -61,18 +59,22 @@ export default function BookOrderModal({
         }
     }, [open]);
 
-    // Calculate total price
-    const totalPrice = selectedItems.reduce((sum, itemId) => {
+
+    const subtotal = selectedItems.reduce((sum, itemId) => {
         const item = menuItems.find(i => i.id === itemId);
         const qty = quantities[itemId] || 0;
         return sum + (item ? item.price * qty : 0);
     }, 0);
 
+    const taxRate = 0.18;
+    const tax = subtotal * taxRate;
+    const totalPrice = subtotal + tax;
+
     // Handle item selection
     const handleSelectItem = (itemId: string) => {
         setSelectedItems(prev => {
             if (prev.includes(itemId)) {
-                setQuantities(q => ({ ...q, [itemId]: (q[itemId] || 1) + 1 }));
+                setQuantities(q => ({ ...q, [itemId]: (q[itemId] || 1) + 2 }));
                 return prev;
             } else {
                 setQuantities(q => ({ ...q, [itemId]: q[itemId] || 1 }));
@@ -103,13 +105,20 @@ export default function BookOrderModal({
             customer_name: customerName,
             items: selectedItems,
             quantity: selectedItems.map(id => String(quantities[id] || 1)),
+            prices: selectedItems.map(id => {
+                const item = menuItems.find(i => i.id === id);
+                return String(item?.price || 0);
+            }),
             status,
-            total_price: String(totalPrice),
-            ...(order ? { id: order.id } : {}),
+            payment_status: "unpaid",
+            subtotal: String(subtotal.toFixed(2)),
+            tax: String(tax.toFixed(2)),
+            total_price: String(totalPrice.toFixed(2)),
+            ...(order ? { order_id: order.id } : {}),
         };
 
         try {
-            const res = await fetch("/api/manager/order", {
+            const res = await fetch("/api/orders", {
                 method: order ? "PUT" : "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -123,7 +132,14 @@ export default function BookOrderModal({
                 resetForm();
                 toast.success(data.message || (order ? "Order updated successfully" : "Order added successfully"));
             } else {
-                toast.error(data.error || "Failed to save order");
+                // Show specific error messages for access control
+                if (res.status === 403) {
+                    toast.error(data.error || "You don't have permission to update this order");
+                } else if (res.status === 404) {
+                    toast.error("Order not found");
+                } else {
+                    toast.error(data.error || "Failed to save order");
+                }
             }
         } catch (error) {
             console.error("Order submit error:", error);
@@ -139,7 +155,8 @@ export default function BookOrderModal({
     };
 
     useEffect(() => {
-        if (order) {
+        if (order && open) {
+            console.log("Populating modal with order data:", order);
             setCustomerName(order.customerName);
             setSelectedItems(order.items);
             setQuantities(
@@ -149,7 +166,8 @@ export default function BookOrderModal({
                 }, {})
             );
             setStatus(order.status);
-        } else {
+        } else if (!order && open) {
+            console.log("Resetting form for new order");
             resetForm();
         }
     }, [order, open]);
@@ -221,7 +239,20 @@ export default function BookOrderModal({
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="font-bold text-lg">Total: ${totalPrice.toFixed(2)}</div>
+                    <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between text-sm">
+                            <span>Subtotal:</span>
+                            <span>${subtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span>Tax (18%):</span>
+                            <span>${tax.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-lg border-t pt-2">
+                            <span>Total:</span>
+                            <span>${totalPrice.toFixed(2)}</span>
+                        </div>
+                    </div>
                 </div>
                 <DialogFooter className="flex justify-between">
                     <Button

@@ -3,7 +3,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 
 export function DescriptionPopover({ description }: { description: string }) {
   const [open, setOpen] = useState(false);
-  const limit = 135;
+  const limit = 155 ;
 
   // Check if description is longer than limit
   const isLong = description.length > limit;
