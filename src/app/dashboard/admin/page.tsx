@@ -16,13 +16,7 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import {
   XAxis,
   YAxis,
@@ -35,7 +29,7 @@ import {
   Pie,
   Cell
 } from "recharts";
-import { HotelType } from "@/types";
+
 
 type ApiOrder = {
   id: string;
@@ -92,7 +86,7 @@ export default function Dashboard() {
       try {
         setLoading(true);
         const [ordersRes, staffRes] = await Promise.all([
-          fetch('/api/manager/order'),
+          fetch('/api/orders'),
           fetch('/api/admin/hotel')
         ]);
 
@@ -119,15 +113,15 @@ export default function Dashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'bg-secondary text-secondary-foreground';
+        return 'bg-secondary text-white';
       case 'preparing':
-        return 'bg-primary text-primary-foreground';
+        return 'bg-primary text-white';
       case 'ready':
-        return 'bg-chart-3 text-foreground';
+        return 'bg-chart-3 text-white';
       case 'delivered':
-        return "bg-green-600 text-foreground";
+        return "bg-green-600 text-white";
       default:
-        return 'bg-muted text-muted-foreground';
+        return 'bg-muted text-white';
     }
   };
 
@@ -443,20 +437,7 @@ export default function Dashboard() {
                     >
                       {order.status}
                     </Badge>
-                    <Select
-                      value={order.status}
-                      onValueChange={(value) => updateOrderStatus(order.id, value)}
-                    >
-                      <SelectTrigger className="w-32 h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="preparing">Preparing</SelectItem>
-                        <SelectItem value="ready">Ready</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                      </SelectContent>
-                    </Select>
+                
                   </div>
                 </div>
               ))}

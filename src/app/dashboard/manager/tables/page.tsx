@@ -16,6 +16,7 @@ import {
   UserCheck,
   Wrench,
   BookOpen,
+  Eye,
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,8 @@ import { toast } from "sonner";
 import BookOrderModal from "@/components/order/add-order-modal";
 import { betterFetch } from "@better-fetch/fetch";
 import { NotesPopover } from "@/components/table/NotesPopover";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import Image from "next/image";
 
 
 const locations = ["Main Dining", "Patio", "Private Room", "Bar Area", "Outdoor", "VIP Section"];
@@ -73,6 +76,15 @@ type Ordertype = {
   itemNames: string[];
 };
 
+type QrCode = {
+  id: string;
+  tenantId: string;
+  url: string;
+  qrPath: string | null;
+  createdAt: string; // coming as ISO string from API
+  updatedAt: string;
+};
+
 export default function Tables() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tableItem, setTableItem] = useState<Table[]>([])
@@ -80,6 +92,11 @@ export default function Tables() {
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string } | null>(null);
   const [editingOrder, setEditingOrder] = useState<Ordertype | null>(null);
+  const [qrCode, setQrCode] = useState<QrCode | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [locationFilter, setLocationFilter] = useState("all");
 
   async function fetchTables() {
     try {
@@ -89,7 +106,6 @@ export default function Tables() {
       }
       const res = await fetch("/api/admin/table");
       const data = await res.json();
-      console.log("Fetched tables:", data);
       setTableItem(
         (data.tables || []).map((table: Table) => ({
           ...table,
@@ -102,19 +118,12 @@ export default function Tables() {
       );
     } catch (error) {
       console.error("Error fetching tables:", error);
-    } 
+    }
   }
 
   useEffect(() => {
     fetchTables();
   }, []);
-
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [locationFilter, setLocationFilter] = useState("all");
-
-
 
   const filteredTables = tableItem.filter(table => {
     const matchesSearch =
@@ -153,7 +162,7 @@ export default function Tables() {
       });
       const data = await res.json();
       if (!res.ok) {
-  
+
         toast.error(data.error || "Failed to update table status");
       } else {
         fetchTables();
@@ -162,16 +171,8 @@ export default function Tables() {
     } catch (err) {
       console.log(err);
       toast.error("Network error");
-    } 
+    }
   };
-
-  const stats = {
-    total: tableItem.length,
-    available: tableItem.filter(t => t.available && !t.maintenance).length,
-    occupied: tableItem.filter(t => !t.available && !t.maintenance).length,
-    maintenance: tableItem.filter(t => t.maintenance).length,
-  };
-
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -197,6 +198,51 @@ export default function Tables() {
     };
     fetchUserData();
   }, []);
+
+
+  function getCookie(name: string) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || "";
+    return "";
+  }
+
+  useEffect(() => {
+    const fetchQrCode = async () => {
+      const tenantId = getCookie("tenantId");
+      if (!tenantId) return;
+
+      try {
+        const res = await fetch(`/api/qr?tenantId=${tenantId}`);
+        const data: { success: boolean; qr?: QrCode; error?: string } = await res.json();
+        if (res.ok && data.success && data.qr) {
+          setQrCode(data.qr);
+
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        toast.error(`Error fetching QR: ${message}`);
+        return null;
+      }
+    };
+
+    fetchQrCode();
+  }, []);
+
+  const handleViewQr = () => {
+    if (!qrCode) {
+      toast.error("No QR code available to view");
+      return;
+    }
+    setViewOpen(true);
+  };
+
+  const stats = {
+    total: tableItem.length,
+    available: tableItem.filter(t => t.available && !t.maintenance).length,
+    occupied: tableItem.filter(t => !t.available && !t.maintenance).length,
+    maintenance: tableItem.filter(t => t.maintenance).length,
+  };
 
   return (
     <div className="flex-1 space-y-6 p-4 md:p-6">
@@ -293,7 +339,7 @@ export default function Tables() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="available">Available</SelectItem>
                 <SelectItem value="occupied">Occupied</SelectItem>
-              
+
                 <SelectItem value="maintenance">Maintenance</SelectItem>
               </SelectContent>
             </Select>
@@ -344,13 +390,13 @@ export default function Tables() {
                                 const res = await fetch(`/api/orders?tableId=${table.id}`);
                                 const data = await res.json();
                                 console.log("Fetched order data:", data);
-                                
+
                                 if (res.ok && data.orders && data.orders.length > 0) {
                                   // Find the most recent active order (pending or preparing)
-                                  const activeOrder = data.orders.find((order: Ordertype) => 
+                                  const activeOrder = data.orders.find((order: Ordertype) =>
                                     order.status === "pending" || order.status === "preparing"
                                   ) || data.orders[0];
-                                  
+
                                   setEditingOrder(activeOrder);
                                   console.log("Setting editing order:", activeOrder);
                                 } else {
@@ -398,22 +444,40 @@ export default function Tables() {
                             </>
                           )}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleViewQr} className="focus:bg-accent focus:text-accent-foreground"  >
+                          <Eye className="w-4 h-4 mr-2 text-green-600" />
+                          View QR Code
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
 
                   {/* QR Skeleton Full Width */}
                   <div className="w-full mb-3 mt-8">
-                    <div className="relative flex items-center justify-center w-full h-50 bg-muted rounded-lg animate-pulse">
-                      <QrCode className="w-12 h-12 text-muted-foreground" />
-                      <button
-                        type="button"
-                        className="absolute bottom-2 right-2 bg-primary text-white rounded-full p-1 shadow hover:bg-primary/90 transition"
-                        title="Generate QR Code"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {qrCode && qrCode.qrPath ? (
+                      <div className="relative flex items-center justify-center w-full h-60  rounded-lg">
+                        <Image
+                          src={qrCode.qrPath}
+                          alt="QR Code"
+                          width={200}
+                          height={200}
+                          style={{ objectFit: "contain" }}
+                          className="w-full h-full"
+                          priority
+                        />
+                      </div>
+                    ) : (
+                      <div className="relative flex items-center justify-center w-full h-60 bg-muted rounded-lg animate-pulse">
+                        <QrCode className="w-12 h-12 text-muted-foreground" />
+                        <button
+                          type="button"
+                          className="absolute bottom-2 right-2 bg-primary text-white rounded-full p-1 shadow hover:bg-primary/90 transition"
+                          title="Generate QR Code"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Table Info */}
@@ -451,7 +515,7 @@ export default function Tables() {
                   </div>
 
                   <p className="text-sm font-medium text-muted-foreground">{table.name}</p>
-                <NotesPopover notes={table.notes || ""} />
+                  <NotesPopover notes={table.notes || ""} />
                 </CardHeader>
 
                 <CardContent className="space-y-3">
@@ -486,6 +550,26 @@ export default function Tables() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex justify-between items-center mb-4">
+            <DialogTitle className="text-base font-medium">QR Code</DialogTitle>
+          </div>
+          <div className="flex items-center justify-center">
+            {qrCode?.qrPath && (
+              <Image
+                src={qrCode.qrPath}
+                alt="QR Code"
+                width={300}
+                height={300}
+                className="rounded-lg border"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       {selectedTableId && (
         <BookOrderModal

@@ -84,6 +84,7 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
+  
 
   const now = new Date();
 
@@ -385,13 +386,13 @@ export default function Orders() {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <p className="text-sm truncate cursor-pointer">
+                                <p className="text-sm truncate  cursor-pointer">
                                   {order.itemNames
                                     ?.map((name: string, i: number) => `${order.quantity?.[i]}x ${name}`)
                                     .join(", ")}
                                 </p>
                               </TooltipTrigger>
-                              <TooltipContent className="max-w-xs break-words">
+                              <TooltipContent className="max-w-xs text-gray-900 break-words">
                                 {order.itemNames
                                   ?.map((name: string, i: number) => `${order.quantity?.[i]}x ${name}`)
                                   .join(", ")}

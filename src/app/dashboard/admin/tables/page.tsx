@@ -8,21 +8,18 @@ import {
   Edit,
   Trash2,
   Users,
-
   MapPin,
-
   CheckCircle,
   AlertCircle,
   XCircle,
   QrCode,
-
   Check,
   Table,
   CircleDot,
   UserCheck,
-  Wrench
+  Wrench,
+  Eye
 } from "lucide-react";
-
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +44,8 @@ import EditTableDialog from "@/components/table/edit-table-modal";
 import { toast } from "sonner";
 import { tableSchema } from "@/schemas";
 import { NotesPopover } from "@/components/table/NotesPopover";
+import Image from "next/image";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const capacities = [2, 3, 4, 6, 8];
 
@@ -61,6 +60,15 @@ type Table = {
   status?: "available" | "occupied" | "unavailable" | string;
 };
 
+type QrCode = {
+  id: string;
+  tenantId: string;
+  url: string;
+  qrPath: string | null;
+  createdAt: string; // coming as ISO string from API
+  updatedAt: string;
+};
+
 export default function Tables() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tableItem, setTableItem] = useState<Table[]>([])
@@ -68,6 +76,18 @@ export default function Tables() {
 
   const [error, setError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
+  const [qrCode, setQrCode] = useState<QrCode | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [viewOpen, setViewOpen] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [tableForm, setTableForm] = useState({
+    number: "",
+    name: "",
+    capacity: 2,
+    notes: ""
+  });
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [editTableForm, setEditTableForm] = useState({
     id: "",
     number: "",
@@ -104,21 +124,6 @@ export default function Tables() {
     fetchTables();
   }, []);
 
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-
-  const [showAddModal, setShowAddModal] = useState(false);
-
-  // Form state for add table modal
-  const [tableForm, setTableForm] = useState({
-    number: "",
-    name: "",
-    capacity: 2,
-    notes: ""
-  });
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
   const clearForm = () => {
     setTableForm({
       number: "",
@@ -154,7 +159,6 @@ export default function Tables() {
       return;
     }
 
-    // Validate with Zod
     const result = tableSchema.safeParse({
       ...tableForm, tenantId, available: true,
       maintenance: false,
@@ -281,6 +285,45 @@ export default function Tables() {
     } finally {
       setEditLoading(false);
     }
+  };
+
+
+  function getCookie(name: string) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || "";
+    return "";
+  }
+
+
+  useEffect(() => {
+    const fetchQrCode = async () => {
+      const tenantId = getCookie("tenantId");
+      if (!tenantId) return;
+
+      try {
+        const res = await fetch(`/api/qr?tenantId=${tenantId}`);
+        const data: { success: boolean; qr?: QrCode; error?: string } = await res.json();
+        if (res.ok && data.success && data.qr) {
+          setQrCode(data.qr);
+          console.log("Fetched QR code:", data.qr);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        toast.error(`Error fetching QR: ${message}`);
+        return null;
+      }
+    };
+
+    fetchQrCode();
+  }, []);
+
+  const handleViewQr = () => {
+    if (!qrCode) {
+      toast.error("No QR code available to view");
+      return;
+    }
+    setViewOpen(true);
   };
 
   const stats = {
@@ -425,7 +468,6 @@ export default function Tables() {
                         className="bg-popover border-border text-popover-foreground"
                       >
 
-
                         <DropdownMenuItem
                           onClick={() => {
                             setEditTableForm({
@@ -439,7 +481,7 @@ export default function Tables() {
                           }}
                           className="focus:bg-accent focus:text-accent-foreground"
                         >
-                          <Edit className="w-4 h-4 mr-2" />
+                          <Edit className="w-4 h-4 mr-2 text-blue-600" />
                           Edit Details
                         </DropdownMenuItem>
 
@@ -477,11 +519,16 @@ export default function Tables() {
                           )}
                         </DropdownMenuItem>
 
+                        <DropdownMenuItem onClick={handleViewQr} className="focus:bg-accent focus:text-accent-foreground"  >
+                          <Eye className="w-4 h-4 mr-2 text-green-600" />
+                          View QR Code
+                        </DropdownMenuItem>
+
                         <DropdownMenuItem
                           onClick={() => handleDeleteTable(table.id.toString())}
                           className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                         >
-                          <Trash2 className="w-4 h-4 mr-2" />
+                          <Trash2 className="w-4 h-4 mr-2 text-red-600" />
                           Remove Table
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -490,16 +537,30 @@ export default function Tables() {
 
                   {/* QR Skeleton Full Width */}
                   <div className="w-full mb-3 mt-8">
-                    <div className="relative flex items-center justify-center w-full h-50 bg-muted rounded-lg animate-pulse">
-                      <QrCode className="w-12 h-12 text-muted-foreground" />
-                      <button
-                        type="button"
-                        className="absolute bottom-2 right-2 bg-primary text-white rounded-full p-1 shadow hover:bg-primary/90 transition"
-                        title="Generate QR Code"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {qrCode && qrCode.qrPath ? (
+                      <div className="relative flex items-center justify-center w-full h-60  rounded-lg">
+                        <Image
+                          src={qrCode.qrPath}
+                          alt="QR Code"
+                          width={200}
+                          height={200}
+                          style={{ objectFit: "contain" }}
+                          className="w-full h-full"
+                          priority
+                        />
+                      </div>
+                    ) : (
+                      <div className="relative flex items-center justify-center w-full h-60 bg-muted rounded-lg animate-pulse">
+                        <QrCode className="w-12 h-12 text-muted-foreground" />
+                        <button
+                          type="button"
+                          className="absolute bottom-2 right-2 bg-primary text-white rounded-full p-1 shadow hover:bg-primary/90 transition"
+                          title="Generate QR Code"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Table Info */}
@@ -572,6 +633,25 @@ export default function Tables() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-md">
+          <div className="flex justify-between items-center mb-4">
+            <DialogTitle className="text-base font-medium">QR Code</DialogTitle>
+          </div>
+          <div className="flex items-center justify-center">
+            {qrCode?.qrPath && (
+              <Image
+                src={qrCode.qrPath}
+                alt="QR Code"
+                width={300}
+                height={300}
+                className="rounded-lg border"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AddTableDialog
         showAddModal={showAddModal}

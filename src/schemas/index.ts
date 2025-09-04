@@ -120,7 +120,7 @@ export const invoiceSchema = z.object({
     subtotal: z.string().min(1, "Subtotal is required"),
     tax: z.string().default("0"),
     total_amount: z.string().min(1, "Total amount is required"),
-    payment_method: z.enum(["cash", "card", "upi", "other"]).default("cash"),
+    payment_method: z.enum(["cash", "card", "upi", "Bank Transfer"]).default("cash"),
     payment_status: z.enum(["pending", "paid", "failed", "refunded"]).default("pending"),
     notes: z.string().optional(),
 });
@@ -134,4 +134,14 @@ export const updateOrderStatusSchema = z.object({
     order_id: z.uuid("Invalid order ID"),
     status: z.enum(["pending", "preparing", "delivered", "cancelled"]),
     payment_status: z.enum(["unpaid", "paid", "refunded"]).optional(),
+});
+
+
+export const qrCodeSchema = z.object({
+  tenantId: z.string().uuid("Invalid tenant ID").optional(),
+//   url: z.string().url("Provide a valid URL"),
+  url: z.string().min(1, "Path or URL is required"),
+  qrPath: z.string().optional(), 
+  createdAt: z.date().optional(), 
+  updatedAt: z.date().optional(), 
 });

@@ -11,7 +11,6 @@ import {
   FileText,
   Download,
   Printer,
-  Send,
   DollarSign,
   CheckCircle,
   XCircle,
@@ -133,7 +132,7 @@ export default function Invoices() {
     tableNumber: "",
     items: [{ name: "", quantity: 1, price: 0 }],
     notes: "",
-    paymentMethod: "cash" as "cash" | "card" | "upi" | "other",
+    paymentMethod: "cash" as "cash" | "card" | "upi" | "Bank Transfer",
     paymentStatus: "pending" as "pending" | "paid" | "failed" | "refunded"
   });
 
@@ -141,7 +140,7 @@ export default function Invoices() {
   const [editForm, setEditForm] = useState({
     customerName: "",
     tableNumber: "",
-    paymentMethod: "cash" as "cash" | "card" | "upi" | "other",
+    paymentMethod: "cash" as "cash" | "card" | "upi" | "Bank Transfer",
     paymentStatus: "pending" as "pending" | "paid" | "failed" | "refunded",
     notes: ""
   });
@@ -216,6 +215,7 @@ export default function Invoices() {
       const data = await response.json();
       if (response.ok) {
         setInvoices(data.invoices || []);
+        console.log("invoices", data);
       } else {
         toast.error("Failed to fetch invoices");
       }
@@ -504,7 +504,7 @@ export default function Invoices() {
     setEditForm({
       customerName: invoice.customerName,
       tableNumber: invoice.tableNumber,
-      paymentMethod: invoice.paymentMethod as "cash" | "card" | "upi" | "other",
+      paymentMethod: invoice.paymentMethod as "cash" | "card" | "upi" | "Bank Transfer",
       paymentStatus: invoice.paymentStatus as "pending" | "paid" | "failed" | "refunded",
       notes: invoice.notes || ""
     });
@@ -714,7 +714,7 @@ export default function Invoices() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="payment-method" className="text-foreground mb-2">Payment Method</Label>
-                        <Select value={invoiceForm.paymentMethod} onValueChange={(value: "cash" | "card" | "upi" | "other") => setInvoiceForm({ ...invoiceForm, paymentMethod: value })} >
+                        <Select value={invoiceForm.paymentMethod} onValueChange={(value: "cash" | "card" | "upi" | "Bank Transfer") => setInvoiceForm({ ...invoiceForm, paymentMethod: value })} >
                           <SelectTrigger className="cursor-pointer">
                             <SelectValue />
                           </SelectTrigger >
@@ -722,7 +722,7 @@ export default function Invoices() {
                             <SelectItem value="cash">Cash</SelectItem>
                             <SelectItem value="card">Card</SelectItem>
                             <SelectItem value="upi">UPI</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
+                            <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -927,7 +927,7 @@ export default function Invoices() {
                     onValueChange={(value) =>
                       setEditForm((prev) => ({
                         ...prev,
-                        paymentMethod: value as "cash" | "card" | "upi" | "other",
+                        paymentMethod: value as "cash" | "card" | "upi" | "Bank Transfer",
                       }))
                     }
                   >
@@ -938,7 +938,7 @@ export default function Invoices() {
                       <SelectItem value="cash">Cash</SelectItem>
                       <SelectItem value="card">Card</SelectItem>
                       <SelectItem value="upi">UPI</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

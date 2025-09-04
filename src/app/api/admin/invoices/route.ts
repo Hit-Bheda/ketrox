@@ -203,11 +203,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Invoice ID is required" }, { status: 400 });
     }
 
-    const updateData: { updatedAt: Date; customerName?: string; tableNumber?: string; paymentStatus?: "pending" | "paid" | "failed" | "refunded"; paymentMethod?: "cash" | "card" | "upi" | "other"; notes?: string | null } = { updatedAt: new Date() };
+    const updateData: { updatedAt: Date; customerName?: string; tableNumber?: string; paymentStatus?: "pending" | "paid" | "failed" | "refunded"; paymentMethod?: "cash" | "card" | "upi" | "Bank Transfer"; notes?: string | null } = { updatedAt: new Date() };
     if (customer_name) updateData.customerName = customer_name;
     if (table_number) updateData.tableNumber = table_number;
     if (payment_status) updateData.paymentStatus = payment_status as "pending" | "paid" | "failed" | "refunded";
-    if (payment_method) updateData.paymentMethod = payment_method as "cash" | "card" | "upi" | "other";
+    if (payment_method) updateData.paymentMethod = payment_method as "cash" | "card" | "upi" | "Bank Transfer";
     if (notes !== undefined) updateData.notes = notes;
 
     const updatedInvoice = await db.update(invoice)

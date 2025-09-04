@@ -34,9 +34,9 @@ export function MenuImageSlider({ images = [], alt }: MenuImageSliderProps) {
               <Image
                 src={imgUrl}
                 alt={`${alt} ${idx + 1}`}
-                fill
+               fill
                 className="object-cover"
-                sizes="100vw"
+                  sizes="(max-width: 768px) 100vw, 423px"
                 priority={idx === 0}
               />
             </div>

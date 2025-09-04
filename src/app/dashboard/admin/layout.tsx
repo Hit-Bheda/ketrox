@@ -182,6 +182,7 @@ export default function Layout({ children }: LayoutProps) {
             image: session.user.image
           });
         }
+        console.log("User session fetched:", session);
 
       } catch (error) {
         console.error("Error fetching session:", error);
@@ -277,7 +278,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const notifications = mockNotifications;
   const unreadCount = notifications.filter(n => !n.read).length;
-  const urgentNotifications = notifications.filter(n => n.priority === 'urgent' && !n.read);
+  const  urgentNotifications = notifications.filter(n => n.priority === 'urgent' && !n.read);
   const recentNotifications = notifications.slice(0, 6);
 
   return (

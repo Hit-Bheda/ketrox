@@ -163,7 +163,7 @@ export const invoice = pgTable("invoice", {
   prices: text("prices").array().notNull(),
   subtotal: text("subtotal").notNull(),
   totalAmount: text("total_amount").notNull(),
-  paymentMethod: text("payment_method", { enum: ["cash", "card", "upi", "other"] })
+  paymentMethod: text("payment_method", { enum: ["cash", "card", "upi", "Bank Transfer"] })
     .notNull()
     .default("cash"),
   paymentStatus: text("payment_status", { enum: ["pending", "paid", "failed", "refunded"] })
@@ -175,3 +175,11 @@ export const invoice = pgTable("invoice", {
 });
 
 
+export const qr_codes = pgTable("qr_codes", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  url: text("url").notNull(),
+  qrPath: text("qr_path"),
+  createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+  updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+});
