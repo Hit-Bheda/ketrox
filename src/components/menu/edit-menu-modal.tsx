@@ -1,6 +1,6 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -34,7 +34,6 @@ export default function EditMenuModal({
   setOpen,
   itemForm,
   setItemForm,
-  menuCategories,
   onSave
 }: {
   open: boolean;
@@ -102,7 +101,7 @@ export default function EditMenuModal({
         const match = document.cookie.match(/(?:^|; )tenantId=([^;]*)/);
         if (match) tenantId = decodeURIComponent(match[1]);
       }
-      const { id, name, category, description, price, preparationTime, isVegetarian, isVegan, isGlutenFree, available } = itemForm;
+      const { id, name, category, description, isVegetarian, isVegan, isGlutenFree, available } = itemForm;
       const dietaryArr = [];
       if (isVegetarian) dietaryArr.push("vegetarian");
       if (isVegan) dietaryArr.push("vegan");
@@ -139,6 +138,7 @@ export default function EditMenuModal({
       setPreviewUrls([]);
       setUploadError(null);
     } catch (error) {
+      console.error("Error updating menu item:", error);
       toast.error("Failed to update menu item. Please try again.");
     } finally {
       setUploading(false);

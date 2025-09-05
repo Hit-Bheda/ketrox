@@ -45,8 +45,6 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import Image from "next/image";
 
 
-const locations = ["Main Dining", "Patio", "Private Room", "Bar Area", "Outdoor", "VIP Section"];
-
 type Table = {
   id: string;
   number: string;
@@ -96,7 +94,7 @@ export default function Tables() {
   const [viewOpen, setViewOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [locationFilter, setLocationFilter] = useState("all");
+
 
   async function fetchTables() {
     try {
@@ -531,7 +529,6 @@ export default function Tables() {
                 onClick={() => {
                   setSearchTerm("");
                   setStatusFilter("all");
-                  setLocationFilter("all");
                 }}
               >
                 Clear Filters

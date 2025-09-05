@@ -1,5 +1,4 @@
 "use client";
-
 import {
   Select,
   SelectTrigger,
@@ -39,8 +38,6 @@ import {
 import { useEffect, useState, useMemo } from "react";
 import { betterFetch } from "@better-fetch/fetch";
 
-
-
 const STATUS_COLORS: Record<string, string> = {
   Pending: 'rgb(246, 216, 144)',
   Preparing: 'rgb(163, 165, 249)',
@@ -54,8 +51,6 @@ const recentActivity = [
   { id: 3, action: "Order completed", details: "Table 8 - Order #ORD-1228", time: "10 minutes ago", type: "order", user: "Manager" },
   { id: 4, action: "New order placed", details: "Table 12 - Order #ORD-1235", time: "15 minutes ago", type: "order", user: "Manager" }
 ];
-
-
 
 type Order = {
   id: string;
