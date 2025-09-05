@@ -1,4 +1,11 @@
 "use client";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from "@/components/ui/select";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -75,11 +82,12 @@ const recentActivity = [
 ];
 
 export default function Dashboard() {
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [orders, setOrders] = useState<ApiOrder[]>([]);
   const [staff, setStaff] = useState<ApiStaff[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -142,65 +150,119 @@ export default function Dashboard() {
     }
   };
 
-  const kpiData = useMemo(() => {
-    const pendingInvoices = 7; // keep static per request
-    const activeOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled').length;
-    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.totalPrice || 0), 0);
-    const staffCount = staff.length;
-    return {
-      activeOrders,
-      totalRevenue,
-      pendingInvoices,
-      staffCount,
-      revenueChange: 0,
-      ordersChange: 0,
-      invoicesChange: 0,
-      staffChange: 0
-    };
-  }, [orders, staff]);
+
+  const getFilterFn = (dateRange: 'today' | 'week' | 'month' | 'all') => {
+    const now = new Date();
+
+    if (dateRange === 'today') {
+      return (d: Date) => d.toDateString() === now.toDateString();
+    } else if (dateRange === 'week') {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(now.getDate() - 6);
+      weekAgo.setHours(0, 0, 0, 0);
+      return (d: Date) => d >= weekAgo && d <= now;
+    } else if (dateRange === 'month') {
+      const monthAgo = new Date(now);
+      monthAgo.setDate(now.getDate() - 29);
+      monthAgo.setHours(0, 0, 0, 0);
+      return (d: Date) => d >= monthAgo && d <= now;
+    }
+    // all time
+    return () => true;
+  };
 
   const dailyOrdersData = useMemo(() => {
     const byHour: Record<string, { orders: number; revenue: number }> = {};
+  
+    const filterFn = getFilterFn(dateRange);
+  
     orders.forEach(o => {
       const d = new Date(o.createdAt);
-      const now = new Date();
-      if (d.toDateString() !== now.toDateString()) return;
+      if (!filterFn(d)) return;
+  
       const hour = `${d.getHours()}:00`;
       if (!byHour[hour]) byHour[hour] = { orders: 0, revenue: 0 };
       byHour[hour].orders += 1;
       byHour[hour].revenue += Number(o.totalPrice || 0);
     });
+  
     const hours = Array.from({ length: 24 }, (_, h) => `${h}:00`);
-    return hours.map(h => ({ time: h, orders: byHour[h]?.orders || 0, revenue: byHour[h]?.revenue || 0 }));
-  }, [orders]);
+  
+    return hours.map(h => ({
+      time: h,
+      orders: byHour[h]?.orders || 0,
+      revenue: byHour[h]?.revenue || 0,
+    }));
+  }, [orders, dateRange]);
+  
+
+  const kpiData = useMemo(() => {
+    const filterFn = getFilterFn(dateRange);
+    const filteredOrders = orders.filter(o => filterFn(new Date(o.createdAt)));
+    const activeOrders = filteredOrders.filter(
+      o => o.status !== "delivered" && o.status !== "cancelled"
+    ).length;
+  
+    const totalRevenue = filteredOrders.reduce(
+      (sum, o) => sum + Number(o.totalPrice || 0),
+      0
+    );
+  
+    const staffCount = staff.length;
+  
+    return {
+      activeOrders,
+      totalRevenue,
+      pendingInvoices: 7, 
+      staffCount,
+      revenueChange: 0,
+      ordersChange: 0,
+      invoicesChange: 0,
+      staffChange: 0,
+    };
+  }, [orders, staff, dateRange]);
+  
+
 
   const orderStatusData = useMemo(() => {
     const counts: Record<string, number> = { Pending: 0, Preparing: 0, Ready: 0, Delivered: 0 };
+
+    const filterFn = getFilterFn(dateRange);
+
     orders.forEach(o => {
+      const d = new Date(o.createdAt);
+      if (!filterFn(d)) return;
+
       const key = (o.status.charAt(0).toUpperCase() + o.status.slice(1)) as keyof typeof counts;
       if (key in counts) counts[key] += 1;
     });
-    return Object.entries(counts).map(([status, count]) => ({ status, count, color: STATUS_COLORS[status] }));
-  }, [orders]);
+
+    return Object.entries(counts).map(([status, count]) => ({
+      status,
+      count,
+      color: STATUS_COLORS[status],
+    }));
+  }, [orders, dateRange]);
+
 
   const liveOrders = useMemo(() => {
+    const filterFn = getFilterFn(dateRange);
+
     return orders
+      .filter(o => filterFn(new Date(o.createdAt)))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 10)
       .map(o => ({
         id: o.orderNumber,
         table: `Table ${o.tableNumber ?? '-'}`,
-        items: (o.itemNames && o.itemNames.length ? o.itemNames : o.items).slice(0, 3),
+        items: (o.itemNames && o.itemNames.length ? o.itemNames : o.items),
         status: o.status,
         time: timeAgo(o.createdAt),
         total: Number(o.totalPrice || 0).toFixed(2),
         customer: o.customerName,
       }));
-  }, [orders]);
+  }, [orders, dateRange]);
 
-  const updateOrderStatus = (orderId: string, newStatus: string) => {
-    console.log(`Updating order ${orderId} to ${newStatus}`);
-  };
 
   function timeAgo(dateString: string) {
     const then = new Date(dateString).getTime();
@@ -217,6 +279,21 @@ export default function Dashboard() {
 
   return (
     <div className="flex-1 space-y-6 p-6 animate-fadeIn">
+      {/* Date Range Filter */}
+      <div className="flex items-center gap-4 mb-4">
+        <span className="font-medium text-muted-foreground">Date Range:</span>
+        <Select value={dateRange} onValueChange={v => setDateRange(v as 'today' | 'week' | 'month' | 'all')}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="week">Last Week</SelectItem>
+            <SelectItem value="month">Last Month</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       {error && (
         <div className="text-sm text-destructive">{error}</div>
       )}
@@ -249,7 +326,7 @@ export default function Dashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-chart-2">${kpiData.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-chart-2">${kpiData.totalRevenue.toFixed(2)}</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <ArrowUpRight className="mr-1 h-3 w-3 text-chart-3" />
               {kpiData.revenueChange}% from yesterday
@@ -257,7 +334,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-all duration-300 ">
+        {/* <Card className="hover:shadow-lg transition-all duration-300 ">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Invoices</CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
@@ -269,7 +346,7 @@ export default function Dashboard() {
               {kpiData.invoicesChange}% from yesterday
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card className="hover:shadow-lg transition-all duration-300 ">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -437,7 +514,7 @@ export default function Dashboard() {
                     >
                       {order.status}
                     </Badge>
-                
+
                   </div>
                 </div>
               ))}

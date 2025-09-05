@@ -182,7 +182,6 @@ export default function Layout({ children }: LayoutProps) {
             image: session.user.image
           });
         }
-        console.log("User session fetched:", session);
 
       } catch (error) {
         console.error("Error fetching session:", error);

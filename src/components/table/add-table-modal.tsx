@@ -11,16 +11,16 @@ interface AddTableDialogProps {
   tableForm: {
     number: string;
     name: string;
-    capacity: number;
+    capacity: string ;
     notes: string;
   };
   setTableForm: React.Dispatch<React.SetStateAction<{
     number: string;
     name: string;
-    capacity: number;
+    capacity: string;
     notes: string;
   }>>;
-  capacities: number[];
+  capacities: string[];
   handleAddTable: () => void;
   errors?: {
     tableNumber?: string;
@@ -90,15 +90,15 @@ export default function AddTableDialog({
             <div>
               <Label htmlFor="table-capacity" className="text-foreground mb-2">Capacity</Label>
               <Select
-                value={tableForm.capacity.toString()}
-                onValueChange={(value) => setTableForm({ ...tableForm, capacity: parseInt(value) })}
+                value={tableForm.capacity}
+                onValueChange={(value) => setTableForm({ ...tableForm, capacity: value })}
               >
                 <SelectTrigger className="bg-background border-input text-foreground">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border text-popover-foreground">
                   {capacities.map((capacity) => (
-                    <SelectItem key={capacity} value={capacity.toString()}>
+                    <SelectItem key={capacity} value={capacity}>
                       {capacity} guests
                     </SelectItem>
                   ))}

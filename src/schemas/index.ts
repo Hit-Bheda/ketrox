@@ -61,7 +61,7 @@ export const
 export const tableSchema = z.object({
     number: z.string().min(1, "Table number is required!"),
     name: z.string().min(1, "Table name is required!"),
-    capacity: z.coerce.number().min(1, "Capacity must be at least 1"),
+    capacity: z.string().min(1, "Capacity is required!"),
     notes: z.string().optional(),
     tenantId: z.string().uuid("Invalid tenant ID"),
     available: z.boolean().optional().default(true),
@@ -138,11 +138,29 @@ export const updateOrderStatusSchema = z.object({
 
 
 export const qrCodeSchema = z.object({
-  tenantId: z.string().uuid("Invalid tenant ID").optional(),
-//   url: z.string().url("Provide a valid URL"),
-  url: z.string().min(1, "Path or URL is required"),
-  qrPath: z.string().optional(), 
-  createdAt: z.date().optional(), 
-  updatedAt: z.date().optional(), 
+    tenantId: z.string().uuid("Invalid tenant ID").optional(),
+    //   url: z.string().url("Provide a valid URL"),
+    url: z.string().min(1, "Path or URL is required"),
+    qrPath: z.string().optional(),
+    createdAt: z.date().optional(),
+    updatedAt: z.date().optional(),
 
+});
+
+export const ticketCreateSchema = z.object({
+    subject: z.string().min(1, "Subject is required"),
+    priority: z.enum(["low", "medium", "high"]).default("medium"),
+    message: z.string().min(1, "Initial message is required"),
+    tenantId: z.string().uuid("Invalid tenant ID").optional(),
+});
+
+export const ticketReplySchema = z.object({
+    ticketId: z.string().min(1, "Ticket ID is required"),
+    content: z.string().min(1, "Message content is required"),
+});
+
+export const ticketUpdateSchema = z.object({
+    id: z.string().min(1, "Ticket ID is required"),
+    status: z.enum(["open", "in_progress", "resolved"]).optional(),
+    priority: z.enum(["low", "medium", "high"]).optional(),
 });

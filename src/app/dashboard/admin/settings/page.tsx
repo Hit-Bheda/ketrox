@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   User,
   Building2,
-  Bell,
+
   Shield,
   Save,
   Eye,
@@ -62,16 +62,16 @@ export default function Settings() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
-  const [notifications, setNotifications] = useState({
-    newOrders: true,
-    customerMessages: true,
-    staffAlerts: true,
-    systemUpdates: false,
-    marketingEmails: false,
-    smsNotifications: true,
-    emailDigest: true,
-    pushNotifications: true
-  });
+  // const [notifications, setNotifications] = useState({
+  //   newOrders: true,
+  //   customerMessages: true,
+  //   staffAlerts: true,
+  //   systemUpdates: false,
+  //   marketingEmails: false,
+  //   smsNotifications: true,
+  //   emailDigest: true,
+  //   pushNotifications: true
+  // });
 
   const [profileForm, setProfileForm] = useState({
     name: "",
@@ -100,10 +100,10 @@ export default function Settings() {
   });
 
 
-  const handleSaveNotifications = () => {
-    console.log("Saving notification settings:", notifications);
-    // In a real app, this would save to backend
-  };
+  // const handleSaveNotifications = () => {
+  //   console.log("Saving notification settings:", notifications);
+  //   // In a real app, this would save to backend
+  // };
 
   const handleSaveSystem = () => {
     console.log("Saving system settings:", systemSettings);
@@ -140,6 +140,7 @@ export default function Settings() {
           });
         }
 
+  
       } catch (error) {
         console.error("Error fetching session:", error);
       }
@@ -331,29 +332,47 @@ export default function Settings() {
     }
   };
 
+
+  // Only set restaurantForm if hotelsData is loaded and form is still at initial state
   useEffect(() => {
     if (hotelsData) {
-      setRestaurantForm({
-        name: hotelsData.name || "",
-        owner_name: hotelsData.owner_name || "",
-        address: hotelsData.address || "",
-        owner_phone: hotelsData.owner_phone || "",
+      setRestaurantForm(prev => {
+        const isInitial = !prev.name && !prev.owner_name && !prev.address && !prev.owner_phone;
+        if (isInitial) {
+          return {
+            name: hotelsData.name || "",
+            owner_name: hotelsData.owner_name || "",
+            address: hotelsData.address || "",
+            owner_phone: hotelsData.owner_phone || "",
+          };
+        }
+        return prev;
       });
     }
   }, [hotelsData]);
 
+  // Only set profileForm if user/hotelsData is loaded and form is still at initial state
   useEffect(() => {
     if (user) {
-      setProfileForm({
-        name: user.name || "",
-        email: user.email || "",
-        phone: hotelsData?.owner_phone || "",
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: ""
+      setProfileForm(prev => {
+        const isInitial = !prev.name && !prev.email && !prev.phone;
+        if (isInitial) {
+          return {
+            name: user.name || "",
+            email: user.email || "",
+            phone: hotelsData?.owner_phone || "",
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: ""
+          };
+        }
+        return prev;
       });
     }
   }, [user, hotelsData]);
+
+  console.log("profileForm", profileForm);
+  
 
   const handleLogoUpload = async () => {
     if (!selectedLogoFile || !hotelsData?.id) {
@@ -473,10 +492,10 @@ export default function Settings() {
 
         {/* Settings Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            {/* <TabsTrigger value="notifications">Notifications</TabsTrigger> */}
             <TabsTrigger value="system">System</TabsTrigger>
           </TabsList>
 
@@ -846,7 +865,7 @@ export default function Settings() {
           </TabsContent>
 
           {/* Notifications */}
-          <TabsContent value="notifications" className="space-y-6">
+          {/* <TabsContent value="notifications" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -927,7 +946,7 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
 
 
 

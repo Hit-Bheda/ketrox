@@ -6,7 +6,6 @@ import {
   Upload,
   Trash2,
   AlertTriangle,
-  Mail,
   Globe,
   Bell,
   Shield,
@@ -52,14 +51,14 @@ const generalSettingsSchema = z.object({
   language: z.string(),
 });
 
-const smtpSettingsSchema = z.object({
-  host: z.string().min(1, "SMTP host is required"),
-  port: z.string().min(1, "Port is required"),
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-  encryption: z.string(),
-  enabled: z.boolean(),
-});
+// const smtpSettingsSchema = z.object({
+//   host: z.string().min(1, "SMTP host is required"),
+//   port: z.string().min(1, "Port is required"),
+//   username: z.string().min(1, "Username is required"),
+//   password: z.string().min(1, "Password is required"),
+//   encryption: z.string(),
+//   enabled: z.boolean(),
+// });
 
 const securitySettingsSchema = z.object({
   currentPassword: z.string().min(8, "Password must be at least 8 characters"),
@@ -89,17 +88,17 @@ export default function Settings() {
     },
   });
 
-  const smtpForm = useForm<z.infer<typeof smtpSettingsSchema>>({
-    resolver: zodResolver(smtpSettingsSchema),
-    defaultValues: {
-      host: "smtp.mailgun.org",
-      port: "587",
-      username: "noreply@ketrox.com",
-      password: "",
-      encryption: "TLS",
-      enabled: true
-    },
-  });
+  // const smtpForm = useForm<z.infer<typeof smtpSettingsSchema>>({
+  //   resolver: zodResolver(smtpSettingsSchema),
+  //   defaultValues: {
+  //     host: "smtp.mailgun.org",
+  //     port: "587",
+  //     username: "noreply@ketrox.com",
+  //     password: "",
+  //     encryption: "TLS",
+  //     enabled: true
+  //   },
+  // });
 
   const securityForm = useForm<z.infer<typeof securitySettingsSchema>>({
     resolver: zodResolver(securitySettingsSchema),
@@ -224,10 +223,10 @@ export default function Settings() {
     }
   };
 
-  const onSmtpSubmit = (values: z.infer<typeof smtpSettingsSchema>) => {
-    console.log("SMTP settings:", values);
-    toast.success("SMTP settings updated successfully!");
-  };
+  // const onSmtpSubmit = (values: z.infer<typeof smtpSettingsSchema>) => {
+  //   console.log("SMTP settings:", values);
+  //   toast.success("SMTP settings updated successfully!");
+  // };
 
 
   // const handleGenerateApiKey = () => {
@@ -247,17 +246,17 @@ export default function Settings() {
 
   return (
     <div className="flex-1 space-y-6 p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-full mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
           <p className="text-muted-foreground">
             Manage your application configuration and preferences
           </p>
         </div>
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+        <Tabs defaultValue="general" className="space-y-3">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="email">Email</TabsTrigger>
+            {/* <TabsTrigger value="email">Email</TabsTrigger> */}
             {/* <TabsTrigger value="api">API</TabsTrigger> */}
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
@@ -518,7 +517,7 @@ export default function Settings() {
 
 
           {/* Email Settings */}
-          <TabsContent value="email">
+          {/* <TabsContent value="email">
             <Card className="border-0 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -651,7 +650,7 @@ export default function Settings() {
                 </Form>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
 
           {/* API & Webhooks */}
           {/* <TabsContent value="api">

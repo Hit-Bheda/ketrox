@@ -80,11 +80,11 @@ export default function Orders() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [timeFilter, setTimeFilter] = useState("all");
+  const [timeFilter, setTimeFilter] = useState("today");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
-  
+
 
   const now = new Date();
 
@@ -96,18 +96,21 @@ export default function Orders() {
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
 
     let matchesTime = true;
-    if (timeFilter === "last30") {
-      const orderTime = new Date(order.createdAt);
-      matchesTime = (now.getTime() - orderTime.getTime()) / 60000 <= 30;
-    } else if (timeFilter === "last60") {
-      const orderTime = new Date(order.createdAt);
-      matchesTime = (now.getTime() - orderTime.getTime()) / 60000 <= 60;
-    } else if (timeFilter === "today") {
-      const orderTime = new Date(order.createdAt);
+    const orderTime = new Date(order.createdAt);
+
+    if (timeFilter === "today") {
       matchesTime =
         orderTime.getDate() === now.getDate() &&
         orderTime.getMonth() === now.getMonth() &&
         orderTime.getFullYear() === now.getFullYear();
+    } else if (timeFilter === "lastWeek") {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(now.getDate() - 7);
+      matchesTime = orderTime >= oneWeekAgo && orderTime <= now;
+    } else if (timeFilter === "lastMonth") {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(now.getMonth() - 1);
+      matchesTime = orderTime >= oneMonthAgo && orderTime <= now;
     }
 
     return matchesSearch && matchesStatus && matchesTime;
@@ -174,12 +177,15 @@ export default function Orders() {
   };
 
   const stats = {
-    total: orders.length,
-    pending: orders.filter(o => o.status === "pending").length,
-    preparing: orders.filter(o => o.status === "preparing").length,
-    delivered: orders.filter(o => o.status === "delivered").length,
-    totalValue: orders.reduce((sum, order) => sum + Number(order.totalPrice), 0),
-    avgOrderValue: orders.length > 0 ? orders.reduce((sum, order) => sum + Number(order.totalPrice), 0) / orders.length : 0
+    total: filteredOrders.length,
+    pending: filteredOrders.filter(o => o.status === "pending").length,
+    preparing: filteredOrders.filter(o => o.status === "preparing").length,
+    delivered: filteredOrders.filter(o => o.status === "delivered").length,
+    totalValue: filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0),
+    avgOrderValue:
+      filteredOrders.length > 0
+        ? filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0) / filteredOrders.length
+        : 0,
   };
 
   useEffect(() => {
@@ -213,9 +219,9 @@ export default function Orders() {
         body: JSON.stringify({ order_id: orderId }),
       });
       if (res.ok) {
-        const data = await res.json(); 
+        const data = await res.json();
         setOrders(prev => prev.filter(o => o.id !== orderId));
-        toast.success(data.message );
+        toast.success(data.message);
       } else {
         const error = await res.json();
         toast.error(error.error || "Failed to delete order");
@@ -335,9 +341,9 @@ export default function Orders() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="last30">Last 30 min</SelectItem>
-                  <SelectItem value="last60">Last hour</SelectItem>
                   <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="lastWeek">Last Week</SelectItem>
+                  <SelectItem value="lastMonth">Last Month</SelectItem>
                 </SelectContent>
               </Select>
             </div>
