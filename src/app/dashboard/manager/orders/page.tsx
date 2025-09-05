@@ -79,7 +79,7 @@ type Order = {
 export default function Orders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [timeFilter, setTimeFilter] = useState("all");
+  const [timeFilter, setTimeFilter] = useState("today");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -120,23 +120,25 @@ export default function Orders() {
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
 
     let matchesTime = true;
-    if (timeFilter === "last30") {
-      const orderTime = new Date(order.createdAt);
-      matchesTime = (now.getTime() - orderTime.getTime()) / 60000 <= 30;
-    } else if (timeFilter === "last60") {
-      const orderTime = new Date(order.createdAt);
-      matchesTime = (now.getTime() - orderTime.getTime()) / 60000 <= 60;
-    } else if (timeFilter === "today") {
-      const orderTime = new Date(order.createdAt);
+    const orderTime = new Date(order.createdAt);
+
+    if (timeFilter === "today") {
       matchesTime =
         orderTime.getDate() === now.getDate() &&
         orderTime.getMonth() === now.getMonth() &&
         orderTime.getFullYear() === now.getFullYear();
+    } else if (timeFilter === "lastWeek") {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(now.getDate() - 7);
+      matchesTime = orderTime >= oneWeekAgo && orderTime <= now;
+    } else if (timeFilter === "lastMonth") {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(now.getMonth() - 1);
+      matchesTime = orderTime >= oneMonthAgo && orderTime <= now;
     }
 
     return matchesSearch && matchesStatus && matchesTime;
   });
-
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "pending":
@@ -167,31 +169,31 @@ export default function Orders() {
     }
   };
 
-const updateOrderStatus = async (orderId: string, newStatus: string) => {
-  try {
-    const res = await fetch("/api/orders", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order_id: orderId, status: newStatus }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-  toast.success(data.message || "Order updated successfully");
-      setOrders(prev =>
-        prev.map(order =>
-          order.id === orderId ? { ...order, status: newStatus } : order
-        )
-      );
-    } else {
-  toast.error(data.error || "Failed to update status");
-      console.error(data.error || "Failed to update status");
-      
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const res = await fetch("/api/orders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderId, status: newStatus }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "Order updated successfully");
+        setOrders(prev =>
+          prev.map(order =>
+            order.id === orderId ? { ...order, status: newStatus } : order
+          )
+        );
+      } else {
+        toast.error(data.error || "Failed to update status");
+        console.error(data.error || "Failed to update status");
+
+      }
+    } catch (error) {
+      toast.error("Something went wrong while updating order status");
+      console.error("Error updating status:", error);
     }
-  } catch (error) {
-    toast.error("Something went wrong while updating order status");
-    console.error("Error updating status:", error);
-  }
-};
+  };
 
   const viewOrderDetails = (order: Order) => {
     setSelectedOrder(order);
@@ -199,23 +201,26 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
   };
 
   const stats = {
-    total: orders.length,
-    pending: orders.filter(o => o.status === "pending").length,
-    preparing: orders.filter(o => o.status === "preparing").length,
-    delivered: orders.filter(o => o.status === "delivered").length,
-    totalValue: orders.reduce((sum, order) => sum + Number(order.totalPrice), 0),
-    avgOrderValue: orders.length > 0 ? orders.reduce((sum, order) => sum + Number(order.totalPrice), 0) / orders.length : 0
+    total: filteredOrders.length,
+    pending: filteredOrders.filter(o => o.status === "pending").length,
+    preparing: filteredOrders.filter(o => o.status === "preparing").length,
+    delivered: filteredOrders.filter(o => o.status === "delivered").length,
+    totalValue: filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0),
+    avgOrderValue:
+      filteredOrders.length > 0
+        ? filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0) / filteredOrders.length
+        : 0,
   };
 
   useEffect(() => {
     const fetchOrders = async () => {
-  
+
       try {
         const managerId = user?.id;
         const res = await fetch(
           `/api/orders?managerId=${managerId}`,
           {
-            method: "GET",  
+            method: "GET",
             headers: { "Content-Type": "application/json" },
             cache: "no-store"
           }
@@ -227,7 +232,7 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         console.error("Error fetching orders:", error);
       }
     };
-     if (user?.id) fetchOrders();
+    if (user?.id) fetchOrders();
   }, [user]);
 
   return (
@@ -340,9 +345,9 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="last30">Last 30 min</SelectItem>
-                  <SelectItem value="last60">Last hour</SelectItem>
                   <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="lastWeek">Last Week</SelectItem>
+                  <SelectItem value="lastMonth">Last Month</SelectItem>
                 </SelectContent>
               </Select>
             </div>
