@@ -1,27 +1,29 @@
 "use client";
 
 import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from "@/components/ui/select";
+
+import {
   DollarSign,
-  Clock,
   Users,
   ChefHat,
   CheckCircle,
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock,
   AlertCircle,
   Package,
-  Activity,
-  ArrowUpRight,
-  ArrowDownRight
+  Activity
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import {
   XAxis,
   YAxis,
@@ -34,76 +36,64 @@ import {
   Pie,
   Cell
 } from "recharts";
+import { useEffect, useState, useMemo } from "react";
+import { betterFetch } from "@better-fetch/fetch";
 
-// Realistic dummy data
-const kpiData = {
-  activeOrders: 23,
-  totalRevenue: 12847.50,
-  pendingInvoices: 7,
-  staffCount: 18,
-  revenueChange: 12.5,
-  ordersChange: -3.2,
-  invoicesChange: 8.1,
-  staffChange: 0
+
+
+const STATUS_COLORS: Record<string, string> = {
+  Pending: 'rgb(246, 216, 144)',
+  Preparing: 'rgb(163, 165, 249)',
+  Ready: 'rgb(199, 208, 190)',
+  Delivered: 'rgb(46, 204, 113)'
 };
 
-const dailyOrdersData = [
-  { time: '9:00', orders: 5, revenue: 125 },
-  { time: '10:00', orders: 8, revenue: 240 },
-  { time: '11:00', orders: 12, revenue: 380 },
-  { time: '12:00', orders: 25, revenue: 750 },
-  { time: '13:00', orders: 32, revenue: 980 },
-  { time: '14:00', orders: 28, revenue: 840 },
-  { time: '15:00', orders: 15, revenue: 450 },
-  { time: '16:00', orders: 10, revenue: 300 },
-  { time: '17:00', orders: 18, revenue: 540 },
-  { time: '18:00', orders: 22, revenue: 660 },
-  { time: '19:00', orders: 35, revenue: 1050 },
-  { time: '20:00', orders: 42, revenue: 1260 },
-  { time: '21:00', orders: 38, revenue: 1140 },
-  { time: '22:00', orders: 20, revenue: 600 }
-];
-
-const orderStatusData = [
-  { status: 'Pending', count: 8, color: 'rgb(246, 216, 144)' },
-  { status: 'Preparing', count: 12, color: 'rgb(163, 165, 249)' },
-  { status: 'Ready', count: 5, color: 'rgb(199, 208, 190)' },
-  { status: 'Delivered', count: 42, color: 'rgb(139, 141, 224)' }
-];
-
-const liveOrders = [
-  { id: 'ORD-1234', table: 'Table 5', items: ['Grilled Salmon', 'Caesar Salad', 'Wine'], status: 'pending', time: '2 min ago', total: 89.50, customer: 'Sarah Johnson' },
-  { id: 'ORD-1235', table: 'Table 12', items: ['Ribeye Steak', 'Mashed Potatoes', 'Beer'], status: 'preparing', time: '8 min ago', total: 125.00, customer: 'Michael Chen' },
-  { id: 'ORD-1236', table: 'Table 3', items: ['Pasta Carbonara', 'Garlic Bread'], status: 'preparing', time: '12 min ago', total: 42.50, customer: 'Emma Wilson' },
-  { id: 'ORD-1237', table: 'Table 8', items: ['Fish & Chips', 'Coleslaw', 'Soda'], status: 'ready', time: '5 min ago', total: 38.75, customer: 'David Brown' },
-  { id: 'ORD-1238', table: 'Table 15', items: ['Chicken Tikka', 'Naan Bread', 'Lassi'], status: 'ready', time: '3 min ago', total: 67.25, customer: 'Priya Patel' },
-  { id: 'ORD-1239', table: 'Table 7', items: ['Burger & Fries', 'Milkshake'], status: 'pending', time: '1 min ago', total: 28.90, customer: 'Alex Murphy' }
-];
-
 const recentActivity = [
-  { id: 1, action: "New order placed", details: "Table 5 - Order #ORD-1234", time: "2 minutes ago", type: "order", user: "Sarah Johnson" },
-  { id: 2, action: "Payment received", details: "Invoice #INV-456 - $125.00", time: "5 minutes ago", type: "payment", user: "Michael Chen" },
-  { id: 3, action: "Staff check-in", details: "Maria Rodriguez started shift", time: "10 minutes ago", type: "staff", user: "Maria Rodriguez" },
-  { id: 4, action: "Table reserved", details: "Table 12 for 6 people at 8:00 PM", time: "15 minutes ago", type: "reservation", user: "James Wilson" },
-  { id: 5, action: "Order completed", details: "Table 8 - Order #ORD-1230", time: "18 minutes ago", type: "order", user: "Kitchen Staff" },
-  { id: 6, action: "Inventory alert", details: "Salmon stock running low", time: "25 minutes ago", type: "alert", user: "System" }
+  { id: 1, action: "New order placed", details: "Table 5 - Order #ORD-1234", time: "2 minutes ago", type: "order", user: "Manager" },
+  { id: 2, action: "Order status updated", details: "Order #ORD-1230 marked as ready", time: "5 minutes ago", type: "order", user: "Manager" },
+  { id: 3, action: "Order completed", details: "Table 8 - Order #ORD-1228", time: "10 minutes ago", type: "order", user: "Manager" },
+  { id: 4, action: "New order placed", details: "Table 12 - Order #ORD-1235", time: "15 minutes ago", type: "order", user: "Manager" }
 ];
 
+
+
+type Order = {
+  id: string;
+  tableId: string;
+  tableNumber: string;
+  tenantId: string;
+  managerId: string;
+  customerName: string;
+  items: string[];
+  quantity: string[];
+  status: "pending" | "completed" | "cancelled" | string;
+  totalPrice: string;
+  createdAt: string;
+  updatedAt: string;
+  managerName: string;
+  orderNumber: string;
+  itemNames: string[];
+};
 export default function Dashboard() {
-  // const [selectedOrderStatus, setSelectedOrderStatus] = useState<string>('pending');
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('today');
+  const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string } | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [staff, setStaff] = useState<{id: string; name: string; role: string; status: string}[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'bg-secondary text-secondary-foreground';
+        return 'bg-secondary text-white';
       case 'preparing':
-        return 'bg-primary text-primary-foreground';
+        return 'bg-primary text-white';
       case 'ready':
-        return 'bg-chart-3 text-foreground';
+        return 'bg-chart-3 text-white';
       case 'delivered':
-        return 'bg-muted text-muted-foreground';
+        return "bg-green-600 text-white";
       default:
-        return 'bg-muted text-muted-foreground';
+        return 'bg-muted text-white';
     }
   };
 
@@ -124,13 +114,209 @@ export default function Dashboard() {
     }
   };
 
-  const updateOrderStatus = (orderId: string, newStatus: string) => {
-    console.log(`Updating order ${orderId} to ${newStatus}`);
-    // In a real app, this would update the backend
+   useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const { data: session } = await betterFetch<{
+          user: { id: string; name: string; role: string; image?: string }
+        }>("/api/auth/get-session", {
+          baseURL: window.location.origin,
+          credentials: "include"
+        });
+
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            name: session.user.name,
+            role: session.user.role,
+          });
+        }
+        console.log("Fetched user session:", session);
+      } catch (error) {
+        console.error("Error fetching session:", error);
+      }
+    };
+    fetchUserData();
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const managerId = user?.id;
+        const [ordersRes, staffRes] = await Promise.all([
+          fetch(`/api/orders?managerId=${managerId}`, {
+            method: "GET",  
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store"
+          }),
+          fetch('/api/admin/hotel')
+        ]);
+        
+        if (!ordersRes.ok) throw new Error("Failed to fetch orders");
+        if (!staffRes.ok) throw new Error("Failed to fetch staff");
+        
+        const ordersData = await ordersRes.json();
+        const staffData = await staffRes.json();
+        
+        setOrders(ordersData.orders || []);
+        setStaff(Array.isArray(staffData.staff) ? staffData.staff : []);
+        setError(null);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setError(error instanceof Error ? error.message : 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (user?.id) fetchData();
+  }, [user]);
+
+  const getFilterFn = (dateRange: 'today' | 'week' | 'month' | 'all') => {
+    const now = new Date();
+
+    if (dateRange === 'today') {
+      return (d: Date) => d.toDateString() === now.toDateString();
+    } else if (dateRange === 'week') {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(now.getDate() - 6);
+      weekAgo.setHours(0, 0, 0, 0);
+      return (d: Date) => d >= weekAgo && d <= now;
+    } else if (dateRange === 'month') {
+      const monthAgo = new Date(now);
+      monthAgo.setDate(now.getDate() - 29);
+      monthAgo.setHours(0, 0, 0, 0);
+      return (d: Date) => d >= monthAgo && d <= now;
+    }
+    return () => true;
   };
+
+  const dailyOrdersData = useMemo(() => {
+    const byHour: Record<string, { orders: number; revenue: number }> = {};
+  
+    const filterFn = getFilterFn(dateRange);
+  
+    orders.forEach(o => {
+      const d = new Date(o.createdAt);
+      if (!filterFn(d)) return;
+  
+      const hour = `${d.getHours()}:00`;
+      if (!byHour[hour]) byHour[hour] = { orders: 0, revenue: 0 };
+      byHour[hour].orders += 1;
+      byHour[hour].revenue += Number(o.totalPrice || 0);
+    });
+  
+    const hours = Array.from({ length: 24 }, (_, h) => `${h}:00`);
+  
+    return hours.map(h => ({
+      time: h,
+      orders: byHour[h]?.orders || 0,
+      revenue: byHour[h]?.revenue || 0,
+    }));
+  }, [orders, dateRange]);
+
+  const kpiData = useMemo(() => {
+    const filterFn = getFilterFn(dateRange);
+    const filteredOrders = orders.filter(o => filterFn(new Date(o.createdAt)));
+    const activeOrders = filteredOrders.filter(
+      o => o.status !== "delivered" && o.status !== "cancelled"
+    ).length;
+  
+    const totalRevenue = filteredOrders.reduce(
+      (sum, o) => sum + Number(o.totalPrice || 0),
+      0
+    );
+  
+    const waiterCount = staff.filter(member => member.role === 'waiter' && member.status === 'active').length;
+
+    return {
+      activeOrders,
+      totalRevenue,
+      pendingInvoices: 0,
+      staffCount: waiterCount,
+      revenueChange: 0,
+      ordersChange: 0,
+      invoicesChange: 0,
+      staffChange: 0,
+    };
+  }, [orders, staff, dateRange]);
+
+  const orderStatusData = useMemo(() => {
+    const counts: Record<string, number> = { Pending: 0, Preparing: 0, Ready: 0, Delivered: 0 };
+
+    const filterFn = getFilterFn(dateRange);
+
+    orders.forEach(o => {
+      const d = new Date(o.createdAt);
+      if (!filterFn(d)) return;
+
+      const key = (o.status.charAt(0).toUpperCase() + o.status.slice(1)) as keyof typeof counts;
+      if (key in counts) counts[key] += 1;
+    });
+
+    return Object.entries(counts).map(([status, count]) => ({
+      status,
+      count,
+      color: STATUS_COLORS[status],
+    }));
+  }, [orders, dateRange]);
+
+  const liveOrders = useMemo(() => {
+    const filterFn = getFilterFn(dateRange);
+
+    return orders
+      .filter(o => filterFn(new Date(o.createdAt)))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 10)
+      .map(o => ({
+        id: o.orderNumber,
+        table: `Table ${o.tableNumber ?? '-'}`,
+        items: (o.itemNames && o.itemNames.length ? o.itemNames : o.items),
+        status: o.status,
+        time: timeAgo(o.createdAt),
+        total: Number(o.totalPrice || 0).toFixed(2),
+        customer: o.customerName,
+        orderId: o.id
+      }));
+  }, [orders, dateRange]);
+
+  function timeAgo(dateString: string) {
+    const then = new Date(dateString).getTime();
+    const now = Date.now();
+    const diff = Math.max(0, now - then);
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins} min ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  }
+
 
   return (
     <div className="flex-1 space-y-6 p-6 animate-fadeIn">
+      {/* Date Range Filter */}
+      <div className="flex items-center gap-4 mb-4">
+        <span className="font-medium text-muted-foreground">Date Range:</span>
+        <Select value={dateRange} onValueChange={v => setDateRange(v as 'today' | 'week' | 'month' | 'all')}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="week">Last Week</SelectItem>
+            <SelectItem value="month">Last Month</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {error && (
+        <div className="text-sm text-destructive">{error}</div>
+      )}
+      {loading && (
+        <div className="text-sm text-muted-foreground">Loading...</div>
+      )}
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="hover:shadow-lg transition-all duration-300 ">
@@ -157,7 +343,7 @@ export default function Dashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-chart-2">${kpiData.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-chart-2">${kpiData.totalRevenue.toFixed(2)}</div>
             <div className="flex items-center text-xs text-muted-foreground">
               <ArrowUpRight className="mr-1 h-3 w-3 text-chart-3" />
               {kpiData.revenueChange}% from yesterday
@@ -165,23 +351,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
+     
         <Card className="hover:shadow-lg transition-all duration-300 ">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Invoices</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{kpiData.pendingInvoices}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <ArrowUpRight className="mr-1 h-3 w-3 text-chart-3" />
-              {kpiData.invoicesChange}% from yesterday
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all duration-300 ">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Staff on Duty</CardTitle>
+            <CardTitle className="text-sm font-medium">Waiters on Duty</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -217,13 +390,23 @@ export default function Dashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgb(224, 224, 224)" />
                 <XAxis dataKey="time" stroke="rgb(117, 117, 117)" fontSize={12} />
-                <YAxis stroke="rgb(117, 117, 117)" fontSize={12} />
+                <YAxis
+                  stroke="rgb(117, 117, 117)"
+                  fontSize={12}
+                  tickFormatter={(value) => value.toFixed(2)}
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'rgb(255, 255, 255)',
                     border: '1px solid rgb(224, 224, 224)',
                     borderRadius: '1rem',
                     boxShadow: '0px 4px 16px 0px hsl(0 0% 0% / 0.05)'
+                  }}
+                  formatter={(value: number, name: string) => {
+                    if (name === "Revenue ($)") {
+                      return [`$${value.toFixed(2)}`, name];
+                    }
+                    return [value, name];
                   }}
                 />
                 <Area
@@ -327,19 +510,14 @@ export default function Dashboard() {
                       <span className="text-xs text-muted-foreground">{order.time}</span>
                     </div>
                   </div>
-                  <div className="flex items-center cursor-pointer space-x-2">
-                    <Badge
-                      className={`${getStatusColor(order.status)} cursor-pointer`}
-                      onClick={() => console.log("Clicked Badge")}
-                    >
-                      {order.status}
-                    </Badge>
-                    <Select
-                      value={order.status}
-                      onValueChange={(value) => updateOrderStatus(order.id, value)}
-                    >
-                      <SelectTrigger className="w-32 h-8">
-                        <SelectValue />
+                  <div className="flex items-center space-x-2">
+                    <Select value={order.status}>
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue>
+                          <Badge className={getStatusColor(order.status)}>
+                            {order.status}
+                          </Badge>
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
@@ -359,7 +537,7 @@ export default function Dashboard() {
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest system events and updates</CardDescription>
+            <CardDescription>Latest manager activities and updates</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 max-h-96 overflow-y-auto">

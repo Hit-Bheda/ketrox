@@ -83,7 +83,6 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string } | null>(null);
 
   const now = new Date();
@@ -210,10 +209,9 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
 
   useEffect(() => {
     const fetchOrders = async () => {
-      setLoading(true);
+  
       try {
         const managerId = user?.id;
-              // console.log("Fetching orders for managerId:", managerId)
         const res = await fetch(
           `/api/orders?managerId=${managerId}`,
           {
@@ -227,8 +225,6 @@ const updateOrderStatus = async (orderId: string, newStatus: string) => {
         setOrders(data.orders || []);
       } catch (error) {
         console.error("Error fetching orders:", error);
-      } finally {
-        setLoading(false);
       }
     };
      if (user?.id) fetchOrders();

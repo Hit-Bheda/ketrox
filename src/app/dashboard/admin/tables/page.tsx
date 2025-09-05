@@ -47,13 +47,13 @@ import { NotesPopover } from "@/components/table/NotesPopover";
 import Image from "next/image";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
-const capacities = [2, 3, 4, 6, 8];
+const capacities = ["2", "3", "4", "6", "8", "more than 8"];
 
 type Table = {
   id: string;
   number: string;
   name: string;
-  capacity: number;
+  capacity: string;
   notes?: string;
   available: boolean;
   maintenance: boolean;
@@ -73,26 +73,35 @@ export default function Tables() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tableItem, setTableItem] = useState<Table[]>([])
   const [editModalOpen, setEditModalOpen] = useState(false);
-
-  const [error, setError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [qrCode, setQrCode] = useState<QrCode | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewOpen, setViewOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [tableForm, setTableForm] = useState({
+  const [tableForm, setTableForm] = useState<{
+    number: string;
+    name: string;
+    capacity: string;
+    notes: string;
+  }>({
     number: "",
     name: "",
-    capacity: 2,
+    capacity: "2",
     notes: ""
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [editTableForm, setEditTableForm] = useState({
+  const [editTableForm, setEditTableForm] = useState<{
+    id: string;
+    number: string;
+    name: string;
+    capacity: string;
+    notes: string;
+  }>({
     id: "",
     number: "",
     name: "",
-    capacity: 2,
+    capacity: "2",
     notes: ""
   });
 
@@ -128,7 +137,7 @@ export default function Tables() {
     setTableForm({
       number: "",
       name: "",
-      capacity: 2,
+      capacity: "2",
       notes: ""
     });
     setErrors({});
@@ -155,7 +164,7 @@ export default function Tables() {
 
   const handleAddTable = async () => {
     if (!tenantId) {
-      setError("Tenant ID not found. Please login again.");
+      toast.error("Tenant ID not found. Please login again.");
       return;
     }
 
@@ -178,9 +187,7 @@ export default function Tables() {
 
     setErrors({});
 
-    setError(null);
-
-    try {
+      try {
       const res = await fetch("/api/admin/table", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -188,7 +195,7 @@ export default function Tables() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to add table");
+       
         toast.error(data.error || "Failed to add table");
 
         return;
@@ -199,7 +206,7 @@ export default function Tables() {
       await fetchTables();
       toast.success(data.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setErrors({ general: err instanceof Error ? err.message : String(err) });
       toast.error("Network error");
     }
   };
@@ -214,7 +221,7 @@ export default function Tables() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to update table");
+        setErrors({ general: data.error || "Failed to update table" });
         toast.error(data.error || "Failed to delete table");
       } else {
         setEditModalOpen(false);
@@ -222,7 +229,7 @@ export default function Tables() {
         toast.success(data.message);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setErrors({ general: err instanceof Error ? err.message : String(err) });
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setEditLoading(false);
@@ -246,14 +253,14 @@ export default function Tables() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to update table status");
+        setErrors({ general: data.error || "Failed to update table status" });
         toast.error(data.error || "Failed to update table status");
       } else {
         fetchTables();
         toast.success(data.message || "Table status updated");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setErrors({ general: err instanceof Error ? err.message : String(err) });
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setEditLoading(false);
@@ -272,7 +279,7 @@ export default function Tables() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to delete table");
+        setErrors({ general: data.error || "Failed to delete table" });
         toast.error(data.error || "Failed to delete table");
       } else {
         setEditModalOpen(false);
@@ -280,7 +287,7 @@ export default function Tables() {
         toast.success(data.message || "Table deleted successfully");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setErrors({ general: err instanceof Error ? err.message : String(err) });
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setEditLoading(false);
@@ -656,7 +663,7 @@ export default function Tables() {
       <AddTableDialog
         showAddModal={showAddModal}
         setShowAddModal={setShowAddModal}
-        tableForm={tableForm}
+        tableForm={{ ...tableForm, capacity: String(tableForm.capacity) }}
         setTableForm={setTableForm}
         capacities={capacities}
         handleAddTable={handleAddTable}
@@ -667,7 +674,7 @@ export default function Tables() {
       <EditTableDialog
         open={editModalOpen}
         setOpen={setEditModalOpen}
-        tableForm={editTableForm}
+        tableForm={{ ...editTableForm, capacity: String(editTableForm.capacity) }}
         setTableForm={setEditTableForm}
         capacities={capacities}
         onSave={handleEditTable}

@@ -55,8 +55,6 @@ import { HotelType } from "@/types";
 import * as pdfMake from "pdfmake/build/pdfmake";
 import * as pdfFonts from "pdfmake/build/vfs_fonts";
 
-
-
 type Order = {
   id: string;
   orderNumber: string;
@@ -95,7 +93,7 @@ const statusOptions = ["all", "pending", "paid", "failed", "refunded"];
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("today");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -187,7 +185,7 @@ export default function Invoices() {
     }
   };
 
-  // Fetch orders that can be invoiced (delivered and unpaid)
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -308,17 +306,21 @@ export default function Invoices() {
   }, []);
 
   const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || invoice.paymentStatus === statusFilter;
-
+  
+    const matchesStatus =
+      statusFilter === "all" || invoice.paymentStatus === statusFilter;
+  
     let matchesDate = true;
     const invoiceDate = new Date(invoice.createdAt);
     const now = new Date();
-
+  
     switch (dateFilter) {
       case "today": {
-        matchesDate = invoiceDate.getUTCFullYear() === now.getUTCFullYear() &&
+        matchesDate =
+          invoiceDate.getUTCFullYear() === now.getUTCFullYear() &&
           invoiceDate.getUTCMonth() === now.getUTCMonth() &&
           invoiceDate.getUTCDate() === now.getUTCDate();
         break;
@@ -341,7 +343,10 @@ export default function Invoices() {
         matchesDate = invoiceDateOnly >= monthAgo && invoiceDateOnly <= now;
         break;
       }
+      default:
+        matchesDate = true;
     }
+  
     return matchesSearch && matchesStatus && matchesDate;
   });
 
@@ -583,11 +588,14 @@ export default function Invoices() {
   };
 
   const stats = {
-    totalInvoices: invoices.length,
-    paidInvoices: invoices.filter(inv => inv.paymentStatus === "paid").length,
-    totalRevenue: invoices.filter(inv => inv.paymentStatus === "paid").reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0),
+    totalInvoices: filteredInvoices.length,
+    paidInvoices: filteredInvoices.filter(
+      inv => inv.paymentStatus === "paid"
+    ).length,
+    totalRevenue: filteredInvoices
+      .filter(inv => inv.paymentStatus === "paid")
+      .reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0),
   };
-
   function formatDate(dateString: string): string {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -609,7 +617,6 @@ export default function Invoices() {
     }
     return 0;
   };
-
 
   return (
     <>
