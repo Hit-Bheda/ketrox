@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { menuSchema } from "@/schemas";
 import { X } from "lucide-react";
+import Image from "next/image";
 
 type MenuItemForm = {
   id: string;
@@ -263,8 +264,10 @@ export default function AddMenuModal({
                 <div className="flex flex-wrap gap-2 mt-2">
                   {previewUrls.map((url, idx) => (
                     <div key={idx} className="relative h-20 w-20">
-                      <img
+                      <Image
                         src={url}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 423px"
                         alt={`Preview ${idx + 1}`}
                         className="object-cover rounded-md h-full w-full"
                       />

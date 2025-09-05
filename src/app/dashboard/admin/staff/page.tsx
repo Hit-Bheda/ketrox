@@ -59,29 +59,20 @@ import { AvatarImage } from "@radix-ui/react-avatar";
 
 
 
-const staffData = [
-  {
-    id: 1,
-    name: "Maria Rodriguez",
-    email: "maria.rodriguez@restaurant.com",
-    phone: "+1 (555) 123-4567",
-    role: "Manager",
-    status: "active",
-    shift: "Morning",
-    joinedDate: "2023-01-15",
-    lastActive: "2 minutes ago",
-    avatar: "MR",
-    permissions: {
-      dashboard: true,
-      staff: true,
-      tables: true,
-      orders: true,
-      invoices: true,
-      reports: true,
-      settings: false
-    }
-  },
-];
+// Staff type based on database schema
+type StaffType = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: "super-admin" | "admin" | "manager" | "waiter";
+  status: "active" | "inactive";
+  tenant_id: string | null;
+  emailVerified: boolean;
+  image: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 const roles = ["manager", "waiter"];
 
@@ -107,10 +98,10 @@ export default function Staff() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedStaff, setSelectedStaff] = useState<typeof staffData[0] | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<StaffType | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
-  async function updateStaff(data: Partial<StaffType> & { id: number }) {
+  async function updateStaff(data: Partial<StaffType> & { id: string }) {
     const res = await fetch("/api/admin/hotel", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -140,9 +131,8 @@ export default function Staff() {
   };
   type StaffFormData = z.infer<typeof staffSchema> & { status?: "active" | "inactive" };
   const [isSubmitting, setIsSubmitting] = useState(false);
-  type StaffType = typeof staffData[0];
   const [staffList, setStaffList] = useState<StaffType[]>([]);
- 
+
 
   const {
     register,
@@ -643,7 +633,7 @@ export default function Staff() {
           staff={{
             name: selectedStaff.name,
             email: selectedStaff.email,
-            phone: selectedStaff.phone,
+            phone: selectedStaff.phone || "",
             role: selectedStaff.role.toLowerCase() as "manager" | "waiter",
             status: selectedStaff.status === "active" ? "active" : "inactive",
           }}

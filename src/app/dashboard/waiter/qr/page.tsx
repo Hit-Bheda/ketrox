@@ -1,17 +1,17 @@
 // app/waiter/qr/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   QrCode,
   Download,
   Share,
-  X,
+
   Maximize,
   Users,
   MapPin,
   Wifi,
-  ExternalLink,
+
   Copy,
   Check,
   Eye,
@@ -20,16 +20,15 @@ import {
   Tablet,
   Grid,
   List,
-  Search,
-  Filter
+  Search
 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Enhanced dummy data for QR codes
 const qrData = [
@@ -114,21 +113,21 @@ const qrData = [
 ];
 
 export default function WaiterQR() {
-  const [fullScreenQR, setFullScreenQR] = useState<string | null>(null);
+  // const [fullScreenQR, setFullScreenQR] = useState<string | null>(null); 
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
-  const [selectedTable, setSelectedTable] = useState<{
-    tableId: string;
-    tableName: string;
-    tableNumber: string;
-    capacity: number;
-    location: string;
-    qrCodeUrl: string;
-    status: string;
-    lastScanned: string;
-    scanCount: number;
-    features: string[];
-    section: string;
-  } | null>(null);
+  // const [selectedTable, setSelectedTable] = useState<{
+  //   tableId: string;
+  //   tableName: string;
+  //   tableNumber: string;
+  //   capacity: number;
+  //   location: string;
+  //   qrCodeUrl: string;
+  //   status: string;
+  //   lastScanned: string;
+  //   scanCount: number;
+  //   features: string[];
+  //   section: string;
+  // } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterSection, setFilterSection] = useState<string>('all');
@@ -364,11 +363,11 @@ export default function WaiterQR() {
                 <div className={`flex ${viewMode === 'grid' ? 'flex-col space-y-4' : 'items-start justify-between'} ${viewMode === 'list' ? 'lg:flex-row lg:items-center' : ''}`}>
                   <div className={`flex items-start ${viewMode === 'grid' ? 'justify-center' : 'space-x-4 flex-1'}`}>
                     <div className={`${viewMode === 'grid' ? 'w-24 h-24 lg:w-32 lg:h-32' : 'w-16 h-16 lg:w-20 lg:h-20'} bg-white rounded-xl shadow-md p-2 ${viewMode === 'grid' ? 'mb-4' : ''}`}>
-                      <img 
+                      {/* <img 
                         src={generateQRCode(table.qrCodeUrl, viewMode === 'grid' ? 200 : 120)}
                         alt={`QR Code for ${table.tableName}`}
                         className="w-full h-full object-contain"
-                      />
+                      /> */}
                     </div>
                     {viewMode === 'list' && (
                       <div className="flex-1">
@@ -472,7 +471,7 @@ export default function WaiterQR() {
                     <DialogTrigger asChild>
                       <Button 
                         className="w-full bg-[var(--sidebar)] hover:bg-[var(--sidebar-accent)] text-[var(--sidebar-foreground)] rounded-xl h-12 font-semibold"
-                        onClick={() => setSelectedTable(table)}
+                        
                       >
                         <Maximize className="w-4 h-4 mr-2" />
                         <span className={viewMode === 'grid' ? 'block' : 'hidden lg:block'}>View Full Size</span>
@@ -487,11 +486,11 @@ export default function WaiterQR() {
                       </DialogHeader>
                       <div className="flex flex-col items-center space-y-6 p-6">
                         <div className="w-64 h-64 bg-white rounded-xl shadow-lg p-4">
-                          <img 
+                          {/* <img 
                             src={generateQRCode(table.qrCodeUrl, 400)}
                             alt={`QR Code for ${table.tableName}`}
                             className="w-full h-full object-contain"
-                          />
+                          /> */}
                         </div>
                         
                         <div className="text-center space-y-2">

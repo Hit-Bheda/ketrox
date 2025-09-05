@@ -8,7 +8,6 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Eye,
   Clock,
   DollarSign,
   ChefHat,
@@ -18,7 +17,6 @@ import {
   Download,
   Copy,
   ExternalLink,
-  X,
 } from "lucide-react";
 
 import {
@@ -716,7 +714,11 @@ export default function Menu() {
                   </h2>
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {itemsInCategory.map((item) => (
-                      <Card key={item.id} className={`hover:shadow-lg transition-all py-0 duration-300 border-1 ${!item.available ? 'opacity-60' : ''}`}>
+                      <Card 
+                        key={item.id} 
+                        className={`hover:shadow-lg transition-all py-0 duration-300 border-1 ${!item.available ? 'opacity-60' : ''} ${selectedItem?.id === item.id ? 'ring-2 ring-primary' : ''}`}
+                        onClick={() => setSelectedItem(item)}
+                      >
                         <div className="relative rounded-t-xl overflow-hidden">
                           {/* Image */}
 
@@ -766,10 +768,7 @@ export default function Menu() {
                                     </>
                                   )}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  View Analytics
-                                </DropdownMenuItem>
+                              
                                 <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                                   <AlertDialogTrigger asChild>
                                     <DropdownMenuItem

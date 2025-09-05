@@ -1,10 +1,9 @@
 "use client"
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search, ShoppingBag, ShoppingCart } from 'lucide-react';
+
+import { Search, ShoppingCart } from 'lucide-react';
 import React from 'react'
-import Menu from '../dashboard/admin/menu/page';
 
 export default function layout({ children }: Readonly<{
     children: React.ReactNode;

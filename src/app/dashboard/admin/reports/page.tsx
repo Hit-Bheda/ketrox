@@ -6,7 +6,6 @@ import {
   DollarSign,
   ShoppingCart,
   Clock,
-
   Target,
   BarChart3,
   PieChart,
@@ -44,8 +43,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
-
-
 
 const categoryData = [
   { name: "Main Courses", value: 45, color: "#hsl(var(--chart-1))" },
@@ -401,7 +398,6 @@ export default function Reports() {
     }
   };
 
-
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -424,7 +420,6 @@ export default function Reports() {
     };
     fetchOrders();
   }, []);
-
 
   const tablePerformance = useMemo(() => {
     if (!filteredOrders.length) return [];
@@ -467,7 +462,6 @@ export default function Reports() {
   }, []);
 
 
-
   useEffect(() => {
     fetch("/api/admin/menu")
       .then(res => res.json())
@@ -482,7 +476,6 @@ export default function Reports() {
         }
       });
   }, []);
-
 
   const topMenuItems = useMemo(() => {
     if (!filteredInvoices.length || !Object.keys(menuMap).length) return [];

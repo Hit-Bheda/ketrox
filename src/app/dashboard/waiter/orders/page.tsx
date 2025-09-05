@@ -1,7 +1,7 @@
 // app/waiter/orders/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -15,11 +15,9 @@ import {
   MessageSquare,
   Phone,
   CheckCircle2,
-  Timer,
-  Utensils,
+ 
   Star,
   Flame,
-  Filter,
   Grid,
   List
 } from "lucide-react";
@@ -29,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Enhanced dummy data with detailed order items
 const ordersData = [
