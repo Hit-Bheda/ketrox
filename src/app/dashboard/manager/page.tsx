@@ -73,7 +73,7 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string } | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [staff, setStaff] = useState<{id: string; name: string; role: string; status: string}[]>([]);
+  const [staff, setStaff] = useState<{ id: string; name: string; role: string; status: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +109,7 @@ export default function Dashboard() {
     }
   };
 
-   useEffect(() => {
+  useEffect(() => {
     const fetchUserData = async () => {
       try {
         const { data: session } = await betterFetch<{
@@ -141,19 +141,19 @@ export default function Dashboard() {
         const managerId = user?.id;
         const [ordersRes, staffRes] = await Promise.all([
           fetch(`/api/orders?managerId=${managerId}`, {
-            method: "GET",  
+            method: "GET",
             headers: { "Content-Type": "application/json" },
             cache: "no-store"
           }),
           fetch('/api/admin/hotel')
         ]);
-        
+
         if (!ordersRes.ok) throw new Error("Failed to fetch orders");
         if (!staffRes.ok) throw new Error("Failed to fetch staff");
-        
+
         const ordersData = await ordersRes.json();
         const staffData = await staffRes.json();
-        
+
         setOrders(ordersData.orders || []);
         setStaff(Array.isArray(staffData.staff) ? staffData.staff : []);
         setError(null);
@@ -188,21 +188,21 @@ export default function Dashboard() {
 
   const dailyOrdersData = useMemo(() => {
     const byHour: Record<string, { orders: number; revenue: number }> = {};
-  
+
     const filterFn = getFilterFn(dateRange);
-  
+
     orders.forEach(o => {
       const d = new Date(o.createdAt);
       if (!filterFn(d)) return;
-  
+
       const hour = `${d.getHours()}:00`;
       if (!byHour[hour]) byHour[hour] = { orders: 0, revenue: 0 };
       byHour[hour].orders += 1;
       byHour[hour].revenue += Number(o.totalPrice || 0);
     });
-  
+
     const hours = Array.from({ length: 24 }, (_, h) => `${h}:00`);
-  
+
     return hours.map(h => ({
       time: h,
       orders: byHour[h]?.orders || 0,
@@ -216,12 +216,12 @@ export default function Dashboard() {
     const activeOrders = filteredOrders.filter(
       o => o.status !== "delivered" && o.status !== "cancelled"
     ).length;
-  
+
     const totalRevenue = filteredOrders.reduce(
       (sum, o) => sum + Number(o.totalPrice || 0),
       0
     );
-  
+
     const waiterCount = staff.filter(member => member.role === 'waiter' && member.status === 'active').length;
 
     return {
@@ -346,7 +346,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-     
+
         <Card className="hover:shadow-lg transition-all duration-300 ">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Waiters on Duty</CardTitle>
@@ -506,21 +506,9 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Select value={order.status}>
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue>
-                          <Badge className={getStatusColor(order.status)}>
-                            {order.status}
-                          </Badge>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="preparing">Preparing</SelectItem>
-                        <SelectItem value="ready">Ready</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Badge className={getStatusColor(order.status)}>
+                      {order.status}
+                    </Badge>
                   </div>
                 </div>
               ))}
