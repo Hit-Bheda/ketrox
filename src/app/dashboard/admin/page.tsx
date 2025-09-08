@@ -430,7 +430,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Order Status Distribution */}
-        <Card className="col-span-3 hover:shadow-lg transition-shadow duration-300">
+        <Card className="md:col-span-3 hover:shadow-lg transition-shadow max-md:col-span-4 duration-300">
           <CardHeader>
             <CardTitle>Order Status</CardTitle>
             <CardDescription>Current distribution of order statuses</CardDescription>
@@ -523,7 +523,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Recent Activity */}
-        <Card className="col-span-3">
+        <Card className="col-span-3 max-md:col-span-4">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>Latest system events and updates</CardDescription>

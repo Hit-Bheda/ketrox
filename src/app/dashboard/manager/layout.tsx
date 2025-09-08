@@ -147,6 +147,7 @@ export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const [user, setUser] = useState<{ name: string; role: string; image?: string } | null>(null);
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isActivePath = (path: string) => {
     return pathname === path;
@@ -221,8 +222,6 @@ export default function Layout({ children }: LayoutProps) {
     };
   }, []);
 
-
-
   // Notification functions
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
@@ -275,23 +274,40 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="flex h-screen bg-background font-sans">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="hidden lg:flex lg:w-64 bg-sidebar border-r border-sidebar-border flex-col">
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border flex-col
+        transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex
+        ${sidebarOpen ? "translate-x-0 flex" : "-translate-x-full hidden"}
+      `}>
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-sidebar-border">
-            <div className="flex items-center justify-center h-20">
-              {tenantLogoUrl && (
-                <Image
-                  src={tenantLogoUrl}
-                  alt="Hotel Logo"
-                  width={200}
-                  height={64}
-                  unoptimized
-                  priority
-                  className="h-full w-auto object-contain"
-                />
-              )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center justify-center h-20 flex-1">
+                {tenantLogoUrl && (
+                  <Image
+                    src={tenantLogoUrl}
+                    alt="Hotel Logo"
+                    width={200}
+                    height={64}
+                    unoptimized
+                    priority
+                    className="h-full w-auto object-contain"
+                  />
+                )}
+              </div>
+              <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
 
@@ -329,6 +345,7 @@ export default function Layout({ children }: LayoutProps) {
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
+                  onClick={() => setSidebarOpen(false)}
                 >
                   <div className="flex items-center space-x-3">
                     <item.icon className="w-5 h-5" />
@@ -366,7 +383,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="lg:hidden">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
                   <Menu className="w-4 h-4" />
                 </Button>
               </div>

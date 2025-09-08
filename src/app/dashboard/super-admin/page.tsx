@@ -123,8 +123,6 @@ const recentActivity = [
 ];
 
 
-
-
 export default function Dashboard() {
   type HotelType = {
     id: string;
@@ -248,10 +246,10 @@ export default function Dashboard() {
     }
   };
   return (
-    <div className="flex-1 space-y-8 p-8 bg-[var(--color-background)] text-[var(--color-foreground)] font-sans">
+    <div className="flex-1 space-y-8 bg-[var(--color-background)] text-[var(--color-foreground)] font-sans">
       {/* Time Period Tabs */}
       <Tabs value={selectedPeriod} onValueChange={setSelectedPeriod} className="space-y-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col items-center sm:flex-row gap-4 justify-between mb-4">
           <TabsList className="grid w-full max-w-[400px] grid-cols-3 rounded-xl bg-[var(--color-card)] shadow">
             <TabsTrigger value="weekly" className="rounded-xl data-[state=active]:bg-[var(--color-primary)] data-[state=active]:text-[var(--color-primary-foreground)] transition">Weekly</TabsTrigger>
             <TabsTrigger value="monthly" className="rounded-xl data-[state=active]:bg-[var(--color-primary)] data-[state=active]:text-[var(--color-primary-foreground)] transition">Monthly</TabsTrigger>
@@ -406,7 +404,7 @@ export default function Dashboard() {
           </div>
 
           {/* Hotels and Activity */}
-          <div className="grid gap-8 md:grid-cols-7">
+          <div className="grid gap-8 grid-cols-1 md:grid-cols-7">
             <Card className="col-span-4 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
               {/* ...existing hotels table code, update badge and button classes for rounded/contrast... */}
               <CardHeader>
@@ -527,7 +525,7 @@ export default function Dashboard() {
               onOpenChange={(open) => dispatch(toggleEditModal(open))}
               onSubmit={handleUpdateHotel}
             />
-            <Card className="col-span-3 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
+            <Card className="col-span-3 max-md:col-span-4 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
               {/* ...existing activity code, update icon and text classes for color/contrast... */}
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-[var(--color-primary)]">Recent Activity</CardTitle>

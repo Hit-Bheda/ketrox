@@ -559,7 +559,7 @@ export default function Reports() {
             <h1 className="text-2xl font-bold">Reports & Analytics</h1>
             <p className="text-muted-foreground">Comprehensive insights into your restaurant performance</p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center  space-x-2">
             <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue />

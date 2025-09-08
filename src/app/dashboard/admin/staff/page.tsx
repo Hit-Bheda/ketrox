@@ -180,7 +180,6 @@ export default function Staff() {
       });
 
       const result = await res.json();
-      console.log("staffffff", result);
 
       if (!res.ok) {
         throw new Error(result.error || "Failed to fetch staff");

@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 export const signinSchema = z.object({
-    email: z.email("Invalid email address"),
+    email: z.string().email("Invalid email address"),
     password: z.string().min(6, "Password must be at least 6 characters long")
 });
+
 
 export const signupSchema = z.object({
     fullName: z.string().min(1, "Full name is required"),
@@ -164,3 +165,15 @@ export const ticketUpdateSchema = z.object({
     status: z.enum(["open", "in_progress", "resolved"]).optional(),
     priority: z.enum(["low", "medium", "high"]).optional(),
 });
+
+export const forgotPasswordSchema = z.object({
+    email: z
+        .string()
+        .email({ message: "Invalid email address" })
+        .min(1, { message: "Email is required" }),
+});
+
+export const betterAuthResetSchema = z.object({
+    token: z.string().min(1, "Reset token is required"),
+    newPassword: z.string().min(6, "Password must be at least 6 characters long"),
+  });

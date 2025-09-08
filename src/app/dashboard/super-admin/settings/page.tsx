@@ -76,6 +76,7 @@ export default function Settings() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+    const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string, email?: string , phone?:string} | null>(null);
 
   const generalForm = useForm<z.infer<typeof generalSettingsSchema>>({
     resolver: zodResolver(generalSettingsSchema),
@@ -223,29 +224,8 @@ export default function Settings() {
     }
   };
 
-  // const onSmtpSubmit = (values: z.infer<typeof smtpSettingsSchema>) => {
-  //   console.log("SMTP settings:", values);
-  //   toast.success("SMTP settings updated successfully!");
-  // };
-
-
-  // const handleGenerateApiKey = () => {
-  //   console.log("Generating new API key");
-  //   toast.success("New API key generated!");
-  // };
-
-  // const handleCopyApiKey = () => {
-  //   navigator.clipboard.writeText("sk_live_1234567890abcdef");
-  //   toast.success("API key copied to clipboard!");
-  // };
-
-  // const handleDeleteAccount = () => {
-  //   console.log("Initiating account deletion");
-  //   toast.error("Account deletion initiated!");
-  // };
-
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="flex-1 space-y-6">
       <div className="max-w-full mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -385,13 +365,13 @@ export default function Settings() {
                     </div>
                     <div className="space-y-4">
                       <Label>profile Logo</Label>
-                      <div className="flex items-center space-x-4">
+                      <div className="flex flex-col sm:flex-row gap-y-4 items-center space-x-4">
                         <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-muted overflow-hidden">
                           {previewUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
                           ) : (
-                          <span className="text-sm text-muted-foreground">Logo</span>
+                            <span className="text-sm text-muted-foreground">Logo</span>
                           )}
                         </div>
                         <label className="inline-flex">
@@ -407,16 +387,16 @@ export default function Settings() {
                               setPreviewUrl(url);
                             }}
                           />
-                          <Button asChild variant="outline" type="button">
+                          <Button asChild variant="outline" type="button" size="sm" className="w-full sm:w-auto">
                             <span><Upload className="w-4 h-4 mr-2" />Upload Profile photo</span>
-                        </Button>
+                          </Button>
                         </label>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-destructive">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Remove
-                    </Button>
+                            <Button variant="outline" size="sm"  className="text-destructive w-full sm:w-auto">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Remove
+                            </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
@@ -444,6 +424,9 @@ export default function Settings() {
                                     // Clear preview and selection
                                     setPreviewUrl(null);
                                     setSelectedFile(null);
+                                    setUser(prev => prev ? { ...prev, image: undefined } : null);
+                                    // Dispatch custom event to update sidebar photo
+                                    window.dispatchEvent(new CustomEvent('profile-photo-updated'));
                                     toast.success('Photo removed');
                                   } catch {
                                     toast.error('Unexpected error');
@@ -468,8 +451,8 @@ export default function Settings() {
                         </>
                       ) : (
                         <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Configuration
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Configuration
                         </>
                       )}
                     </Button>
@@ -762,9 +745,9 @@ export default function Settings() {
                       { name: "Security alerts", email: true, sms: true },
                       { name: "Monthly reports", email: true, sms: false },
                     ].map((notification, index) => (
-                      <div key={index} className="flex items-center justify-between rounded-lg border p-3">
+                      <div key={index} className="md:flex  items-center justify-between rounded-lg border p-3">
                         <span className="font-medium">{notification.name}</span>
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center  mt-1 space-x-4">
                           <div className="flex items-center space-x-2">
                             <span className="text-sm">Email</span>
                             <Switch checked={notification.email} />

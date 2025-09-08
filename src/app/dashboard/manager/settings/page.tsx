@@ -262,7 +262,6 @@ export default function Settings() {
 
 
   return (
-    <>
       <div className="flex-1 space-y-6 p-6 animate-fadeIn">
         {/* Header */}
         <div>
@@ -276,7 +275,7 @@ export default function Settings() {
           <TabsContent value="profile" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 ">
                   <User className="w-5 h-5" />
                   <span>Profile Information</span>
                 </CardTitle>
@@ -284,8 +283,8 @@ export default function Settings() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Avatar Section */}
-                <div className="flex items-center space-x-4">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted overflow-hidden">
+                 <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+        <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted overflow-hidden">
                     {previewUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={previewUrl} alt="Profile" className="h-full w-full object-cover" />
@@ -296,7 +295,7 @@ export default function Settings() {
                       </Avatar>
                     )}
                   </div>
-                  <div className="space-y-2 flex gap-2">
+                  <div className="space-y-2 flex flex-col gap-2 sm:flex-row sm:gap-2">
                     <label className="inline-flex">
                       <input
                         type="file"
@@ -310,7 +309,7 @@ export default function Settings() {
                           setPreviewUrl(url);
                         }}
                       />
-                      <Button asChild variant="outline" size="sm">
+                      <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
                         <span><Upload className="w-4 h-4 mr-2" />Change Photo</span>
                       </Button>
                     </label>
@@ -445,7 +444,7 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
                   <Button onClick={handleSaveProfile} disabled={isUploading}>
                     {isUploading ? (
                       <>
@@ -478,6 +477,6 @@ export default function Settings() {
           </TabsContent>
         </Tabs>
       </div>
-    </>
+
   );
 }

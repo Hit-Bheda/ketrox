@@ -1,41 +1,56 @@
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { eq, and } from "drizzle-orm";
-import bcrypt from "bcryptjs";
+import { z } from "zod";
 
-import { db } from "@/db";
-import { user as userTable, account as accountTable } from "@/db/schema";
+const betterAuthResetSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  newPassword: z.string().min(6, "Password must be at least 6 characters long"),
+});
 
 export async function POST(req: Request) {
   try {
-    const { email, newPassword } = await req.json();
+    const body = await req.json();
+    console.log("👉 Received body in reset-password API:", body);
 
-    if (!email || !newPassword) {
-      return NextResponse.json({ error: "email and newPassword required" }, { status: 400 });
+    // Validate input for Better Auth format
+    const validatedData = betterAuthResetSchema.parse(body);
+    const { token, newPassword } = validatedData;
+    console.log("👉 Validated token:", token);
+
+    // Use Better Auth's resetPassword method
+    const result = await auth.api.resetPassword({
+      body: {
+        token,
+        newPassword,
+      },
+    });
+
+    if (!result) {
+      return NextResponse.json(
+        { error: "Failed to reset password" },
+        { status: 400 }
+      );
     }
 
-    const users = await db
-      .select({ id: userTable.id })
-      .from(userTable)
-      .where(eq(userTable.email, email));
-    if (!users.length) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-    const userId = users[0].id;
+    console.log("👉 Password reset successfully using Better Auth");
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    const now = new Date();
-
-    const updated = await db
-      .update(accountTable)
-      .set({ password: hashedPassword, updatedAt: now })
-      .where(and(eq(accountTable.providerId, "email"), eq(accountTable.userId, userId)));
-
-    if (updated.count === 0) {
-      return NextResponse.json({ error: "Email credential not found for user" }, { status: 404 });
-    }
-
-    return NextResponse.json({ success: true, message: "Password reset successful" });
+    return NextResponse.json({
+      success: true,
+      message: "Password reset successfully",
+    });
   } catch (error) {
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+    console.error("Reset password error:", error);
+
+    if (error && typeof error === "object" && "issues" in error) {
+      return NextResponse.json(
+        { error: "Invalid input data" },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again later." },
+      { status: 500 }
+    );
   }
 }

@@ -113,7 +113,6 @@ export default function Tables() {
       }
       const res = await fetch("/api/admin/table");
       const data = await res.json();
-      console.log("Fetched tables:", data);
       setTableItem(
         (data.tables || []).map((table: Table) => ({
           ...table,
@@ -313,7 +312,7 @@ export default function Tables() {
         const data: { success: boolean; qr?: QrCode; error?: string } = await res.json();
         if (res.ok && data.success && data.qr) {
           setQrCode(data.qr);
-          console.log("Fetched QR code:", data.qr);
+      
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
