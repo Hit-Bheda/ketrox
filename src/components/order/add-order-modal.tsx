@@ -4,25 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner"
+import { OrderType } from "@/types";
 
 
-type Ordertype = {
-    id: string;
-    tableId: string;
-    tableNumber: string;
-    tenantId: string;
-    managerId: string;
-    customerName: string;
-    items: string[];
-    quantity: string[];
-    status: "pending" | "completed" | "cancelled" | string;
-    totalPrice: string;
-    createdAt: string;
-    updatedAt: string;
-    managerName: string;
-    orderNumber: string;
-    itemNames: string[];
-};
+
 
 export default function BookOrderModal({
     open,
@@ -39,7 +24,7 @@ export default function BookOrderModal({
     tenantId: string;
     managerId: string;
     onOrderAdded: () => void;
-    order?: Ordertype;
+    order?: OrderType;
 }) {
     const [menuItems, setMenuItems] = useState<{ id: string; item_name: string; price: number }[]>([]);
     const [selectedItems, setSelectedItems] = useState<string[]>([]);

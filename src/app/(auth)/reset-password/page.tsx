@@ -1,4 +1,5 @@
 "use client";
+
 import { z } from "zod";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -9,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { betterAuthResetSchema } from "@/schemas";
+import { resetPasswordFormSchema } from "@/schemas";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -25,11 +26,11 @@ export default function ResetPasswordPage() {
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
 
-    const form = useForm<z.infer<typeof betterAuthResetSchema>>({
-        resolver: zodResolver(betterAuthResetSchema),
+    const form = useForm<z.infer<typeof resetPasswordFormSchema>>({
+        resolver: zodResolver(resetPasswordFormSchema),
         defaultValues: {
-            token: token || "",
             newPassword: "",
+            confirmPassword: "",
         },
     });
 
@@ -46,7 +47,7 @@ export default function ResetPasswordPage() {
         setError("");
     };
 
-    const onSubmit = async (values: z.infer<typeof betterAuthResetSchema>) => {
+    const onSubmit = async (values: z.infer<typeof resetPasswordFormSchema>) => {
         try {
             resetState();
             setLoading(true);
@@ -92,7 +93,7 @@ export default function ResetPasswordPage() {
                 <div
                     className="absolute inset-0 z-0"
                     style={{
-                        backgroundImage: `url('https://images.pexels.com/photos/1449773/pexels-photo-1449773.jpeg')`,
+                        backgroundImage: `url('/images/auth-bg.webp')`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat'
@@ -139,7 +140,7 @@ export default function ResetPasswordPage() {
             <div
                 className="absolute inset-0 z-0"
                 style={{
-                    backgroundImage: `url('https://images.pexels.com/photos/1449773/pexels-photo-1449773.jpeg')`,
+                    backgroundImage: `url('/images/auth-bg.webp')`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat'
@@ -256,14 +257,14 @@ export default function ResetPasswordPage() {
                                                     id="confirmPassword"
                                                     type={showConfirmPassword ? "text" : "password"}
                                                     placeholder="Confirm new password"
-                                                    {...register("newPassword")}
+                                                    {...register("confirmPassword")}
                                                     className={cn(
                                                         "pl-12 pr-12 h-12 text-base transition-all duration-200",
                                                         "bg-background/50 backdrop-blur-sm",
                                                         "border-border/60 focus:border-primary",
                                                         "focus:ring-2 focus:ring-primary/20",
                                                         "hover:border-primary/50",
-                                                        errors.newPassword && "border-destructive focus:border-destructive focus:ring-destructive/20"
+                                                        errors.confirmPassword && "border-destructive focus:border-destructive focus:ring-destructive/20"
                                                     )}
                                                     disabled={loading}
                                                 />
@@ -282,9 +283,9 @@ export default function ResetPasswordPage() {
                                                     )}
                                                 </Button>
                                             </div>
-                                            {errors.newPassword && (
+                                            {errors.confirmPassword && (
                                                 <p className="text-sm text-destructive animate-slide-up font-medium">
-                                                    {errors.newPassword.message}
+                                                    {errors.confirmPassword.message as string}
                                                 </p>
                                             )}
                                         </div>

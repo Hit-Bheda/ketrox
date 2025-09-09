@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-// import { Textarea } from "@/components/ui/textarea";
+
 import {
   Select,
   SelectContent,
@@ -150,23 +150,23 @@ export default function Settings() {
 
   const getHotelsData = async () => {
     try {
-      const res = await fetch("/api/super-admin/hotels");
+      const res = await fetch("/api/admin/tenant-hotel");
       if (!res.ok) {
-        throw new Error("Failed to fetch hotels");
+        throw new Error("Failed to fetch hotel data");
       }
       const data = await res.json();
 
-      return Array.isArray(data.hotels) ? data.hotels : [];
+      return data.hotel || null;
     } catch (error) {
-      console.error("Error fetching hotels:", error);
-      return [];
+      console.error("Error fetching hotel data:", error);
+      return null;
     }
   };
 
   useEffect(() => {
     getHotelsData().then(data => {
-      if (data.length > 0) {
-        setHotelsData(data[0]);
+      if (data) {
+        setHotelsData(data);
       }
     });
   }, []);
@@ -298,7 +298,7 @@ export default function Settings() {
           setIsUploading(false);
           return;
         }
-        imageUrl = data.signedUrl as string;
+        imageUrl = data.signedUrl!;
         const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
         const sessJson = await sess.json();
         const uid = sessJson?.user?.id;
@@ -351,7 +351,7 @@ export default function Settings() {
     }
   }, [hotelsData]);
 
-  // Only set profileForm if user/hotelsData is loaded and form is still at initial state
+
   useEffect(() => {
     if (user) {
       setProfileForm(prev => {
@@ -407,7 +407,7 @@ export default function Settings() {
         return;
       }
 
-      const logoUrl = data.signedUrl as string;
+      const logoUrl = data.signedUrl;
 
       // Update hotel with new logo URL
       const res = await fetch("/api/super-admin/hotels", {
@@ -447,6 +447,33 @@ export default function Settings() {
     }
   };
 
+  const removeLogo = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (!hotelsData?.id) {
+        return { success: false, error: 'Hotel ID not found' };
+      }
+
+      // Delete logo using DELETE method
+      const res = await fetch("/api/super-admin/hotels/logo", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hotelId: hotelsData.id,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        return { success: false, error: result.error || "Failed to remove logo" };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Remove logo error:', error);
+      return { success: false, error: 'Unexpected error' };
+    }
+  };
+
   const handleSaveRestaurant = async () => {
     try {
       if (!hotelsData?.id) {
@@ -478,6 +505,34 @@ export default function Settings() {
     }
   };
 
+  const removeProfilePhoto = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
+      const sessJson = await sess.json();
+      const uid = sessJson?.user?.id;
+
+      if (!uid) {
+        return { success: false, error: 'User not found' };
+      }
+
+      const res = await fetch('/api/user/photo', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: uid })
+      });
+
+      const j = await res.json();
+
+      if (!res.ok) {
+        return { success: false, error: j.error || 'Failed to remove photo' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Remove photo error:', error);
+      return { success: false, error: 'Unexpected error' };
+    }
+  };
 
   return (
 
@@ -509,7 +564,7 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Avatar Section */}
-              <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+              <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
                 <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted overflow-hidden">
                   {previewUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -541,7 +596,7 @@ export default function Settings() {
                   </label>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full sm:w-auto text-destructive">
+                      <Button variant="outline" size="sm" className="text-destructive w-full sm:w-auto">
                         <Trash2 className="w-4 h-4 mr-2" />
                         Remove
                       </Button>
@@ -557,25 +612,15 @@ export default function Settings() {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={async () => {
-                            try {
-                              if (!user) return;
-                              const res = await fetch('/api/user/photo', {
-                                method: 'DELETE',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ userId: user.id })
-                              });
-                              const j = await res.json();
-                              if (!res.ok) { toast.error(j.error || 'Failed to remove photo'); return; }
-                              // Clear preview and selection
+                            const result = await removeProfilePhoto();
+                            if (result.success) {
                               setPreviewUrl(null);
                               setSelectedFile(null);
-                              // Update user state to reflect the removed image
                               setUser(prev => prev ? { ...prev, image: undefined } : null);
-                              // Dispatch custom event to update sidebar photo
                               window.dispatchEvent(new CustomEvent('profile-photo-updated'));
                               toast.success('Photo removed');
-                            } catch {
-                              toast.error('Unexpected error');
+                            } else {
+                              toast.error(result.error || 'Failed to remove photo');
                             }
                           }}
                         >
@@ -714,43 +759,99 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Logo Section */}
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center sm:flex-row flex-col gap-4 space-x-4">
                 <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted overflow-hidden">
-                  {logoPreviewUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logoPreviewUrl} alt="Logo Preview" className="h-full w-full object-cover" />
-                  ) : hotelsData?.logo_url ? (
-                    <Image
-                      src={hotelsData.logo_url}
-                      width={100}
-                      height={100}
-                      alt={hotelsData?.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full border-2 border-dashed border-muted rounded-lg flex items-center justify-center">
-                      <Building2 className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                  )}
+                  {(() => {
+                    if (logoPreviewUrl) {
+                     
+                      return (
+                        <Image
+                          src={logoPreviewUrl}
+                          width={100}
+                          height={100}
+                          alt="Logo Preview"
+                          className="h-full w-full object-cover"
+                        />
+                      );
+                    }
+
+                    if (hotelsData?.logo_url) {
+                      return (
+                        <Image
+                          src={hotelsData.logo_url}
+                          width={100}
+                          height={100}
+                          alt={hotelsData?.name}
+                          className="h-full w-full object-cover"
+                        />
+                      );
+                    }
+
+                    return (
+                      <div className="w-full h-full border-2 border-dashed border-muted rounded-lg flex items-center justify-center">
+                        <Building2 className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                    );
+                  })()}
                 </div>
-                <div className="space-y-2 flex flex-col gap-2">
-                  <label className="inline-flex">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      hidden
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setSelectedLogoFile(file);
-                        const url = URL.createObjectURL(file);
-                        setLogoPreviewUrl(url);
-                      }}
-                    />
-                    <Button asChild variant="outline" size="sm">
-                      <span><Upload className="w-4 h-4 mr-2" />Upload Logo</span>
-                    </Button>
-                  </label>
+
+                <div className="space-y-2 flex flex-col items-center gap-2">
+                  <div className="flex gap-2">
+                    <label className="inline-flex">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setSelectedLogoFile(file);
+                          const url = URL.createObjectURL(file);
+                          setLogoPreviewUrl(url);
+                        }}
+                      />
+                      <Button asChild variant="outline" size="sm">
+                        <span><Upload className="w-4 h-4 mr-2" />Upload Logo</span>
+                      </Button>
+                    </label>
+                    {hotelsData?.logo_url && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-destructive">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Remove
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove logo?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action will remove your current restaurant logo.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={async () => {
+                                const result = await removeLogo();
+                                if (result.success) {
+                                  setHotelsData(prev => prev ? { ...prev, logo_url: "" } : prev);
+                                  setLogoPreviewUrl(null);
+                                  setSelectedLogoFile(null);
+                                  window.dispatchEvent(new CustomEvent('tenant-logo-updated', { detail: { logoUrl: "" } }));
+                                  toast.success('Logo removed successfully');
+                                } else {
+                                  toast.error(result.error || 'Failed to remove logo');
+                                }
+                              }}
+                            >
+                              Remove
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                   {selectedLogoFile && (
                     <Button
                       onClick={handleLogoUpload}
@@ -842,7 +943,7 @@ export default function Settings() {
               </div>
 
 
-              <div className="flex justify-end">
+              <div className="flex justify-center sm:justify-end">
 
                 <Button onClick={handleSaveRestaurant} disabled={isUploading}>
                   {isUploading ? (

@@ -5,25 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { UserMenuImageSlider } from "@/components/usercompoments/UserMenuImageSlider";
 import Image from "next/image";
 import { UserDescPopover } from "@/components/usercompoments/UserDescPopover";
+import { ApiMenuItem, DietaryOption, MenuItem } from "@/types";
 
-
-
-type DietaryOption = "vegetarian" | "vegan" | "glutenFree";
-
-type MenuItem = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  price: string | number;
-  preparationTime: string | number;
-  dietary: DietaryOption[];
-  isVegetarian: boolean;
-  isVegan: boolean;
-  isGlutenFree: boolean;
-  available: boolean;
-  image?: string[];
-};
 
 const badgeColors: Record<DietaryOption, string> = {
   vegetarian: "bg-emerald-700 text-white",
@@ -59,21 +42,6 @@ export default function Page() {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [activeCategory, setActiveCategory] = useState("all");
 
-  type ApiMenuItem = {
-    id: string;
-    item_name?: string;
-    name?: string;
-    category: string;
-    description: string;
-    price: number | string;
-    item_logo?: string;
-    image?: string[];
-    prepTime?: number | string;
-    preparationTime?: number | string;
-    dietaty?: DietaryOption[];
-    dietary?: DietaryOption[];
-    isAvailable?: boolean;
-  };
 
 useEffect(() => {
   const fetchMenuItems = async () => {

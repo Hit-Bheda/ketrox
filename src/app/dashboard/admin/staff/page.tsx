@@ -56,23 +56,12 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import UpdateStaffModal from "@/components/staff/edit-staff-modal";
 import { AvatarImage } from "@radix-ui/react-avatar";
+import { StaffType } from "@/types";
 
 
 
 // Staff type based on database schema
-type StaffType = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  role: "super-admin" | "admin" | "manager" | "waiter";
-  status: "active" | "inactive";
-  tenant_id: string | null;
-  emailVerified: boolean;
-  image: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
+
 
 const roles = ["manager", "waiter"];
 

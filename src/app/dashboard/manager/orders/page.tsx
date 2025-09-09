@@ -57,32 +57,16 @@ import {
 } from "@/components/ui/tooltip"
 import { betterFetch } from "@better-fetch/fetch";
 import { toast } from "sonner";
+import { OrderType } from "@/types";
 
-type Order = {
-  id: string;
-  tableId: string;
-  tableNumber: string;
-  tenantId: string;
-  managerId: string;
-  customerName: string;
-  items: string[];
-  quantity: string[];
-  status: "pending" | "completed" | "cancelled" | string;
-  totalPrice: string;
-  createdAt: string;
-  updatedAt: string;
-  managerName: string;
-  orderNumber: string;
-  itemNames: string[];
-};
 
 export default function Orders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [timeFilter, setTimeFilter] = useState("today");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderType | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderType[]>([]);
   const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string } | null>(null);
 
   const now = new Date();
@@ -195,7 +179,7 @@ export default function Orders() {
     }
   };
 
-  const viewOrderDetails = (order: Order) => {
+  const viewOrderDetails = (order: OrderType) => {
     setSelectedOrder(order);
     setShowOrderDetails(true);
   };
@@ -236,7 +220,7 @@ export default function Orders() {
   }, [user]);
 
   return (
-    <>
+
       <div className="flex-1 space-y-6 p-6 animate-fadeIn">
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
@@ -580,6 +564,5 @@ export default function Orders() {
           </DialogContent>
         </Dialog>
       </div>
-    </>
   );
 }

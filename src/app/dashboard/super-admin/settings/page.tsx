@@ -26,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-// import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import {
   Form,
@@ -51,15 +50,6 @@ const generalSettingsSchema = z.object({
   language: z.string(),
 });
 
-// const smtpSettingsSchema = z.object({
-//   host: z.string().min(1, "SMTP host is required"),
-//   port: z.string().min(1, "Port is required"),
-//   username: z.string().min(1, "Username is required"),
-//   password: z.string().min(1, "Password is required"),
-//   encryption: z.string(),
-//   enabled: z.boolean(),
-// });
-
 const securitySettingsSchema = z.object({
   currentPassword: z.string().min(8, "Password must be at least 8 characters"),
   newPassword: z.string().min(8, "Password must be at least 8 characters"),
@@ -76,7 +66,8 @@ export default function Settings() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-    const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string, email?: string , phone?:string} | null>(null);
+  const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string, email?: string, phone?: string } | null>(null);
+
 
   const generalForm = useForm<z.infer<typeof generalSettingsSchema>>({
     resolver: zodResolver(generalSettingsSchema),
@@ -88,18 +79,6 @@ export default function Settings() {
       language: "en"
     },
   });
-
-  // const smtpForm = useForm<z.infer<typeof smtpSettingsSchema>>({
-  //   resolver: zodResolver(smtpSettingsSchema),
-  //   defaultValues: {
-  //     host: "smtp.mailgun.org",
-  //     port: "587",
-  //     username: "noreply@ketrox.com",
-  //     password: "",
-  //     encryption: "TLS",
-  //     enabled: true
-  //   },
-  // });
 
   const securityForm = useForm<z.infer<typeof securitySettingsSchema>>({
     resolver: zodResolver(securitySettingsSchema),
@@ -118,11 +97,25 @@ export default function Settings() {
         const resp = await fetch('/api/auth/get-session', { credentials: 'include' });
         const js = await resp.json();
         const existing: string | undefined = js?.user?.image;
+        
+        // Populate user state with session data
+        if (!cancelled && js?.user) {
+          setUser({
+            id: js.user.id,
+            name: js.user.name,
+            role: js.user.role,
+            image: js.user.image,
+            email: js.user.email,
+            phone: js.user.phone
+          });
+        }
+        
         if (!cancelled && existing && !selectedFile) {
           setPreviewUrl(existing);
         }
-      } catch {
-        // ignore
+
+      } catch(error) {
+        console.error(error);
       }
     })();
     return () => {
@@ -187,7 +180,8 @@ export default function Settings() {
           setIsUploading(false);
           return;
         }
-        imageUrl = data.signedUrl as string;
+
+        imageUrl = data.signedUrl!;
         // Get session user id
         const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
         const sessJson = await sess.json();
@@ -197,6 +191,7 @@ export default function Settings() {
           setIsUploading(false);
           return;
         }
+
         const res = await fetch('/api/user/photo', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -218,9 +213,40 @@ export default function Settings() {
       if (imageUrl) {
         setPreviewUrl(imageUrl);
       }
+
     } catch {
       toast.error('Failed to save configuration');
       setIsUploading(false);
+    }
+  };
+
+
+  const removeProfilePhoto = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
+      const sessJson = await sess.json();
+      const uid = sessJson?.user?.id;
+
+      if (!uid) {
+        return { success: false, error: 'User not found' };
+      }
+
+      const res = await fetch('/api/user/photo', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: uid })
+      });
+
+      const j = await res.json();
+
+      if (!res.ok) {
+        return { success: false, error: j.error || 'Failed to remove photo' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Remove photo error:', error);
+      return { success: false, error: 'Unexpected error' };
     }
   };
 
@@ -393,7 +419,7 @@ export default function Settings() {
                         </label>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm"  className="text-destructive w-full sm:w-auto">
+                            <Button variant="outline" size="sm" className="text-destructive w-full sm:w-auto">
                               <Trash2 className="w-4 h-4 mr-2" />
                               Remove
                             </Button>
@@ -409,27 +435,15 @@ export default function Settings() {
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={async () => {
-                                  try {
-                                    const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
-                                    const sessJson = await sess.json();
-                                    const uid = sessJson?.user?.id;
-                                    if (!uid) { toast.error('User not found'); return; }
-                                    const res = await fetch('/api/user/photo', {
-                                      method: 'DELETE',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ userId: uid })
-                                    });
-                                    const j = await res.json();
-                                    if (!res.ok) { toast.error(j.error || 'Failed to remove photo'); return; }
-                                    // Clear preview and selection
+                                  const result = await removeProfilePhoto();
+                                  if (result.success) {
                                     setPreviewUrl(null);
                                     setSelectedFile(null);
                                     setUser(prev => prev ? { ...prev, image: undefined } : null);
-                                    // Dispatch custom event to update sidebar photo
                                     window.dispatchEvent(new CustomEvent('profile-photo-updated'));
                                     toast.success('Photo removed');
-                                  } catch {
-                                    toast.error('Unexpected error');
+                                  } else {
+                                    toast.error(result.error || 'Failed to remove photo');
                                   }
                                 }}
                               >

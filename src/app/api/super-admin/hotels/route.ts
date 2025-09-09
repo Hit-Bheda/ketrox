@@ -124,7 +124,6 @@ export async function DELETE(request: Request) {
         return Response.json({ error: "Hotel ID is required" }, { status: 400 });
     }
 
-  // Delete users linked to this tenant first to satisfy FK constraints
   await db.delete(user).where(eq(user.tenant_id, id));
 
   const deletedHotel = await db.delete(tenants).where(eq(tenants.id, id));

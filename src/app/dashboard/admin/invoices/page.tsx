@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useRef, useEffect } from "react";
 import {
   Plus,
@@ -51,43 +50,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { HotelType } from "@/types";
+import { HotelType, Invoice, OrderType } from "@/types";
 import * as pdfMake from "pdfmake/build/pdfmake";
 import * as pdfFonts from "pdfmake/build/vfs_fonts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-type Order = {
-  id: string;
-  orderNumber: string;
-  tableId: string;
-  customerName: string;
-  items: string[];
-  quantity: string[];
-  prices: string[];
-  status: string;
-  paymentStatus: string;
-  subtotal: string;
-  tax: string;
-  totalPrice: string;
-  createdAt: string;
-};
-
-type Invoice = {
-  id: string;
-  invoiceNumber: string;
-  orderId: string;
-  customerName: string;
-  tableNumber: string;
-  items: string[];
-  quantities: string[];
-  prices: string[];
-  subtotal: string;
-  totalAmount: string;
-  paymentMethod: string;
-  paymentStatus: string;
-  notes?: string;
-  createdAt: string;
-};
+import { getInvoicePDFDefinition } from "@/components/invoice/GetInvoicePDFDefinition";
 
 const statusOptions = ["all", "pending", "paid", "failed", "refunded"];
 
@@ -101,7 +68,7 @@ export default function Invoices() {
 
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderType[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -124,23 +91,25 @@ export default function Invoices() {
         }
       });
   }, []);
-
+  type PaymentMethod = "cash" | "card" | "upi" | "Bank Transfer";
+  type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
   // Form state for create invoice modal
   const [invoiceForm, setInvoiceForm] = useState({
     customerName: "",
     tableNumber: "",
     items: [{ name: "", quantity: 1, price: 0 }],
     notes: "",
-    paymentMethod: "cash" as "cash" | "card" | "upi" | "Bank Transfer",
-    paymentStatus: "pending" as "pending" | "paid" | "failed" | "refunded"
+    paymentMethod: "cash" as PaymentMethod,
+    paymentStatus: "pending" as PaymentStatus,
+
   });
 
   // Form state for edit invoice modal
   const [editForm, setEditForm] = useState({
     customerName: "",
     tableNumber: "",
-    paymentMethod: "cash" as "cash" | "card" | "upi" | "Bank Transfer",
-    paymentStatus: "pending" as "pending" | "paid" | "failed" | "refunded",
+    paymentMethod: "cash" as PaymentMethod,
+    paymentStatus: "pending" as PaymentStatus,
     notes: ""
   });
 
@@ -287,17 +256,21 @@ export default function Invoices() {
 
   const getHotelsData = async () => {
     try {
-      const res = await fetch("/api/super-admin/hotels");
+      const res = await fetch("/api/admin/tenant-hotel");
       if (!res.ok) {
-        throw new Error("Failed to fetch hotels");
+        throw new Error("Failed to fetch hotel data");
       }
       const data = await res.json();
-      setHotelsData(data.hotels[0]);
 
-      return Array.isArray(data.hotels) ? data.hotels : [];
+      if (data.hotel) {
+        setHotelsData(data.hotel);
+    
+      }
+
+      return data.hotel || null;
     } catch (error) {
-      console.error("Error fetching hotels:", error);
-      return [];
+      console.error("Error fetching hotel data:", error);
+      return null;
     }
   };
 
@@ -313,7 +286,7 @@ export default function Invoices() {
     const matchesStatus =
       statusFilter === "all" || invoice.paymentStatus === statusFilter;
 
-    let matchesDate = true;
+    let matchesDate: boolean;
     const invoiceDate = new Date(invoice.createdAt);
     const now = new Date();
 
@@ -350,6 +323,7 @@ export default function Invoices() {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
@@ -385,94 +359,384 @@ export default function Invoices() {
   };
 
 
-  // @ts-expect-error: pdfmake types mismatch, manually assigning vfs
-  if (pdfMake.default) {
-    // @ts-expect-error: pdfmake types mismatch, manually assigning vfs
-    pdfMake.default.vfs = pdfFonts.vfs;
-  } else {
-    // @ts-expect-error: pdfmake types mismatch, manually assigning vfs
-    pdfMake.vfs = pdfFonts.vfs;
+  interface PdfFonts {
+    vfs: Record<string, string>;
   }
 
-  const downloadPDF = (selectedInvoice: Invoice) => {
-    if (!selectedInvoice) return;
-
-    try {
-      // Defensive checks for items, quantities, prices
-      const items = Array.isArray(selectedInvoice.items) ? selectedInvoice.items : [];
-      const quantities = Array.isArray(selectedInvoice.quantities) ? selectedInvoice.quantities : [];
-      const prices = Array.isArray(selectedInvoice.prices) ? selectedInvoice.prices : [];
-
-      const itemsTable = [
-        ["Item", "Qty", "Price", "Total"],
-        ...items.map((itemId, idx) => [
-          menuMap[itemId] || itemId,
-          quantities[idx] ?? "",
-          `$${parseFloat(prices[idx] ?? "0").toFixed(2)}`,
-          `$${((parseInt(quantities[idx] ?? "0") * parseFloat(prices[idx] ?? "0")) || 0).toFixed(2)}`,
-        ]),
-      ];
-
-      const docDefinition = {
-        content: [
-          { text: "Invoice", style: "header" },
-          {
-            text: `Invoice Number: ${selectedInvoice.invoiceNumber || selectedInvoice.id}`,
-            style: "subheader",
-          },
-          { text: `Date: ${formatDate(selectedInvoice.createdAt)}` },
-          { text: `Customer: ${selectedInvoice.customerName}` },
-          { text: `Table: ${selectedInvoice.tableNumber}` },
-          { text: `Payment Method: ${selectedInvoice.paymentMethod}` },
-          { text: `Payment Status: ${selectedInvoice.paymentStatus}` },
-
-          { text: "\nItems:", style: "subheader" },
-          {
-            table: {
-              headerRows: 1,
-              widths: ["*", "auto", "auto", "auto"],
-              body: itemsTable,
-            },
-          },
-
-          {
-            text: `\nSubtotal: $${parseFloat(selectedInvoice.subtotal ?? "0").toFixed(2)}`,
-            style: "total",
-          },
-          {
-            text: `Tax: $${getInvoiceTax().toFixed(2)}`,
-            style: "total",
-          },
-          {
-            text: `Grand Total: $${parseFloat(selectedInvoice.totalAmount ?? "0").toFixed(2)}`,
-            style: "total",
-          },
-        ],
-        styles: {
-          header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] as [number, number, number, number] },
-          subheader: { fontSize: 14, bold: true, margin: [0, 10, 0, 5] as [number, number, number, number] },
-          total: { fontSize: 14, bold: true, alignment: "right", margin: [0, 20, 0, 0] as [number, number, number, number] },
-        },
-      };
-
-      // @ts-expect-error: pdfmake types mismatch, manually assigning vfs
-
-      pdfMake.createPdf(docDefinition).download(`invoice-${selectedInvoice.invoiceNumber || selectedInvoice.id}.pdf`);
-    } catch (error) {
-      console.error("Error generating PDF:", error);
+  function configurePdfMakeFonts(pdfMake: unknown, pdfFonts: PdfFonts): void {
+    if (typeof pdfMake !== 'object' || pdfMake === null) {
+      throw new Error('pdfMake is not a valid object');
     }
+
+    const pdfMakeObj = pdfMake as Record<string, unknown>;
+
+    if (typeof pdfMakeObj.default === 'object' && pdfMakeObj.default !== null) {
+      const defaultObj = pdfMakeObj.default as Record<string, unknown>;
+      defaultObj.vfs = pdfFonts.vfs;
+    } else {
+      pdfMakeObj.vfs = pdfFonts.vfs;
+    }
+  }
+
+  // Usage
+  const paymentColors: Record<string, string> = {
+    cash: "#059669",          // green
+    card: "#3b82f6",          // blue
+    upi: "#f59e0b",           // amber
+    "Bank Transfer": "#8b5cf6" // purple
   };
 
-  const printInvoice = () => {
-    if (!invoiceRef.current) return;
-    const printContent = invoiceRef.current.innerHTML;
-    const originalContent = document.body.innerHTML;
+  configurePdfMakeFonts(pdfMake, pdfFonts);
+ const downloadPDF = (selectedInvoice: Invoice) => {
+  if (!selectedInvoice) return;
+  const paymentColor = paymentColors[selectedInvoice.paymentMethod || ""] || "#4b5563";
+  
+  try {
+    const docDefinition = getInvoicePDFDefinition({
+      selectedInvoice,
+        hotelsData: hotelsData!,
+      menuMap,
+      paymentColor,
+      formatDate,
+      getInvoiceTax
+    });
 
-    document.body.innerHTML = printContent;
-    window.print();
-    document.body.innerHTML = originalContent;
-    window.location.reload();
-  };
+  
+    pdfMake.createPdf(docDefinition).download(`invoice-${selectedInvoice.invoiceNumber || selectedInvoice.id}.pdf`);
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+  }
+};
+
+const printInvoice = () => {
+  if (!selectedInvoice) return;
+  const paymentColor = paymentColors[selectedInvoice.paymentMethod || ""] || "#4b5563";
+  
+  try {
+    // Defensive checks for items, quantities, prices
+    const items = Array.isArray(selectedInvoice.items) ? selectedInvoice.items : [];
+    const quantities = Array.isArray(selectedInvoice.quantities) ? selectedInvoice.quantities : [];
+    const prices = Array.isArray(selectedInvoice.prices) ? selectedInvoice.prices : [];
+
+    // Create HTML content that matches the PDF layout
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice ${selectedInvoice.invoiceNumber || selectedInvoice.id}</title>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: 'Helvetica', Arial, sans-serif;
+            margin: 40px;
+            color: #374151;
+          }
+          .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+          }
+          .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+            margin: 0;
+          }
+          .invoice-number {
+            font-size: 16px;
+            font-weight: bold;
+            color: #3b82f6;
+          }
+          .divider {
+            border-top: 2px solid #e5e7eb;
+            margin: 10px 0 20px 0;
+          }
+          .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+          }
+          .company-info {
+            width: 50%;
+          }
+          .customer-info {
+            width: 50%;
+            text-align: right;
+          }
+          .company-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 5px;
+          }
+          .company-details {
+            font-size: 10px;
+            color: #6b7280;
+            line-height: 1.4;
+          }
+          .section-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #374151;
+            margin-bottom: 5px;
+          }
+          .customer-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 2px;
+          }
+          .customer-details {
+            font-size: 11px;
+            color: #6b7280;
+            line-height: 1.4;
+          }
+          .payment-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+          }
+          .payment-method {
+            color: ${paymentColor};
+            font-size: 12px;
+          }
+          .payment-status {
+            font-size: 12px;
+            font-weight: bold;
+            color: ${selectedInvoice.paymentStatus === "paid" ? "#059669" : "#dc2626"};
+          }
+          .section-header {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1f2937;
+            margin: 20px 0 10px 0;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .items-table th {
+            background-color: #3b82f6;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 8px 6px;
+            text-align: left;
+          }
+          .items-table td {
+            font-size: 11px;
+            color: #374151;
+            padding: 8px 6px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          .totals-section {
+            text-align: right;
+            margin: 20px 0 30px 0;
+          }
+          .total-row {
+            margin-bottom: 5px;
+          }
+          .total-label {
+            font-size: 12px;
+            color: #6b7280;
+            display: inline-block;
+            width: 100px;
+            text-align: right;
+            margin-right: 10px;
+          }
+          .total-value {
+            font-size: 12px;
+            color: #374151;
+            font-weight: bold;
+            display: inline-block;
+            width: 80px;
+            text-align: right;
+          }
+          .divider-line {
+            border-top: 1px solid #e5e7eb;
+            margin: 10px 0;
+            width: 200px;
+            display: inline-block;
+          }
+          .grand-total-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1f2937;
+            display: inline-block;
+            width: 100px;
+            text-align: right;
+            margin-right: 10px;
+          }
+          .grand-total-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #059669;
+            display: inline-block;
+            width: 80px;
+            text-align: right;
+          }
+          .footer {
+            text-align: center;
+            background-color: #f9fafb;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 30px;
+          }
+          .thank-you {
+            font-size: 14px;
+            font-weight: bold;
+            color: #3b82f6;
+            margin-bottom: 5px;
+          }
+          .footer-contact {
+            font-size: 10px;
+            color: #9ca3af;
+            font-style: italic;
+          }
+          .spacer {
+            height: 20px;
+          }
+          
+          @media print {
+            body {
+              margin: 0;
+              padding: 20px;
+            }
+            .invoice-container {
+              max-width: 100%;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-container">
+          <!-- Header -->
+          <div class="header">
+            <h1>INVOICE</h1>
+            <div class="invoice-number">#${selectedInvoice.invoiceNumber || selectedInvoice.id}</div>
+          </div>
+          
+          <div class="divider"></div>
+
+          <!-- Company and Customer Info -->
+          <div class="info-section">
+            <div class="company-info">
+              <div class="company-name">${hotelsData?.name }</div>
+              <div class="company-details">
+                ${hotelsData?.address }<br>
+                Phone: ${hotelsData?.owner_phone }<br>
+                Email: ${hotelsData?.email }
+              </div>
+            </div>
+            <div class="customer-info">
+              <div class="section-label">BILL TO: ${selectedInvoice.customerName || "Guest"}</div>
+              <div class="customer-details">
+                Table: ${selectedInvoice.tableNumber || "N/A"}<br>
+                Date: ${formatDate(selectedInvoice.createdAt)}
+              </div>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <!-- Payment Details -->
+          <div class="payment-section">
+            <div>
+              <div class="section-label">Payment Method</div>
+              <div class="payment-method">${selectedInvoice.paymentMethod || "N/A"}</div>
+            </div>
+            <div>
+              <div class="section-label">Payment Status</div>
+              <div class="payment-status">${selectedInvoice.paymentStatus || "N/A"}</div>
+            </div>
+          </div>
+
+          <!-- Items Table -->
+          <div class="section-header">ORDER ITEMS</div>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map((itemId, idx) => `
+                <tr>
+                  <td>${menuMap[itemId] || itemId}</td>
+                  <td>${quantities[idx] ?? ""}</td>
+                  <td>$${parseFloat(prices[idx] ?? "0").toFixed(2)}</td>
+                  <td>$${((parseInt(quantities[idx] ?? "0") * parseFloat(prices[idx] ?? "0")) || 0).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <!-- Totals Section -->
+          <div class="totals-section">
+            <div class="total-row">
+              <span class="total-label">Subtotal:</span>
+              <span class="total-value">$${parseFloat(selectedInvoice.subtotal ?? "0").toFixed(2)}</span>
+            </div>
+            <div class="total-row">
+              <span class="total-label">Tax:</span>
+              <span class="total-value">$${getInvoiceTax().toFixed(2)}</span>
+            </div>
+            <div class="divider-line"></div>
+            <div class="total-row">
+              <span class="grand-total-label">Grand Total:</span>
+              <span class="grand-total-value">$${parseFloat(selectedInvoice.totalAmount ?? "0").toFixed(2)}</span>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="footer">
+            <div class="thank-you">Thank you for dining with us!</div>
+            <div class="footer-contact">
+              For any inquiries, please contact: ${hotelsData?.email || "info@ketrox.com"} | ${hotelsData?.owner_phone || "(555) 123-4567"}
+            </div>
+          </div>
+        </div>
+        
+        <script>
+          // Automatically trigger print when content is loaded
+          window.onload = function() {
+            window.print();
+            // Close the window after printing (with a small delay)
+            setTimeout(function() {
+              window.close();
+            }, 10);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    // Create a blob from the HTML content
+    const blob = new Blob([printContent], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    
+    // Open the print window
+    const printWindow = window.open(blobUrl, '_blank');
+    
+    // Clean up the URL object after the window loads
+    if (printWindow) {
+      printWindow.onload = function() {
+        URL.revokeObjectURL(blobUrl);
+      };
+    }
+  } catch (error) {
+    console.error("Error generating print invoice:", error);
+  }
+};
 
   const markAsPaid = async (invoiceId: string) => {
     try {
@@ -509,8 +773,8 @@ export default function Invoices() {
     setEditForm({
       customerName: invoice.customerName,
       tableNumber: invoice.tableNumber,
-      paymentMethod: invoice.paymentMethod as "cash" | "card" | "upi" | "Bank Transfer",
-      paymentStatus: invoice.paymentStatus as "pending" | "paid" | "failed" | "refunded",
+      paymentMethod: invoice.paymentMethod as PaymentMethod,
+      paymentStatus: invoice.paymentStatus as PaymentStatus,
       notes: invoice.notes || ""
     });
     setShowEditModal(true);
@@ -908,7 +1172,7 @@ export default function Invoices() {
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Customer Name</label>
+              <label htmlFor="customer-name" className="text-sm font-medium">Customer Name</label>
               <Input
                 value={editForm.customerName}
                 onChange={(e) => setEditForm(prev => ({ ...prev, customerName: e.target.value }))}
@@ -917,7 +1181,7 @@ export default function Invoices() {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Table Number</label>
+              <label htmlFor="table-number" className="text-sm font-medium">Table Number</label>
               <Input
                 value={editForm.tableNumber}
                 onChange={(e) => setEditForm(prev => ({ ...prev, tableNumber: e.target.value }))}
@@ -927,7 +1191,7 @@ export default function Invoices() {
 
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="text-sm font-medium">Payment Method</label>
+                <label htmlFor="payment-method" className="text-sm font-medium">Payment Method</label>
                 <Select
 
                   value={editForm.paymentMethod}
@@ -951,7 +1215,7 @@ export default function Invoices() {
               </div>
 
               <div className="flex-1">
-                <label className="text-sm font-medium">Payment Status</label>
+                <label htmlFor="payment-status" className="text-sm font-medium">Payment Status</label>
                 <Select
                   value={editForm.paymentStatus}
                   onValueChange={(value) =>
@@ -979,7 +1243,7 @@ export default function Invoices() {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Notes</label>
+              <label htmlFor="notes" className="text-sm font-medium">Notes</label>
               <Textarea
                 value={editForm.notes}
                 onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
@@ -1058,7 +1322,7 @@ export default function Invoices() {
                       {selectedInvoice.items.map((itemId, index) => {
                         const itemName = menuMap[itemId] || itemId;
                         return (
-                          <TableRow key={index} className="border-gray-200">
+                          <TableRow key={itemId} className="border-gray-200">
                             <TableCell className="text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 max-w-[150px] sm:max-w-none">
                               {/* Tooltip for small screens */}
                               <div className="sm:hidden">

@@ -23,7 +23,8 @@ import {
   HandMetal,
   BellRing,
   Trash2,
-  User
+  User,
+  Building2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,8 +44,9 @@ import { betterFetch } from "@better-fetch/fetch";
 
 import Image from "next/image";
 
+
 interface LayoutProps {
-  children: ReactNode;
+  readonly children: ReactNode; 
 }
 
 // Notification types and data
@@ -190,7 +192,6 @@ export default function Layout({ children }: LayoutProps) {
     };
     fetchUserData();
 
-    // Listen for profile photo updates
     const handleProfileUpdate = () => {
       fetchUserData();
     };
@@ -220,9 +221,7 @@ export default function Layout({ children }: LayoutProps) {
     // Listen for tenant logo updates
     const handleTenantLogoUpdate = (event: CustomEvent) => {
       const { logoUrl } = event.detail;
-      if (logoUrl) {
-        setTenantLogoUrl(logoUrl);
-      }
+      setTenantLogoUrl(logoUrl || null);
     };
 
     window.addEventListener('tenant-logo-updated', handleTenantLogoUpdate as EventListener);
@@ -281,11 +280,38 @@ export default function Layout({ children }: LayoutProps) {
   const urgentNotifications = notifications.filter(n => n.priority === 'urgent' && !n.read);
   const recentNotifications = notifications.slice(0, 6);
 
+  function getNotificationClasses(notification: Notification): string {
+    if (!notification.read) {
+      switch (notification.priority) {
+        case "urgent":
+          return "border-destructive bg-destructive/5";
+        case "high":
+          return "border-secondary bg-secondary/5";
+        default:
+          return "border-primary bg-primary/5";
+      }
+    }
+    return "border-border";
+  }
+
+  function getNotificationBg(priority: string): string {
+    switch (priority) {
+      case "urgent":
+        return "bg-destructive/10";
+      case "high":
+        return "bg-secondary/10";
+      default:
+        return "bg-primary/10";
+    }
+  }
+
   return (
     <div className="flex h-screen bg-background font-sans">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div
+        <button
+          type="button"
+          aria-label="Close sidebar"
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -302,7 +328,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="p-6 border-b border-sidebar-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center justify-center h-20 flex-1">
-                {tenantLogoUrl && (
+                {tenantLogoUrl ? (
                   <Image
                     src={tenantLogoUrl}
                     alt="Hotel Logo"
@@ -312,6 +338,8 @@ export default function Layout({ children }: LayoutProps) {
                     priority
                     className="h-full w-auto object-contain"
                   />
+                ) : (
+                  <Building2 className="w-16 h-16 text-muted-foreground" />
                 )}
               </div>
               <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
@@ -344,11 +372,11 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {sidebarItems.map((item, index) => {
+            {sidebarItems.map((item) => {
               const isActive = isActivePath(item.path);
               return (
                 <Link
-                  key={index}
+                  key={item.path}
                   href={item.path}
                   className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-200 ${isActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
@@ -469,21 +497,13 @@ export default function Layout({ children }: LayoutProps) {
                           return (
                             <div
                               key={notification.id}
-                              className={`p-3 hover:bg-accent rounded-md cursor-pointer transition-all duration-200 border-l-2 ${!notification.read
-                                ? notification.priority === 'urgent'
-                                  ? 'border-destructive bg-destructive/5'
-                                  : notification.priority === 'high'
-                                    ? 'border-secondary bg-secondary/5'
-                                    : 'border-primary bg-primary/5'
-                                : 'border-border'
-                                }`}
+                              className={`p-3 hover:bg-accent rounded-md cursor-pointer transition-all duration-200 border-l-2 ${getNotificationClasses(notification)}`}
                             >
                               <div className="flex items-start space-x-3">
-                                <div className={`p-1 rounded-full ${notification.priority === 'urgent' ? 'bg-destructive/10' :
-                                  notification.priority === 'high' ? 'bg-secondary/10' :
-                                    'bg-primary/10'
-                                  }`}>
-                                  <IconComponent className={`w-3 h-3 ${getNotificationColor(notification.priority)}`} />
+                                <div className={`p-1 rounded-full ${getNotificationBg(notification.priority)}`}>
+                                  <IconComponent
+                                    className={`w-3 h-3 ${getNotificationColor(notification.priority)}`}
+                                  />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
@@ -541,7 +561,7 @@ export default function Layout({ children }: LayoutProps) {
                     className="hover:bg-transparent hover:text-inherit"
                   >
                     <Avatar className="h-8 w-8">
-                     
+
                       <AvatarFallback className="bg-muted text-muted-foreground">
                         <User className="w-4 h-4" />
                       </AvatarFallback>

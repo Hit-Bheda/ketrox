@@ -43,6 +43,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
+import { Invoice, OrderType } from "@/types";
 
 const categoryData = [
   { name: "Main Courses", value: 45, color: "#hsl(var(--chart-1))" },
@@ -52,47 +53,11 @@ const categoryData = [
   { name: "Wines", value: 4, color: "#hsl(var(--chart-5))" }
 ];
 
-type Order = {
-  id: string;
-  tableId: string;
-  tableNumber: string;
-  tenantId: string;
-  managerId: string;
-  customerName: string;
-  items: string[];
-  quantity: string[];
-  status: "pending" | "completed" | "cancelled" | string;
-  totalPrice: string;
-  createdAt: string;
-  updatedAt: string;
-  managerName: string;
-  orderNumber: string;
-  itemNames: string[];
-};
-
-type Invoice = {
-  id: string;
-  invoiceNumber: string;
-  orderId: string;
-  customerName: string;
-  tableNumber: string;
-  items: string[];
-  quantities: string[];
-  prices: string[];
-  subtotal: string;
-  totalAmount: string;
-  paymentMethod: string;
-  paymentStatus: string;
-  notes?: string;
-  createdAt: string;
-};
-
-
 export default function Reports() {
   const [dateRange, setDateRange] = useState("today");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [activeTab, setActiveTab] = useState("overview");
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderType[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [menuMap, setMenuMap] = useState<{ [id: string]: string }>({});
   const [isExporting, setIsExporting] = useState(false);
@@ -424,7 +389,7 @@ export default function Reports() {
   const tablePerformance = useMemo(() => {
     if (!filteredOrders.length) return [];
     const tableStats: Record<string, { orders: number; revenue: number }> = {};
-    filteredOrders.forEach((order: Order) => {
+    filteredOrders.forEach((order: OrderType) => {
       const table = order.tableNumber || "Unknown";
       if (!tableStats[table]) tableStats[table] = { orders: 0, revenue: 0 };
       tableStats[table].orders += 1;

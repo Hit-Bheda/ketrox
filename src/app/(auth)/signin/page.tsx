@@ -14,7 +14,6 @@ import { signIn } from "@/lib/auth-client";
 import { toast } from "sonner";
 import Link from "next/link";
 
-
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
 
@@ -67,10 +66,10 @@ export default function LoginPage() {
             <div
                 className="absolute inset-0 z-0"
                 style={{
-                    backgroundImage: `url('https://images.pexels.com/photos/1449773/pexels-photo-1449773.jpeg')`,
+                    backgroundImage: `url('/images/auth-bg.webp')`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat'
+                    backgroundRepeat: 'no-repeat',
                 }}
             >
                 <div className="absolute inset-0 bg-black/60 dark:bg-black/60" />
@@ -115,7 +114,7 @@ export default function LoginPage() {
                                             <Input
                                                 id="email"
                                                 type="email"
-                                    
+
                                                 placeholder="Enter your email"
                                                 {...register("email")}
                                                 className={cn(

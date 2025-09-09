@@ -10,24 +10,8 @@ import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import Image from "next/image";
 import { X } from "lucide-react";
+import { MenuItem } from "@/types";
 
-type DietaryOption = "vegetarian" | "vegan" | "glutenFree";
-
-
-type MenuItemForm = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  image?: string[];
-  dietary: DietaryOption[];
-  price: string | "";
-  preparationTime: string | "";
-  isVegetarian: boolean;
-  isVegan: boolean;
-  isGlutenFree: boolean;
-  available: boolean;
-};
 
 export default function EditMenuModal({
   open,
@@ -38,8 +22,8 @@ export default function EditMenuModal({
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  itemForm: MenuItemForm;
-  setItemForm: React.Dispatch<React.SetStateAction<MenuItemForm>>;
+  itemForm: MenuItem;
+  setItemForm: React.Dispatch<React.SetStateAction<MenuItem>>;
   menuCategories: { id: string; name: string }[];
   onSave: () => void;
 }) {

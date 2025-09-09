@@ -6,13 +6,13 @@ import { cn } from "@/lib/utils" // If you have a `cn` utility for className mer
 
 export function NavMain({
   items,
-}: {
-  items: {
-    title: string
-    url: string // now expects "dashboard", "hotels", etc.
-    icon?: React.ElementType
-  }[]
-}) {
+}: Readonly<{
+  items: ReadonlyArray<{
+    title: string;
+    url: string; // e.g., "dashboard", "hotels", etc.
+    icon?: React.ElementType;
+  }>;
+}>) {
   const pathname = usePathname()
   const routeAfterSuperAdmin = pathname.split("/super-admin/")[1]?.split("/")[0] || ""
 

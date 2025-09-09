@@ -177,3 +177,14 @@ export const betterAuthResetSchema = z.object({
     token: z.string().min(1, "Reset token is required"),
     newPassword: z.string().min(6, "Password must be at least 6 characters long"),
   });
+
+// Client-side form schema for reset password page
+export const resetPasswordFormSchema = z
+  .object({
+    newPassword: z.string().min(6, "Password must be at least 6 characters long"),
+    confirmPassword: z.string().min(6, "Password must be at least 6 characters long"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
+  });

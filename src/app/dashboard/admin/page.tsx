@@ -36,34 +36,8 @@ import {
   Pie,
   Cell
 } from "recharts";
+import { OrderType, StaffType } from "@/types";
 
-
-type ApiOrder = {
-  id: string;
-  tableId: string;
-  tableNumber?: string | null;
-  tenantId: string;
-  managerId: string | null;
-  customerName: string;
-  items: string[];
-  itemNames?: string[];
-  quantity: string[];
-  status: "pending" | "preparing" | "ready" | "delivered" | "cancelled";
-  totalPrice: string;
-  createdAt: string;
-  updatedAt: string;
-  managerName?: string | null;
-  orderNumber: string;
-};
-
-type ApiStaff = {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string | null;
-  role: "manager" | "waiter";
-  status: "active" | "inactive";
-};
 
 const STATUS_COLORS: Record<string, string> = {
   Pending: 'rgb(246, 216, 144)',
@@ -83,8 +57,8 @@ const recentActivity = [
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('today');
-  const [orders, setOrders] = useState<ApiOrder[]>([]);
-  const [staff, setStaff] = useState<ApiStaff[]>([]);
+  const [orders, setOrders] = useState<OrderType[]>([]);
+  const [staff, setStaff] = useState<StaffType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

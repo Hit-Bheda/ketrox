@@ -37,6 +37,7 @@ import {
 } from "recharts";
 import { useEffect, useState, useMemo } from "react";
 import { betterFetch } from "@better-fetch/fetch";
+import { OrderType } from "@/types";
 
 const STATUS_COLORS: Record<string, string> = {
   Pending: 'rgb(246, 216, 144)',
@@ -52,27 +53,11 @@ const recentActivity = [
   { id: 4, action: "New order placed", details: "Table 12 - Order #ORD-1235", time: "15 minutes ago", type: "order", user: "Manager" }
 ];
 
-type Order = {
-  id: string;
-  tableId: string;
-  tableNumber: string;
-  tenantId: string;
-  managerId: string;
-  customerName: string;
-  items: string[];
-  quantity: string[];
-  status: "pending" | "completed" | "cancelled" | string;
-  totalPrice: string;
-  createdAt: string;
-  updatedAt: string;
-  managerName: string;
-  orderNumber: string;
-  itemNames: string[];
-};
+
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string } | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderType[]>([]);
   const [staff, setStaff] = useState<{ id: string; name: string; role: string; status: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

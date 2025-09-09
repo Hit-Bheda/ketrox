@@ -46,35 +46,20 @@ import { tableSchema } from "@/schemas";
 import { NotesPopover } from "@/components/table/NotesPopover";
 import Image from "next/image";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { QrCodeType, TableType } from "@/types";
 
 const capacities = ["2", "3", "4", "6", "8", "more than 8"];
 
-type Table = {
-  id: string;
-  number: string;
-  name: string;
-  capacity: string;
-  notes?: string;
-  available: boolean;
-  maintenance: boolean;
-  status?: "available" | "occupied" | "unavailable" | string;
-};
 
-type QrCode = {
-  id: string;
-  tenantId: string;
-  url: string;
-  qrPath: string | null;
-  createdAt: string; // coming as ISO string from API
-  updatedAt: string;
-};
+
+
 
 export default function Tables() {
   const [tenantId, setTenantId] = useState<string | null>(null);
-  const [tableItem, setTableItem] = useState<Table[]>([])
+  const [tableItem, setTableItem] = useState<TableType[]>([])
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
-  const [qrCode, setQrCode] = useState<QrCode | null>(null);
+  const [qrCode, setQrCode] = useState<QrCodeType | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewOpen, setViewOpen] = useState(false);
@@ -114,7 +99,7 @@ export default function Tables() {
       const res = await fetch("/api/admin/table");
       const data = await res.json();
       setTableItem(
-        (data.tables || []).map((table: Table) => ({
+        (data.tables || []).map((table: TableType) => ({
           ...table,
           status: table.maintenance
             ? "maintenance"
@@ -235,7 +220,7 @@ export default function Tables() {
     }
   };
 
-  const handleToggleTableStatus = async (table: Table, field: "available" | "maintenance") => {
+  const handleToggleTableStatus = async (table: TableType, field: "available" | "maintenance") => {
     setEditLoading(true);
     try {
       const res = await fetch("/api/admin/table", {
@@ -309,7 +294,7 @@ export default function Tables() {
 
       try {
         const res = await fetch(`/api/qr?tenantId=${tenantId}`);
-        const data: { success: boolean; qr?: QrCode; error?: string } = await res.json();
+        const data: { success: boolean; qr?: QrCodeType; error?: string } = await res.json();
         if (res.ok && data.success && data.qr) {
           setQrCode(data.qr);
       

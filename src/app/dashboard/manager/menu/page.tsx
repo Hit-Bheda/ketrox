@@ -27,24 +27,9 @@ import { MenuImageSlider } from "@/components/menu/MenuImageSlider";
 
 
 import { DescriptionPopover } from "@/components/menu/DescriptionPopover";
+import { ApiMenuItem, DietaryOption, MenuItem } from "@/types";
 
 
-type DietaryOption = "vegetarian" | "vegan" | "glutenFree";
-
-type MenuItem = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  price: string | "";
-  preparationTime: string | "";
-  dietary: DietaryOption[];
-  isVegetarian: boolean;
-  isVegan: boolean;
-  isGlutenFree: boolean;
-  available: boolean;
-  image?: string[];
-};
 
 
 export default function Menu() {
@@ -81,23 +66,6 @@ export default function Menu() {
     ));
   };
 
-  type ApiMenuItem = {
-    id: string;
-    item_name?: string;
-    name?: string;
-    category: string;
-    description: string;
-    price:
-    | "";
-    preparationTime: number | "";
-    item_logo?: string;
-    image?: string[];
-    prepTime?: number | string;
-    dietaty?: DietaryOption[];
-    dietary?: DietaryOption[];
-    isAvailable?: boolean;
-  };
-
   const featchhMenuItems = async () => {
     try {
       const response = await fetch('/api/admin/menu', {
@@ -129,7 +97,6 @@ export default function Menu() {
 
   useEffect(() => {
     featchhMenuItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 

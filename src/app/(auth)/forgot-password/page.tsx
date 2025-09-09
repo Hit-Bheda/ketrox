@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
             <div
                 className="absolute inset-0 z-0"
                 style={{
-                    backgroundImage: `url('https://images.pexels.com/photos/1449773/pexels-photo-1449773.jpeg')`,
+                    backgroundImage: `url('/images/auth-bg.webp')`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat'
