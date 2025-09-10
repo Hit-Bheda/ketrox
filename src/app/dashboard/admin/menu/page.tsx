@@ -121,11 +121,11 @@ export default function Menu() {
 
     ));
   };
+
   const handleAddItem = () => {
     setShowAddModal(false);
     resetForm();
   };
-
 
   const featchhMenuItems = async () => {
     try {
@@ -222,7 +222,6 @@ export default function Menu() {
     });
     setSelectedItem(null);
   };
-
 
   const deleteMenuItem = async (
     id: string,

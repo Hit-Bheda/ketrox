@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
       tenantId: session.user.tenant_id || validatedData.tenant_id!,
       adminId: session.user.id,
       customerName: validatedData.customer_name,
+      customerPhone: validatedData.customer_phone,
       tableNumber: finalTableNumber,
       items: validatedData.items,
       quantities: validatedData.quantities,
@@ -184,8 +185,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-
-
 export async function PUT(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -197,14 +196,15 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { invoice_id, customer_name, table_number, payment_status, payment_method, notes } = body;
+    const { invoice_id, customer_name, customer_phone, table_number, payment_status, payment_method, notes } = body;
 
     if (!invoice_id) {
       return NextResponse.json({ error: "Invoice ID is required" }, { status: 400 });
     }
 
-    const updateData: { updatedAt: Date; customerName?: string; tableNumber?: string; paymentStatus?: "pending" | "paid" | "failed" | "refunded"; paymentMethod?: "cash" | "card" | "upi" | "Bank Transfer"; notes?: string | null } = { updatedAt: new Date() };
+    const updateData: { updatedAt: Date; customerName?: string; customerPhone?: string; tableNumber?: string; paymentStatus?: "pending" | "paid" | "failed" | "refunded"; paymentMethod?: "cash" | "card" | "upi" | "Bank Transfer"; notes?: string | null } = { updatedAt: new Date() };
     if (customer_name) updateData.customerName = customer_name;
+    if(customer_phone) updateData.customerPhone = customer_phone;
     if (table_number) updateData.tableNumber = table_number;
     if (payment_status) updateData.paymentStatus = payment_status as "pending" | "paid" | "failed" | "refunded";
     if (payment_method) updateData.paymentMethod = payment_method as "cash" | "card" | "upi" | "Bank Transfer";

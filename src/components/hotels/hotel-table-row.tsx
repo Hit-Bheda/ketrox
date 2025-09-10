@@ -41,7 +41,30 @@ type HotelTableRowProps = {
   planColorStyles: { [key: string]: string };
 };
 
-export default function HotelTableRow({ hotel, onView, onDelete, statusColorStyles, planColorStyles }: HotelTableRowProps) {
+const planColorStyle: Record<string, string> = {
+  free: "bg-green-100 text-green-800 border-green-300",
+  monthly: "bg-blue-100 text-blue-800 border-blue-300",
+  "6-months": "bg-yellow-100 text-yellow-800 border-yellow-300",
+  yearly: "bg-purple-100 text-purple-800 border-purple-300",
+};
+
+const getPlanBadgeStyle = (plan?: string) => {
+  switch (plan) {
+    case "free":
+      return "bg-purple-900 text-white border border-purple-900"; 
+    case "monthly":
+      return "bg-pink-900 text-white border border-pink-900";       
+    case "6-months":
+      return "bg-orange-700 text-white border border-orange-700";
+    case "yearly":
+      return "bg-teal-800 text-white border border-teal-800";    
+    default:
+      return "bg-gray-100 text-gray-800 border border-gray-300";
+  }
+};
+
+
+export default function HotelTableRow({ hotel, onView, onDelete, statusColorStyles }: HotelTableRowProps) {
   const dispatch = useDispatch<AppDispatch>();
   return (
     <TableRow key={hotel.id}>
@@ -64,7 +87,10 @@ export default function HotelTableRow({ hotel, onView, onDelete, statusColorStyl
         </div>
       </TableCell>
       <TableCell>
-        <Badge variant="outline" className={planColorStyles[hotel.plan]}>
+        <Badge
+          variant="outline"
+          className={getPlanBadgeStyle(hotel.plan)}
+        >
           {hotel.plan}
         </Badge>
       </TableCell>

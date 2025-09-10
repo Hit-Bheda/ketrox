@@ -27,7 +27,7 @@ export const hotelSchema = z.object({
         .max(10, "Phone number must be 10 digits")
         .regex(/^[6-9]\d{9}$/, "Enter a valid Indian phone number"),
     address: z.string().min(1, "Hotel is required"),
-    plan: z.enum(["free", "standard"]),
+    plan: z.enum(["free", "monthly", "6-months", "yearly"]),
     status: z.enum(["active", "trial", "suspended", "expired"])
 })
 
@@ -44,7 +44,7 @@ export const hotelUpdateSchema = z.object({
         .max(10, "Phone number must be 10 digits")
         .regex(/^[6-9]\d{9}$/, "Enter a valid Indian phone number"),
     address: z.string().min(1, "Hotel is required"),
-    plan: z.enum(["free", "standard"]),
+    plan: z.enum(["free", "monthly", "6-months", "yearly"]),
     status: z.enum(["active", "trial", "suspended", "expired"])
 })
 
@@ -98,6 +98,7 @@ export const orderSchema = z.object({
     tenant_id: z.uuid("Invalid tenant ID").optional(),
     manager_id: z.string().min(1, "Invalid manager ID").optional(),
     customer_name: z.string().min(1, "Customer name is required"),
+    customer_phone: z.string().min(1, "Customer phone is required"),
     items: z.array(z.string()).min(1, "At least one item is required"),
     quantity: z.array(z.string()).min(1, "At least one quantity is required"),
     prices: z.array(z.string()).min(1, "At least one price is required"),
@@ -114,6 +115,7 @@ export const invoiceSchema = z.object({
     tenant_id: z.uuid("Invalid tenant ID").optional(),
     admin_id: z.string().min(1, "Invalid admin ID").optional(),
     customer_name: z.string().min(1, "Customer name is required"),
+    customer_phone: z.string().min(1, "Customer phone is required"),
     table_number: z.string().min(1, "Table number is required"),
     items: z.array(z.string()).min(1, "At least one item is required"),
     quantities: z.array(z.string()).min(1, "At least one quantity is required"),

@@ -62,7 +62,7 @@ export default function HotelsPage() {
         throw new Error("Failed to fetch hotels");
       }
       const data = await res.json();
-      console.log("Fetched hotels data:", data);
+      
       return Array.isArray(data.hotels) ? data.hotels : [];
     } catch (error) {
       console.error("Error fetching hotels:", error);
@@ -95,7 +95,7 @@ export default function HotelsPage() {
   };
 
   const handleUpdateHotel = async (formData: z.infer<typeof hotelUpdateSchema>) => {
-    console.log("Updating hotel:", formData);
+  
     try {
       const res = await fetch("/api/super-admin/hotels", {
         method: "PUT",

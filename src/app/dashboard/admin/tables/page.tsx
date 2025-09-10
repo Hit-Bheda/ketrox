@@ -64,6 +64,7 @@ export default function Tables() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewOpen, setViewOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [tableForm, setTableForm] = useState<{
     number: string;
     name: string;
@@ -110,7 +111,7 @@ export default function Tables() {
       );
     } catch (error) {
       console.error("Error fetching tables:", error);
-    }
+    } 
   }
 
   useEffect(() => {
@@ -147,6 +148,7 @@ export default function Tables() {
   });
 
   const handleAddTable = async () => {
+    setIsSubmitting(true);
     if (!tenantId) {
       toast.error("Tenant ID not found. Please login again.");
       return;
@@ -192,6 +194,8 @@ export default function Tables() {
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : String(err) });
       toast.error("Network error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -652,6 +656,7 @@ export default function Tables() {
         capacities={capacities}
         handleAddTable={handleAddTable}
         errors={errors}
+        isSubmitting={isSubmitting}
         setErrors={setErrors}
         clearForm={clearForm}
       />

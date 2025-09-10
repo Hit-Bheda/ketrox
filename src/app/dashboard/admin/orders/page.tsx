@@ -14,7 +14,8 @@ import {
   User,
   MapPin,
   Calendar,
-  Trash2
+  Trash2,
+  Phone
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -364,9 +365,15 @@ export default function Orders() {
                           </Avatar>
                           <div>
                             <p className="font-medium text-sm">{order.customerName}</p>
-                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                              <MapPin className="w-3 h-3" />
-                              <span>{order.tableNumber}</span>
+                            <div className="flex flex-col items-start text-xs text-muted-foreground space-y-1">
+                              <div className="flex items-center space-x-1">
+                                <Phone className="w-3 h-3" />
+                                <span>{order.customerPhone}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <MapPin className="w-3 h-3" />
+                                <span>{order.tableNumber}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -518,6 +525,10 @@ export default function Orders() {
                       <div className="flex items-center space-x-2">
                         <User className="w-4 h-4 text-muted-foreground" />
                         <span>{selectedOrder.customerName}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedOrder.customerPhone}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <MapPin className="w-4 h-4 text-muted-foreground" />

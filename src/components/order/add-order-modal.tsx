@@ -5,9 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner"
 import { OrderType } from "@/types";
-
-
-
+import { LoaderIcon } from "lucide-react";
 
 export default function BookOrderModal({
     open,
@@ -30,6 +28,7 @@ export default function BookOrderModal({
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [quantities, setQuantities] = useState<{ [itemId: string]: number }>({});
     const [customerName, setCustomerName] = useState("");
+    const [customerPhone, setCustomerPhone] = useState("");
     const [status, setStatus] = useState("pending");
     const [loading, setLoading] = useState(false);
     // Fetch menu items
@@ -76,6 +75,7 @@ export default function BookOrderModal({
 
     const resetForm = () => {
         setCustomerName("");
+        setCustomerPhone("");
         setSelectedItems([]);
         setQuantities({});
         setStatus("pending");
@@ -88,6 +88,7 @@ export default function BookOrderModal({
             tenant_id: tenantId,
             manager_id: managerId,
             customer_name: customerName,
+            customer_phone: customerPhone,
             items: selectedItems,
             quantity: selectedItems.map(id => String(quantities[id] || 1)),
             prices: selectedItems.map(id => {
@@ -167,11 +168,18 @@ export default function BookOrderModal({
                     <DialogTitle>{order ? "Update Order" : "Book Order"}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                    <Input
-                        placeholder="Customer Name"
-                        value={customerName}
-                        onChange={e => setCustomerName(e.target.value)}
-                    />
+                    <div className="flex space-x-2">
+                        <Input
+                            placeholder="Customer Name"
+                            value={customerName}
+                            onChange={e => setCustomerName(e.target.value)}
+                        />
+                        <Input
+                            placeholder="Customer Phone"
+                            value={customerPhone}
+                            onChange={e => setCustomerPhone(e.target.value)}
+                        />
+                    </div>
                     <div>
                         <div className="font-medium mb-2">Select Items</div>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -230,7 +238,7 @@ export default function BookOrderModal({
                             <span>${subtotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                            <span>Tax (18%):</span>
+                            <span>Tax (18%): </span>
                             <span>${tax.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between font-bold text-lg border-t pt-2">
@@ -248,7 +256,12 @@ export default function BookOrderModal({
                     >
                         Cancel
                     </Button>
-                    <Button onClick={handleSubmit} disabled={loading || !customerName || selectedItems.length === 0}>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={loading || !customerName || !customerPhone || selectedItems.length === 0}
+                        className="flex items-center gap-2"
+                    >
+                        {loading && <LoaderIcon className="w-4 h-4 animate-spin text-white" />}
                         {loading ? (order ? "Updating..." : "Booking...") : (order ? "Update Order" : "Book Order")}
                     </Button>
                 </DialogFooter>

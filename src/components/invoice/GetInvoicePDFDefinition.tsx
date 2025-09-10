@@ -81,6 +81,7 @@ export const getInvoicePDFDefinition = ({
                 ],
                 margin: [0, 0, 0, 5]
               },
+              { text: `Phone: ${selectedInvoice.customerPhone || "N/A"}`, style: "customerInfo" },
               { text: `Table: ${selectedInvoice.tableNumber || "N/A"}`, style: "customerInfo" },
               { text: `Date: ${formatDate(selectedInvoice.createdAt)}`, style: "customerInfo" }
             ],

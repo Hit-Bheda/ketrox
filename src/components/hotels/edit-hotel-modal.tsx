@@ -18,6 +18,7 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/store/store"; // Adjust path to your store
 import { setSelectedHotel } from "@/store/slices/hotel-store"; // Adjust path to your hotel slice
 import Image from "next/image";
+import { LoaderIcon } from "lucide-react";
 
 type UpdateHotelModalProps = {
     open: boolean;
@@ -59,7 +60,7 @@ export default function UpdateHotelModal({ open, onOpenChange, onSubmit }: Updat
                 ownerName: initialData.owner_name || "",
                 ownerPhone: initialData.owner_phone || "",
                 address: initialData.address || "",
-                plan: (initialData.plan === "free" || initialData.plan === "standard" ? initialData.plan : "free") as "free" | "standard",
+                plan: (initialData.plan === "free" || initialData.plan === "monthly" || initialData.plan === "6-months" || initialData.plan === "yearly" ? initialData.plan : "free") as "free" | "monthly" | "6-months" | "yearly",
                 status: (initialData.status === "active" || initialData.status === "trial" || initialData.status === "suspended" || initialData.status === "expired" ? initialData.status : "active") as "active" | "trial" | "suspended" | "expired"
             });
             setExistingLogoUrl(initialData.logo_url || null);
@@ -275,7 +276,9 @@ export default function UpdateHotelModal({ open, onOpenChange, onSubmit }: Updat
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="free">Free</SelectItem>
-                                                <SelectItem value="standard">Standard</SelectItem>
+                                                <SelectItem value="monthly">Monthly</SelectItem>
+                                                <SelectItem value="6-months">6-Months</SelectItem>
+                                                <SelectItem value="yearly">Yearly</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -310,6 +313,7 @@ export default function UpdateHotelModal({ open, onOpenChange, onSubmit }: Updat
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={uploading}>
+                                {uploading && <LoaderIcon className="w-4 h-4 animate-spin text-white" />}
                                 {uploading ? "Updating..." : "Update Hotel"}
                             </Button>
                         </DialogFooter>

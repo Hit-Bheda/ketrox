@@ -48,8 +48,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
 
   const isActivePath = (path: string) => {
     if (pathname === path) {
-      console.log("Path", path, "pathname", pathname)
-
+      
       return true;
     }
     // return pathname.startsWith(path + '/');

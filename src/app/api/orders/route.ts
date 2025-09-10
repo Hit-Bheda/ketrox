@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       tenantId: session.user.tenant_id || validatedData.tenant_id!,
       managerId: session.user.id,
       customerName: validatedData.customer_name,
+      customerPhone: validatedData.customer_phone,
       items: validatedData.items,
       quantity: validatedData.quantity,
       prices: validatedData.prices,
@@ -96,6 +97,7 @@ export async function GET(request: NextRequest) {
     const payment_status = searchParams.get("payment_status");
     const tenant_id = searchParams.get("tenant_id");
     const customer_name = searchParams.get("customer_name");
+    const customer_phone = searchParams.get("customer_phone");
     const manager_id = searchParams.get("managerId");
     const table_id = searchParams.get("tableId");
 
@@ -112,6 +114,8 @@ export async function GET(request: NextRequest) {
     if (status) whereConditions.push(eq(order.status, status as "pending" | "preparing" | "delivered" | "cancelled"));
     if (payment_status) whereConditions.push(eq(order.paymentStatus, payment_status as "unpaid" | "paid" | "refunded"));
     if (customer_name) whereConditions.push(eq(order.customerName, customer_name));
+    if (customer_phone) whereConditions.push(eq(order.customerPhone, customer_phone));
+    if (manager_id) whereConditions.push(eq(order.managerId, manager_id));
     if (table_id) whereConditions.push(eq(order.tableId, table_id));
 
     const orders = await db.select({
@@ -121,6 +125,7 @@ export async function GET(request: NextRequest) {
       tenantId: order.tenantId,
       managerId: order.managerId,
       customerName: order.customerName,
+      customerPhone: order.customerPhone,
       items: order.items,
       quantity: order.quantity,
       prices: order.prices,
@@ -206,6 +211,7 @@ export async function PUT(request: NextRequest) {
       paymentMethod?: "cash" | "card" | "upi" | "other";
       notes?: string;
       customerName?: string;
+      customerPhone?: string;
       items?: string[];
       quantity?: string[];
       prices?: string[];
@@ -224,6 +230,7 @@ export async function PUT(request: NextRequest) {
 
     // Handle full order update (from modal)
     if (otherFields.customer_name) updateData.customerName = otherFields.customer_name;
+    if (otherFields.customer_phone) updateData.customerPhone = otherFields.customer_phone;
     if (otherFields.items) updateData.items = otherFields.items;
     if (otherFields.quantity) updateData.quantity = otherFields.quantity;
     if (otherFields.prices) updateData.prices = otherFields.prices;

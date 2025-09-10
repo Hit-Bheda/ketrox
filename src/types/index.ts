@@ -99,6 +99,7 @@ export type OrderType = {
   tenantId: string;
   managerId: string;
   customerName: string;
+  customerPhone: string;
   items: string[];
   quantity: string[];
   tax: string;
@@ -116,6 +117,7 @@ export type Invoice = {
   invoiceNumber: string;
   orderId: string;
   customerName: string;
+  customerPhone: string;
   tableNumber: string;
   items: string[];
   quantities: string[];

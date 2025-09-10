@@ -10,6 +10,7 @@ import {
   UserCheck,
   UserX,
   Shield,
+  LoaderIcon,
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,13 +61,11 @@ import { StaffType } from "@/types";
 
 
 
-// Staff type based on database schema
-
-
 const roles = ["manager", "waiter"];
 
 
 export default function Staff() {
+
   async function deleteStaff(id: string) {
     try {
       const res = await fetch("/api/admin/hotel", {
@@ -201,9 +200,6 @@ export default function Staff() {
     });
 
     const result = await res.json();
-    console.log("createStaff result:", result);
-
-
     if (!res.ok) {
       throw new Error(result.error || "Error creating staff");
     }
@@ -215,12 +211,12 @@ export default function Staff() {
     setIsSubmitting(true);
     try {
       const result = await createStaff(data);
-      toast.success("Staff added successfully!");
+      toast.success(result.message);
       reset();
       clearErrors();
       setShowAddModal(false);
       await getStaffList();
-      console.log("Staff created:", result);
+
     }
     catch (error: unknown) {
       const errorMessage = typeof error === "object" && error !== null && "message" in error ? (error as { message?: string }).message : "Failed to add staff"; toast.error(errorMessage || "Failed to add staff"); console.error("Error submitting staff form:", error);
@@ -436,7 +432,8 @@ export default function Staff() {
                     </DialogClose>
 
 
-                    <Button type="submit" disabled={isSubmitting}>
+                    <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
+                      {isSubmitting && <LoaderIcon className="w-4 h-4 animate-spin text-gray-100" />}
                       {isSubmitting ? "Adding..." : "Add Staff Member"}
                     </Button>
                   </DialogFooter>

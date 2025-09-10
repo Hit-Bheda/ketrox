@@ -15,7 +15,8 @@ import {
   XCircle,
   Clock,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  LoaderIcon,
 } from "lucide-react";
 
 
@@ -65,16 +66,14 @@ export default function Invoices() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [orders, setOrders] = useState<OrderType[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
-
   const [hotelsData, setHotelsData] = useState<HotelType | null>(null);
-
   const [menuMap, setMenuMap] = useState<{ [id: string]: string }>({});
 
   useEffect(() => {
@@ -93,9 +92,11 @@ export default function Invoices() {
   }, []);
   type PaymentMethod = "cash" | "card" | "upi" | "Bank Transfer";
   type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+
   // Form state for create invoice modal
   const [invoiceForm, setInvoiceForm] = useState({
     customerName: "",
+    customerPhone: "",
     tableNumber: "",
     items: [{ name: "", quantity: 1, price: 0 }],
     notes: "",
@@ -107,6 +108,7 @@ export default function Invoices() {
   // Form state for edit invoice modal
   const [editForm, setEditForm] = useState({
     customerName: "",
+    customerPhone: "",
     tableNumber: "",
     paymentMethod: "cash" as PaymentMethod,
     paymentStatus: "pending" as PaymentStatus,
@@ -114,20 +116,20 @@ export default function Invoices() {
   });
 
   // Auto-fill customer order data
-  const handleCustomerNameChange = async (customerName: string) => {
-    setInvoiceForm(prev => ({ ...prev, customerName }));
+  const handleCustomerPhoneChange = async (customerPhone: string) => {
+    setInvoiceForm(prev => ({ ...prev, customerPhone }));
+    setTableLoading(true); // start loader
 
-    if (customerName.trim()) {
+    if (customerPhone.trim()) {
       try {
-        // Fetch orders for this customer (any recent orders)
-        const response = await fetch(`/api/orders?customer_name=${encodeURIComponent(customerName)}`);
+        // Fetch orders for this customer
+        const response = await fetch(`/api/orders?customer_phone=${encodeURIComponent(customerPhone)}`);
         const data = await response.json();
-        console.log("data", data);
 
         if (response.ok && data.orders && data.orders.length > 0) {
-          const latestOrder = data.orders[0]; // Get the most recent order
+          const latestOrder = data.orders[0];
 
-          // Fetch table details to get the actual table number
+          // Fetch table details
           let tableNumber = latestOrder.tableId;
           try {
             const tableResponse = await fetch(`/api/tables/${latestOrder.tableId}`);
@@ -148,11 +150,18 @@ export default function Invoices() {
               price: parseFloat(latestOrder.prices[index]) || 0
             }))
           }));
+        } else {
+          // Clear table number if no orders
+          setInvoiceForm(prev => ({ ...prev, tableNumber: "" }));
         }
       } catch (error) {
         console.error("Error fetching customer orders:", error);
       }
+    } else {
+      setInvoiceForm(prev => ({ ...prev, tableNumber: "" }));
     }
+
+    setTableLoading(false);
   };
 
 
@@ -201,7 +210,7 @@ export default function Invoices() {
       setLoading(true);
 
       // Validate required fields
-      if (!invoiceForm.customerName || !invoiceForm.tableNumber || invoiceForm.items.length === 0) {
+      if (!invoiceForm.customerName || !invoiceForm.customerPhone || !invoiceForm.tableNumber || invoiceForm.items.length === 0) {
         toast.error("Please fill in all required fields");
         return;
       }
@@ -213,6 +222,7 @@ export default function Invoices() {
 
       const payload = {
         customer_name: invoiceForm.customerName,
+        customer_phone: invoiceForm.customerPhone,
         table_number: invoiceForm.tableNumber,
         items: invoiceForm.items.map(item => item.name),
         quantities: invoiceForm.items.map(item => item.quantity.toString()),
@@ -264,7 +274,7 @@ export default function Invoices() {
 
       if (data.hotel) {
         setHotelsData(data.hotel);
-    
+
       }
 
       return data.hotel || null;
@@ -282,6 +292,7 @@ export default function Invoices() {
     const matchesSearch =
       invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+    invoice.customerPhone.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" || invoice.paymentStatus === statusFilter;
@@ -323,7 +334,6 @@ export default function Invoices() {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
@@ -341,10 +351,10 @@ export default function Invoices() {
     }
   };
 
-
   const resetForm = () => {
     setInvoiceForm({
       customerName: "",
+      customerPhone: "",
       tableNumber: "",
       items: [{ name: "", quantity: 1, price: 0 }],
       notes: "",
@@ -357,7 +367,6 @@ export default function Invoices() {
     setSelectedInvoice(invoice);
     setShowInvoiceModal(true);
   };
-
 
   interface PdfFonts {
     vfs: Record<string, string>;
@@ -378,48 +387,48 @@ export default function Invoices() {
     }
   }
 
-  // Usage
   const paymentColors: Record<string, string> = {
-    cash: "#059669",          // green
-    card: "#3b82f6",          // blue
-    upi: "#f59e0b",           // amber
-    "Bank Transfer": "#8b5cf6" // purple
+    cash: "#059669",
+    card: "#3b82f6",
+    upi: "#f59e0b",
+    "Bank Transfer": "#8b5cf6"
   };
 
   configurePdfMakeFonts(pdfMake, pdfFonts);
- const downloadPDF = (selectedInvoice: Invoice) => {
-  if (!selectedInvoice) return;
-  const paymentColor = paymentColors[selectedInvoice.paymentMethod || ""] || "#4b5563";
-  
-  try {
-    const docDefinition = getInvoicePDFDefinition({
-      selectedInvoice,
+
+  const downloadPDF = (selectedInvoice: Invoice) => {
+    if (!selectedInvoice) return;
+    const paymentColor = paymentColors[selectedInvoice.paymentMethod || ""] || "#4b5563";
+
+    try {
+      const docDefinition = getInvoicePDFDefinition({
+        selectedInvoice,
         hotelsData: hotelsData!,
-      menuMap,
-      paymentColor,
-      formatDate,
-      getInvoiceTax
-    });
+        menuMap,
+        paymentColor,
+        formatDate,
+        getInvoiceTax
+      });
 
-  
-    pdfMake.createPdf(docDefinition).download(`invoice-${selectedInvoice.invoiceNumber || selectedInvoice.id}.pdf`);
-  } catch (error) {
-    console.error("Error generating PDF:", error);
-  }
-};
 
-const printInvoice = () => {
-  if (!selectedInvoice) return;
-  const paymentColor = paymentColors[selectedInvoice.paymentMethod || ""] || "#4b5563";
-  
-  try {
-    // Defensive checks for items, quantities, prices
-    const items = Array.isArray(selectedInvoice.items) ? selectedInvoice.items : [];
-    const quantities = Array.isArray(selectedInvoice.quantities) ? selectedInvoice.quantities : [];
-    const prices = Array.isArray(selectedInvoice.prices) ? selectedInvoice.prices : [];
+      pdfMake.createPdf(docDefinition).download(`invoice-${selectedInvoice.invoiceNumber || selectedInvoice.id}.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    }
+  };
 
-    // Create HTML content that matches the PDF layout
-    const printContent = `
+  const printInvoice = () => {
+    if (!selectedInvoice) return;
+    const paymentColor = paymentColors[selectedInvoice.paymentMethod || ""] || "#4b5563";
+
+    try {
+      // Defensive checks for items, quantities, prices
+      const items = Array.isArray(selectedInvoice.items) ? selectedInvoice.items : [];
+      const quantities = Array.isArray(selectedInvoice.quantities) ? selectedInvoice.quantities : [];
+      const prices = Array.isArray(selectedInvoice.prices) ? selectedInvoice.prices : [];
+
+      // Create HTML content that matches the PDF layout
+      const printContent = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -627,16 +636,17 @@ const printInvoice = () => {
           <!-- Company and Customer Info -->
           <div class="info-section">
             <div class="company-info">
-              <div class="company-name">${hotelsData?.name }</div>
+              <div class="company-name">${hotelsData?.name}</div>
               <div class="company-details">
-                ${hotelsData?.address }<br>
-                Phone: ${hotelsData?.owner_phone }<br>
-                Email: ${hotelsData?.email }
+                ${hotelsData?.address}<br>
+                Phone: ${hotelsData?.owner_phone}<br>
+                Email: ${hotelsData?.email}
               </div>
             </div>
             <div class="customer-info">
               <div class="section-label">BILL TO: ${selectedInvoice.customerName || "Guest"}</div>
               <div class="customer-details">
+              phone: ${selectedInvoice.customerPhone || "N/A"}<br>
                 Table: ${selectedInvoice.tableNumber || "N/A"}<br>
                 Date: ${formatDate(selectedInvoice.createdAt)}
               </div>
@@ -720,23 +730,23 @@ const printInvoice = () => {
       </html>
     `;
 
-    // Create a blob from the HTML content
-    const blob = new Blob([printContent], { type: 'text/html' });
-    const blobUrl = URL.createObjectURL(blob);
-    
-    // Open the print window
-    const printWindow = window.open(blobUrl, '_blank');
-    
-    // Clean up the URL object after the window loads
-    if (printWindow) {
-      printWindow.onload = function() {
-        URL.revokeObjectURL(blobUrl);
-      };
+      // Create a blob from the HTML content
+      const blob = new Blob([printContent], { type: 'text/html' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Open the print window
+      const printWindow = window.open(blobUrl, '_blank');
+
+      // Clean up the URL object after the window loads
+      if (printWindow) {
+        printWindow.onload = function () {
+          URL.revokeObjectURL(blobUrl);
+        };
+      }
+    } catch (error) {
+      console.error("Error generating print invoice:", error);
     }
-  } catch (error) {
-    console.error("Error generating print invoice:", error);
-  }
-};
+  };
 
   const markAsPaid = async (invoiceId: string) => {
     try {
@@ -772,6 +782,7 @@ const printInvoice = () => {
     setEditingInvoice(invoice);
     setEditForm({
       customerName: invoice.customerName,
+      customerPhone: invoice.customerPhone,
       tableNumber: invoice.tableNumber,
       paymentMethod: invoice.paymentMethod as PaymentMethod,
       paymentStatus: invoice.paymentStatus as PaymentStatus,
@@ -793,6 +804,7 @@ const printInvoice = () => {
         body: JSON.stringify({
           invoice_id: editingInvoice.id,
           customer_name: editForm.customerName,
+          customer_phone: editForm.customerPhone,
           table_number: editForm.tableNumber,
           payment_status: editForm.paymentStatus,
           payment_method: editForm.paymentMethod,
@@ -806,6 +818,7 @@ const printInvoice = () => {
             ? {
               ...inv,
               customerName: editForm.customerName,
+              customerPhone: editForm.customerPhone,
               tableNumber: editForm.tableNumber,
               paymentStatus: editForm.paymentStatus,
               paymentMethod: editForm.paymentMethod,
@@ -860,6 +873,7 @@ const printInvoice = () => {
       .filter(inv => inv.paymentStatus === "paid")
       .reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0),
   };
+
   function formatDate(dateString: string): string {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -914,8 +928,6 @@ const printInvoice = () => {
           </CardContent>
         </Card>
 
-
-
         <Card className="hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Collection Rate</CardTitle>
@@ -957,30 +969,47 @@ const printInvoice = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-6 py-4">
-                  <div className="grid grid-cols gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="customer-name" className="text-foreground mb-2">Customer Name</Label>
+                      <Label htmlFor="customer-name" className="text-foreground mb-2">
+                        Customer Name
+                      </Label>
                       <Input
                         id="customer-name"
                         value={invoiceForm.customerName}
-                        onChange={(e) => handleCustomerNameChange(e.target.value)}
+                        onChange={(e) => setInvoiceForm({ ...invoiceForm, customerName: e.target.value })}
                         placeholder="John Doe"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="customer-phone" className="text-foreground mb-2">
+                        Customer Phone
+                      </Label>
+                      <Input
+                        id="customer-phone"
+                        value={invoiceForm.customerPhone}
+
+                        onChange={(e) => handleCustomerPhoneChange(e.target.value)}
+                        placeholder="123-456-7890"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols gap-4">
                     <div>
-                      <Label htmlFor="table-number" className="text-foreground mb-2">Table Number</Label>
+                      <Label htmlFor="table-number" className="text-foreground mb-2">
+                        Table Number
+                      </Label>
                       <Input
                         id="table-number"
-                        value={invoiceForm.tableNumber}
-                        onChange={(e) => setInvoiceForm({ ...invoiceForm, tableNumber: e.target.value })}
+                        readOnly
+                        value={tableLoading ? "Loading..." : invoiceForm.tableNumber}
                         placeholder="T001"
                       />
                     </div>
-
                   </div>
+
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -1032,7 +1061,11 @@ const printInvoice = () => {
                   }}>
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateInvoice} disabled={loading}>Create Invoice</Button>
+                  <Button onClick={handleCreateInvoice} disabled={loading}>
+                    {loading && <LoaderIcon className="w-4 h-4 animate-spin text-white" />}
+                    {loading ? "Adding..." : "Add Invoice"}
+
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -1095,9 +1128,8 @@ const printInvoice = () => {
 
                     <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{invoice.customerName}</div>
-
+                      <div className="font-medium">
+                        {invoice.customerName} <span className="text-muted-foreground">• {invoice.customerPhone}</span>
                       </div>
                     </TableCell>
                     <TableCell>{invoice.tableNumber}</TableCell>
@@ -1258,7 +1290,8 @@ const printInvoice = () => {
               Cancel
             </Button>
             <Button onClick={updateInvoice} disabled={loading}>
-              Update Invoice
+              {loading && <LoaderIcon className="w-4 h-4 animate-spin text-white" />}
+              {loading ? "Updating..." : "Update Invoice"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1297,12 +1330,13 @@ const printInvoice = () => {
                   <h3 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">
                     Bill To: {selectedInvoice.customerName}
                   </h3>
+                  <p className="text-sm text-gray-600">Phone: {selectedInvoice.customerPhone}</p>
                   <p className="text-sm text-gray-600">Table: {selectedInvoice.tableNumber}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">Payment Info:</h3>
                   <p className="text-sm text-gray-600">Method: {selectedInvoice.paymentMethod}</p>
-                  <p className="text-sm text-gray-600">Status: {getStatusBadge(selectedInvoice.paymentStatus)}</p>
+                  <p className="text-sm text-gray-600 mt-1">Status: {getStatusBadge(selectedInvoice.paymentStatus)}</p>
                 </div>
               </div>
 

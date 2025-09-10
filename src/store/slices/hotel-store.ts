@@ -26,7 +26,7 @@ const hotelSlice = createSlice({
             state.hotels = action.payload;
         },
         setSelectedHotel: (state, action) => {
-            console.log("Setting selected hotel:", action.payload);
+            
             state.selectedHotel = action.payload;
         },
         setLoading: (state, action) => {

@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { user as userTable, verification } from "@/db/schema";
+import { accountPlainPassword, user as userTable, verification } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 const betterAuthResetSchema = z.object({
@@ -20,7 +20,6 @@ export async function POST(req: Request) {
     const { token, newPassword } = validatedData;
     console.log("👉 Validated token:", token);
 
-    // Backward-compatibility: migrate old verification rows (value=token, identifier=email)
     const existingNewFormat = await db
       .select({ id: verification.id })
       .from(verification)
@@ -53,23 +52,29 @@ export async function POST(req: Request) {
         }
       }
     }
+    const row = await db
+    .select({ userId: verification.value })
+    .from(verification)
+    .where(eq(verification.identifier, `reset-password:${token}`))
+    .limit(1);
 
-    // Use Better Auth's resetPassword method
+    const userId = row.length ? row[0].userId : null;
+
     const result = await auth.api.resetPassword({
-      body: {
-        token,
-        newPassword,
-      },
+      body: { token, newPassword },
     });
-
-    if (!result) {
-      return NextResponse.json(
-        { error: "Failed to reset password" },
-        { status: 400 }
-      );
+    
+    if (!result?.status) {
+      return NextResponse.json({ error: "Failed to reset password" }, { status: 400 });
     }
-
-    console.log("👉 Password reset successfully using Better Auth");
+    
+    // Update plain password table if we have userId
+    if (userId) {
+      await db
+        .update(accountPlainPassword)
+        .set({ plainPassword: newPassword })
+        .where(eq(accountPlainPassword.userId, userId));
+    }
 
     return NextResponse.json({
       success: true,

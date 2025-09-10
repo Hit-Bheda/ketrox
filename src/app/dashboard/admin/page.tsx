@@ -234,6 +234,7 @@ export default function Dashboard() {
         time: timeAgo(o.createdAt),
         total: Number(o.totalPrice || 0).toFixed(2),
         customer: o.customerName,
+        phone: o.customerPhone,
       }));
   }, [orders, dateRange]);
 
@@ -471,6 +472,8 @@ export default function Dashboard() {
                       <span className="text-sm text-muted-foreground">{order.table}</span>
                       <span className="text-sm text-muted-foreground">•</span>
                       <span className="text-sm text-muted-foreground">{order.customer}</span>
+                      <span className="text-sm text-muted-foreground">•</span>
+                      <span className="text-sm text-muted-foreground">{order.phone}</span>
                     </div>
                     <div className="text-xs text-muted-foreground mb-2">
                       {order.items.join(', ')}

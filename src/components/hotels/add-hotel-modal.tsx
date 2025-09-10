@@ -12,6 +12,8 @@ import { hotelSchema } from "@/schemas";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client"; // Ensure this is a configured Supabase client instance
 import { toast } from "sonner";
+import Image from "next/image";
+import { LoaderIcon } from "lucide-react";
 
 type AddHotelModalProps = {
   open: boolean;
@@ -21,7 +23,8 @@ type AddHotelModalProps = {
 
 export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotelModalProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof hotelSchema>>({
@@ -29,8 +32,8 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
     defaultValues: {
       name: "",
       email: "",
-      password:"",
-      logoUrl: "", 
+      password: "",
+      logoUrl: "",
       ownerName: "",
       ownerPhone: "",
       address: "",
@@ -43,7 +46,7 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
     if (!file) return null;
 
     try {
-      setUploading(true);
+      setUploadingLogo(true);
       setUploadError(null);
 
       const fileExt = file.name.split(".").pop();
@@ -70,27 +73,27 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
       );
       return null;
     } finally {
-      setUploading(false);
+      setUploadingLogo(false);
     }
   };
 
   const handleSubmit = async (data: z.infer<typeof hotelSchema>) => {
-    let uploadedUrl = data.logoUrl;
+    try {
+      setSubmitting(true);
 
-    if (file) {
-      const url = await handleFileUpload();
-      if (!url) {
-        toast.error("File upload failed. Please try again.");
-        return;
-      }
-      uploadedUrl = url;
+      await onSubmit(data);
+      form.reset();
+      setFile(null);
+      setUploadError(null);
+      onOpenChange(false);
+    } catch (err) {
+      console.error("Error adding hotel:", err);
+      toast.error("Failed to add hotel");
+    } finally {
+      setSubmitting(false);
     }
-
-    onSubmit({ ...data, logoUrl: uploadedUrl });
-    form.reset();
-    setFile(null);
-    setUploadError(null);
   };
+
 
   // Reset form and file when modal is closed
   useEffect(() => {
@@ -124,18 +127,62 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
                       onChange={(e) => {
                         const selectedFile = e.target.files?.[0] || null;
                         setFile(selectedFile);
-                        // Set a temporary value to pass validation
                         field.onChange(selectedFile ? "temp_file_selected" : "");
                       }}
                     />
                   </FormControl>
-                  {file && <p className="text-sm text-muted-foreground">{file.name}</p>}
-                  {uploadError && <p className="text-sm text-red-500">{uploadError}</p>}
+
+                  {/* Show file name */}
+                  {file && (
+                    <p className="text-sm text-muted-foreground mt-1">{file.name}</p>
+                  )}
+
+                  {/* Show preview */}
+                  {file && (
+                    <div className="mt-2">
+                      <Image
+                        src={URL.createObjectURL(file)}
+                        alt="Logo preview"
+                        width={100}
+                        height={100}
+                        className="w-24 h-24 object-cover rounded-md border"
+                      />
+                    </div>
+                  )}
+
+                  {/* Upload button */}
+                  {file && (
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        const uploadedUrl = await handleFileUpload();
+                        if (uploadedUrl) {
+                          field.onChange(uploadedUrl);
+                          toast.success("Logo uploaded successfully!");
+                        }
+                      }}
+                      className="mt-2"
+                      disabled={uploadingLogo}
+                    >
+                      {uploadingLogo ? (
+                        <span className="flex items-center gap-2">
+                          <LoaderIcon className="w-4 h-4 animate-spin text-gray-100" />
+                          Uploading...
+                        </span>
+                      ) : (
+                        "Upload Logo"
+                      )}
+                    </Button>
+                  )}
+
+                  {uploadError && (
+                    <p className="text-sm text-red-500 mt-1">{uploadError}</p>
+                  )}
+
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <div className="flex gap-4">
               <FormField
                 control={form.control}
@@ -166,18 +213,18 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
             </div>
 
             <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter Password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -185,9 +232,9 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter hotel address" {...field} />
-                    </FormControl>
+                  <FormControl>
+                    <Input placeholder="Enter hotel address" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -235,7 +282,9 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="free">Free</SelectItem>
-                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="6-months">6-Months</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -269,8 +318,15 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
               <Button variant="outline" onClick={() => onOpenChange(false)} type="button">
                 Cancel
               </Button>
-              <Button type="submit" disabled={uploading}>
-                {uploading ? "Uploading..." : "Add Hotel"}
+              <Button type="submit" disabled={submitting}>
+                {submitting ? (
+                  <span className="flex items-center gap-2">
+                    <LoaderIcon className="w-4 h-4 animate-spin text-gray-100" />
+                    Adding...
+                  </span>
+                ) : (
+                  "Add Hotel"
+                )}
               </Button>
             </DialogFooter>
           </form>

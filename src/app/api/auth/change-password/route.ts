@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { db } from "@/db";
+import { accountPlainPassword } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,6 +51,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    await db
+      .update(accountPlainPassword)
+      .set({ plainPassword: newPassword }) 
+      .where(eq(accountPlainPassword.userId, session.user.id));
+
+
 
     return NextResponse.json(
       { message: "Password changed successfully" },
