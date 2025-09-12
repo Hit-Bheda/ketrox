@@ -46,7 +46,16 @@ export default function Page() {
 useEffect(() => {
   const fetchMenuItems = async () => {
     try {
-      const response = await fetch("/api/admin/menu", {
+      // Get tenantId from URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const tenantId = urlParams.get('tenantId');
+      
+      // Build the API URL with tenantId if available
+      const apiUrl = tenantId 
+        ? `/api/admin/menu?tenantId=${tenantId}`
+        : "/api/admin/menu";
+      
+      const response = await fetch(apiUrl, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -138,7 +147,7 @@ useEffect(() => {
           <div className="relative">
             <div
               ref={categoriesRef}
-              className="flex flex-nowrap items-center gap-2 rounded-full bg-black/40 backdrop-blur supports-[backdrop-filter]:bg-black/30 px-3 py-2 border border-white/10 overflow-x-auto scrollbar-hidden"
+              className="flex flex-nowrap items-center scrollbar-hidden gap-2 rounded-full bg-black/40 backdrop-blur supports-[backdrop-filter]:bg-black/30 px-3 py-2 border border-white/10 overflow-x-auto"
             >
               {[{ id: "all", name: "All" }, ...categories].map((cat) => (
                 <button
@@ -158,14 +167,14 @@ useEffect(() => {
                 <button
                   aria-label="Scroll categories left"
                   onClick={() => scrollCats(-150)}
-                  className="absolute -left-3 sm:-left-4 top-1/2 -translate-y-1/2 grid place-items-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-black/60 text-white/90 hover:bg-black/80 border border-white/10"
+                  className="absolute -left-4 sm:-left-4 top-1/2 -translate-y-1/2 grid place-items-center h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-[#f59f0a] text-white/90 hover:bg-black/80 border border-white/10"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
                   aria-label="Scroll categories right"
                   onClick={() => scrollCats(150)}
-                  className="absolute -right-3 sm:-right-4 top-1/2 -translate-y-1/2 grid place-items-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-black/60 text-white/90 hover:bg-black/80 border border-white/10"
+                  className="absolute -right-4 sm:-right-4 top-1/2 -translate-y-1/2 grid place-items-center h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-[#f59f0a] text-white/90 hover:bg-black/80 border border-white/10"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
