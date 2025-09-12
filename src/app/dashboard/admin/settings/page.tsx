@@ -58,6 +58,7 @@ export default function Settings() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -208,7 +209,7 @@ export default function Settings() {
         return;
       }
 
-      setIsUploading(true);
+      setIsChangingPassword(true);
 
       const res = await fetch("/api/auth/change-password", {
         method: "POST",
@@ -222,7 +223,7 @@ export default function Settings() {
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Failed to change password");
-        setIsUploading(false);
+        setIsChangingPassword(false);
         return;
       }
 
@@ -234,12 +235,12 @@ export default function Settings() {
         confirmPassword: ""
       }));
 
-      setIsUploading(false);
+      setIsChangingPassword(false);
       toast.success("Password changed successfully");
     } catch (error) {
       console.error("Password change error:", error);
       toast.error("Failed to change password");
-      setIsUploading(false);
+      setIsChangingPassword(false);
     }
   };
 
@@ -729,8 +730,8 @@ export default function Settings() {
                     </>
                   )}
                 </Button>
-                <Button onClick={handleChangePassword} disabled={isUploading} className="w-full sm:w-auto">
-                  {isUploading ? (
+                <Button onClick={handleChangePassword} disabled={isChangingPassword} className="w-full sm:w-auto">
+                  {isChangingPassword ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Changing Password...
@@ -1046,9 +1047,6 @@ export default function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
-
-
-
 
         {/* System Settings */}
         <TabsContent value="system" className="space-y-6">

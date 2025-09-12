@@ -13,18 +13,40 @@ import { cn } from "@/lib/utils";
 import { resetPasswordFormSchema } from "@/schemas";
 import { toast } from "sonner";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
-export default function ResetPasswordPage() {
+// Define the proper type for searchParams in Next.js App Router
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default function ResetPasswordPage({ searchParams }: PageProps) {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState("");
     const [error, setError] = useState("");
-    
-    const searchParams = useSearchParams();
-    const token = searchParams.get('token');
+    const [token, setToken] = useState<string | null>(null);
+
+    // Extract token from searchParams promise
+    useEffect(() => {
+        const getToken = async () => {
+            try {
+                const params = await searchParams;
+                const tokenValue = params.token as string;
+                setToken(tokenValue);
+                
+                if (!tokenValue) {
+                    setError("Invalid or missing reset token");
+                }
+            } catch (error) {
+                setError("Failed to parse reset token");
+                console.error("Error parsing searchParams:", error);
+            }
+        };
+
+        getToken();
+    }, [searchParams]);
 
     const form = useForm<z.infer<typeof resetPasswordFormSchema>>({
         resolver: zodResolver(resetPasswordFormSchema),
@@ -35,12 +57,6 @@ export default function ResetPasswordPage() {
     });
 
     const { handleSubmit, register, formState: { errors }, reset } = form;
-
-    useEffect(() => {
-        if (!token) {
-            setError("Invalid or missing reset token");
-        }
-    }, [token]);
 
     const resetState = () => {
         setSuccess("");
@@ -86,6 +102,48 @@ export default function ResetPasswordPage() {
     const toggleConfirmPasswordVisibility = () => {
         setShowConfirmPassword(!showConfirmPassword);
     };
+
+    if (token === null) {
+        // Show loading state while token is being extracted
+        return (
+            <div className="h-screen relative overflow-hidden">
+                <div
+                    className="absolute inset-0 z-0"
+                    style={{
+                        backgroundImage: `url('/images/auth-bg.webp')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                    }}
+                >
+                    <div className="absolute inset-0 bg-black/60 dark:bg-black/60" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20" />
+                </div>
+
+                <div className="relative h-screen flex justify-center">
+                    <div className="w-full lg:w-1/2 flex items-center justify-center px-6">
+                        <div className="w-full max-w-md">
+                            <Card className="bg-background/10 backdrop-blur-xl border-border/50 shadow-2xl animate-fade-in">
+                                <CardContent className="space-y-6 px-6 py-8">
+                                    <div className="text-center space-y-4">
+                                        <div className="flex justify-center">
+                                            <LoaderIcon className="h-12 w-12 text-primary animate-spin" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h3 className="text-lg font-semibold text-white">Loading...</h3>
+                                            <p className="text-sm text-gray-300">
+                                                Verifying reset link
+                                            </p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (!token) {
         return (
@@ -135,7 +193,7 @@ export default function ResetPasswordPage() {
         );
     }
 
-    return (
+   return (
         <div className="h-screen relative overflow-hidden">
             <div
                 className="absolute inset-0 z-0"

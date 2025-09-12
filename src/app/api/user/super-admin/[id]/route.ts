@@ -3,12 +3,18 @@ import { db } from "@/db";
 import { user as userTable } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+// Define the proper route context interface
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
+export async function PUT(req: Request, context: RouteContext) {
   try {
+    // Await the params promise first
+    const params = await context.params;
     const id = params.id;
+    
     const body = await req.json();
-
-
     const { name, email, phone } = body;
 
     const updatedUser = await db

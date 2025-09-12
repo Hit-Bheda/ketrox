@@ -42,7 +42,8 @@ export default function Settings() {
   const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string, email?: string, phone?: string } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingPassword, setIsUploadingPassword] = useState(false);
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   const [hotelsData, setHotelsData] = useState<{ id: string; name: string; logo_url: string; owner_name: string; owner_phone: string; address: string; email: string } | null>(null);
 
   const [profileForm, setProfileForm] = useState({
@@ -71,7 +72,7 @@ export default function Settings() {
         return;
       }
 
-      setIsUploading(true);
+      setIsUploadingPassword(true);
 
       const res = await fetch("/api/auth/change-password", {
         method: "POST",
@@ -85,7 +86,7 @@ export default function Settings() {
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Failed to change password");
-        setIsUploading(false);
+        setIsUploadingPassword(false);
         return;
       }
 
@@ -97,23 +98,23 @@ export default function Settings() {
         confirmPassword: ""
       }));
 
-      setIsUploading(false);
+      setIsUploadingPassword(false);
       toast.success("Password changed successfully");
     } catch (error) {
       console.error("Password change error:", error);
       toast.error("Failed to change password");
-      setIsUploading(false);
+      setIsUploadingPassword(false);
     }
   };
 
-  const handleSaveProfile = async () => {
+   const handleSaveProfile = async () => {
     try {
       if (!user) {
         toast.error("User not found");
         return;
       }
 
-      setIsUploading(true);
+      setIsUploadingProfile(true);
 
       // Update profile information using staff API
       const res = await fetch("/api/admin/hotel", {
@@ -130,7 +131,7 @@ export default function Settings() {
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Failed to update profile");
-        setIsUploading(false);
+        setIsUploadingProfile(false);
         return;
       }
 
@@ -155,7 +156,7 @@ export default function Settings() {
           .upload(filePath, selectedFile, { contentType: selectedFile.type });
         if (error) {
           toast.error(error.message || 'Upload failed');
-          setIsUploading(false);
+          setIsUploadingProfile(false);
           return;
         }
         const { data, error: signedUrlError } = await supabaseClient.storage
@@ -163,7 +164,7 @@ export default function Settings() {
           .createSignedUrl(filePath, 1577880000);
         if (signedUrlError || !data) {
           toast.error(signedUrlError?.message || 'Failed to create signed URL');
-          setIsUploading(false);
+          setIsUploadingProfile(false);
           return;
         }
         imageUrl = data.signedUrl!;
@@ -176,25 +177,22 @@ export default function Settings() {
         const photoData = await photoRes.json();
         if (!photoRes.ok) {
           toast.error(photoData.error || 'Failed to save photo');
-          setIsUploading(false);
+          setIsUploadingProfile(false);
           return;
         }
 
-        // Clear local state after successful save
         setSelectedFile(null);
-        // Update user state to reflect the new image
         setUser(prev => prev ? { ...prev, image: imageUrl as string } : null);
-        // Dispatch custom event to update sidebar photo
         window.dispatchEvent(new CustomEvent('profile-photo-updated'));
         setPreviewUrl(imageUrl);
       }
 
-      setIsUploading(false);
+      setIsUploadingProfile(false);
       toast.success('Profile updated successfully');
     } catch (error) {
       console.error("Profile update error:", error);
       toast.error('Failed to update profile');
-      setIsUploading(false);
+      setIsUploadingProfile(false);
     }
   };
 
@@ -506,8 +504,8 @@ export default function Settings() {
               </div>
 
               <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
-                <Button onClick={handleSaveProfile} disabled={isUploading}>
-                  {isUploading ? (
+                <Button onClick={handleSaveProfile} disabled={isUploadingProfile}>
+                  {isUploadingProfile ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Saving Profile...
@@ -519,8 +517,8 @@ export default function Settings() {
                     </>
                   )}
                 </Button>
-                <Button onClick={handleChangePassword} disabled={isUploading}>
-                  {isUploading ? (
+                <Button onClick={handleChangePassword} disabled={isUploadingPassword}>
+                  {isUploadingPassword ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Changing Password...
