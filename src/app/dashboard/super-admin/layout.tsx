@@ -4,15 +4,15 @@ import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
-  Hotel,
-  CreditCard,
-  FileText,
-  MessageSquare,
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  LayoutDashboard,
+  MessageSquareText,
+  ChartNoAxesCombined,
+  Crown,
+  Building
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,12 @@ interface LayoutProps {
 }
 
 const sidebarItems = [
-  { icon: BarChart3, label: "Dashboard", path: "/dashboard/super-admin" },
-  { icon: Hotel, label: "Hotels", path: "/dashboard/super-admin/hotels" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard/super-admin" },
+  { icon: Building, label: "Hotels", path: "/dashboard/super-admin/hotels" },
   // { icon: Users, label: "Users", path: "/dashboard/super-admin/users" },
-  { icon: CreditCard, label: "Plans", path: "/dashboard/super-admin/plans" },
-  { icon: FileText, label: "Reports", path: "/dashboard/super-admin/reports" },
-  { icon: MessageSquare, label: "Messages", path: "/dashboard/super-admin/messages", badge: 3 },
+  { icon: Crown, label: "Plans", path: "/dashboard/super-admin/plans" },
+  { icon: ChartNoAxesCombined, label: "Reports", path: "/dashboard/super-admin/reports" },
+  { icon: MessageSquareText, label: "Messages", path: "/dashboard/super-admin/messages", badge: 3 },
   { icon: Settings, label: "Settings", path: "/dashboard/super-admin/settings" },
 ];
 
@@ -139,6 +139,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
                     height={64}
                     unoptimized={true}
                     priority={true}
+                     fetchPriority="high" 
                     className="h-full w-auto object-contain"
                   />
                 </div>

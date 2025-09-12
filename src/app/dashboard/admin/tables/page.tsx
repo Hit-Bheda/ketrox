@@ -542,6 +542,7 @@ export default function Tables() {
                           style={{ objectFit: "contain" }}
                           className="w-full h-full"
                           priority
+                           fetchPriority="high" 
                         />
                       </div>
                     ) : (
@@ -642,6 +643,8 @@ export default function Tables() {
                 width={300}
                 height={300}
                 className="rounded-lg border"
+                priority
+                 fetchPriority="high" 
               />
             )}
           </div>

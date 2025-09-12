@@ -119,6 +119,8 @@ useEffect(() => {
           src="/images/login-bg.jpg"
           fill
           alt="Menu hero"
+          priority
+          fetchPriority="high"
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute inset-0 bg-black/70" />

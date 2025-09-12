@@ -418,6 +418,7 @@ export default function Menu() {
                     style={{ objectFit: "contain" }}
                     className="w-full h-full"
                     priority
+                     fetchPriority="high" 
                   />
                 ) : (
                   <span className="text-xs text-muted-foreground">QR Code Preview</span>
@@ -492,6 +493,8 @@ export default function Menu() {
                             width={300}
                             height={300}
                             className="rounded-lg border"
+                            priority
+                             fetchPriority="high" 
                           />
                         )}
                       </div>

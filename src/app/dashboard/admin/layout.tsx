@@ -2,19 +2,14 @@
 // app/layout.tsx or components/layout.tsx
 import { ReactNode, useEffect, useState } from "react";
 import {
-  BarChart3,
   Users,
-  Utensils,
   FileText,
   CreditCard,
-  TrendingUp,
-  MessageSquare,
   Settings,
   LogOut,
   Bell,
   Menu,
   X,
-  ChefHat,
   ClipboardList as OrderIcon,
   CreditCard as PaymentIcon,
   UserCheck,
@@ -24,7 +19,13 @@ import {
   BellRing,
   Trash2,
   User,
-  Building2
+  Building2,
+  LayoutDashboard,
+  MessageSquareText,
+  ChartNoAxesCombined,
+  ShoppingCart,
+  Utensils,
+  Grid3X3
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ import Image from "next/image";
 
 
 interface LayoutProps {
-  readonly children: ReactNode; 
+  readonly children: ReactNode;
 }
 
 // Notification types and data
@@ -135,17 +136,16 @@ const mockNotifications: Notification[] = [
 ];
 
 const sidebarItems = [
-  { icon: BarChart3, label: "Dashboard", path: "/dashboard/admin" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard/admin" },
   { icon: Users, label: "Staff", path: "/dashboard/admin/staff" },
-  { icon: Utensils, label: "Tables", path: "/dashboard/admin/tables" },
-  { icon: ChefHat, label: "Menu", path: "/dashboard/admin/menu" },
-  { icon: OrderIcon, label: "Orders", path: "/dashboard/admin/orders", badge: 12 },
+  { icon: Grid3X3, label: "Tables", path: "/dashboard/admin/tables" },
+  { icon: Utensils, label: "Menu", path: "/dashboard/admin/menu" },
+  { icon: ShoppingCart, label: "Orders", path: "/dashboard/admin/orders", badge: 12 },
   { icon: FileText, label: "Invoices", path: "/dashboard/admin/invoices" },
-  { icon: TrendingUp, label: "Reports", path: "/dashboard/admin/reports" },
-  { icon: MessageSquare, label: "Messages", path: "/dashboard/admin/messages", badge: 3 },
+  { icon: ChartNoAxesCombined, label: "Reports", path: "/dashboard/admin/reports" },
+  { icon: MessageSquareText, label: "Messages", path: "/dashboard/admin/messages", badge: 3 },
   { icon: Settings, label: "Settings", path: "/dashboard/admin/settings" },
 ];
-
 const handleLogout = async () => {
   // Implement logout logic here
   console.log("Logging out...");

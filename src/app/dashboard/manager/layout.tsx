@@ -2,14 +2,12 @@
 // app/layout.tsx or components/layout.tsx
 import { ReactNode, useEffect, useState } from "react";
 import {
-  BarChart3,
   Utensils,
   CreditCard,
   LogOut,
   Bell,
   Menu,
   X,
-  ChefHat,
   ClipboardList as OrderIcon,
   CreditCard as PaymentIcon,
   UserCheck,
@@ -19,7 +17,10 @@ import {
   BellRing,
   Trash2,
   User,
-  Settings
+  Settings,
+  LayoutDashboard,
+  Grid3X3,
+  ShoppingCart
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -128,11 +129,11 @@ const mockNotifications: Notification[] = [
 ];
 
 const sidebarItems = [
-  { icon: BarChart3, label: "Dashboard", path: "/dashboard/manager" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard/manager" },
   // { icon: Users, label: "Staff", path: "/dashboard/admin/staff" },
-  { icon: Utensils, label: "Tables", path: "/dashboard/manager/tables" },
-  { icon: ChefHat, label: "Menu", path: "/dashboard/manager/menu" },
-  { icon: OrderIcon, label: "Orders", path: "/dashboard/manager/orders", badge: 12 },
+  { icon: Grid3X3, label: "Tables", path: "/dashboard/manager/tables" },
+  { icon: Utensils, label: "Menu", path: "/dashboard/manager/menu" },
+  { icon: ShoppingCart, label: "Orders", path: "/dashboard/manager/orders", badge: 12 },
   { icon: Settings, label: "Settings", path: "/dashboard/manager/settings" },
 ];
 
@@ -301,6 +302,7 @@ export default function Layout({ children }: LayoutProps) {
                     height={64}
                     unoptimized
                     priority
+                     fetchPriority="high" 
                     className="h-full w-auto object-contain"
                   />
                 )}

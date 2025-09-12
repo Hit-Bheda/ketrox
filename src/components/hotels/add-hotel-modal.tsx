@@ -145,6 +145,8 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
                         alt="Logo preview"
                         width={100}
                         height={100}
+                        priority
+                           fetchPriority="high" 
                         className="w-24 h-24 object-cover rounded-md border"
                       />
                     </div>

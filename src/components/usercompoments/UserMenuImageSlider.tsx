@@ -140,6 +140,7 @@ export function UserMenuImageSlider({ images = [], alt }: MenuImageSliderProps) 
                 src={imgUrl}
                 alt={`${alt} ${idx + 1}`}
                 fill
+                 fetchPriority="high" 
                 className="object-cover"
                 sizes="100vw"
                 priority={idx === 0}

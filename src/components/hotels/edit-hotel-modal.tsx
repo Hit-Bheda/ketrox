@@ -178,6 +178,8 @@ export default function UpdateHotelModal({ open, onOpenChange, onSubmit }: Updat
                                                     src={existingLogoUrl}
                                                     alt="Current logo"
                                                     fill
+                                                    priority
+                                                     fetchPriority="high" 
                                                     className="object-cover rounded"
                                                     sizes="64px"
                                                 />

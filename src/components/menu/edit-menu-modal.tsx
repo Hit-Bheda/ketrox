@@ -185,6 +185,8 @@ export default function EditMenuModal({
                         className="object-cover rounded-md h-full w-full"
                         width={80}
                         height={80}
+                        priority
+                         fetchPriority="high" 
                       />
                       <button
                         type="button"

@@ -772,6 +772,9 @@ export default function Settings() {
                           height={100}
                           alt="Logo Preview"
                           className="h-full w-full object-cover"
+                          priority
+                          fetchPriority="high"
+
                         />
                       );
                     }
@@ -784,6 +787,8 @@ export default function Settings() {
                           height={100}
                           alt={hotelsData?.name}
                           className="h-full w-full object-cover"
+                          priority
+                           fetchPriority="high" 
                         />
                       );
                     }

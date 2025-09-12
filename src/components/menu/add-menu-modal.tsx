@@ -267,6 +267,8 @@ export default function AddMenuModal({
                         src={url}
                         fill
                         sizes="(max-width: 768px) 100vw, 423px"
+                        priority
+                         fetchPriority="high" 
                         alt={`Preview ${idx + 1}`}
                         className="object-cover rounded-md h-full w-full"
                       />
