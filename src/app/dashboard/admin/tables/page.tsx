@@ -46,39 +46,25 @@ import { tableSchema } from "@/schemas";
 import { NotesPopover } from "@/components/table/NotesPopover";
 import Image from "next/image";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { QrCodeType, TableType } from "@/types";
 
 const capacities = ["2", "3", "4", "6", "8", "more than 8"];
 
-type Table = {
-  id: string;
-  number: string;
-  name: string;
-  capacity: string;
-  notes?: string;
-  available: boolean;
-  maintenance: boolean;
-  status?: "available" | "occupied" | "unavailable" | string;
-};
 
-type QrCode = {
-  id: string;
-  tenantId: string;
-  url: string;
-  qrPath: string | null;
-  createdAt: string; // coming as ISO string from API
-  updatedAt: string;
-};
+
+
 
 export default function Tables() {
   const [tenantId, setTenantId] = useState<string | null>(null);
-  const [tableItem, setTableItem] = useState<Table[]>([])
+  const [tableItem, setTableItem] = useState<TableType[]>([])
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
-  const [qrCode, setQrCode] = useState<QrCode | null>(null);
+  const [qrCode, setQrCode] = useState<QrCodeType | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewOpen, setViewOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [tableForm, setTableForm] = useState<{
     number: string;
     name: string;
@@ -113,9 +99,8 @@ export default function Tables() {
       }
       const res = await fetch("/api/admin/table");
       const data = await res.json();
-      console.log("Fetched tables:", data);
       setTableItem(
-        (data.tables || []).map((table: Table) => ({
+        (data.tables || []).map((table: TableType) => ({
           ...table,
           status: table.maintenance
             ? "maintenance"
@@ -126,7 +111,7 @@ export default function Tables() {
       );
     } catch (error) {
       console.error("Error fetching tables:", error);
-    }
+    } 
   }
 
   useEffect(() => {
@@ -163,6 +148,7 @@ export default function Tables() {
   });
 
   const handleAddTable = async () => {
+    setIsSubmitting(true);
     if (!tenantId) {
       toast.error("Tenant ID not found. Please login again.");
       return;
@@ -208,6 +194,8 @@ export default function Tables() {
     } catch (err) {
       setErrors({ general: err instanceof Error ? err.message : String(err) });
       toast.error("Network error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -236,7 +224,7 @@ export default function Tables() {
     }
   };
 
-  const handleToggleTableStatus = async (table: Table, field: "available" | "maintenance") => {
+  const handleToggleTableStatus = async (table: TableType, field: "available" | "maintenance") => {
     setEditLoading(true);
     try {
       const res = await fetch("/api/admin/table", {
@@ -310,10 +298,10 @@ export default function Tables() {
 
       try {
         const res = await fetch(`/api/qr?tenantId=${tenantId}`);
-        const data: { success: boolean; qr?: QrCode; error?: string } = await res.json();
+        const data: { success: boolean; qr?: QrCodeType; error?: string } = await res.json();
         if (res.ok && data.success && data.qr) {
           setQrCode(data.qr);
-          console.log("Fetched QR code:", data.qr);
+      
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -554,6 +542,7 @@ export default function Tables() {
                           style={{ objectFit: "contain" }}
                           className="w-full h-full"
                           priority
+                           fetchPriority="high" 
                         />
                       </div>
                     ) : (
@@ -654,6 +643,8 @@ export default function Tables() {
                 width={300}
                 height={300}
                 className="rounded-lg border"
+                priority
+                 fetchPriority="high" 
               />
             )}
           </div>
@@ -668,6 +659,7 @@ export default function Tables() {
         capacities={capacities}
         handleAddTable={handleAddTable}
         errors={errors}
+        isSubmitting={isSubmitting}
         setErrors={setErrors}
         clearForm={clearForm}
       />

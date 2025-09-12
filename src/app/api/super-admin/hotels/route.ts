@@ -1,7 +1,8 @@
 import { db } from "@/db";
-import { tenants, user, account } from "@/db/schema";
+import { tenants, user, accountPlainPassword } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import crypto from "crypto";
+
 
 export async function POST(request: Request) {
   const {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
       owner_name: ownerName,
       owner_phone: ownerPhone,
       address,
-      plan: plan as "free" | "standard",
+      plan: plan as "free" | "monthly" | "6-months" | "yearly",
       status: status as "active" | "trial" | "suspended" | "expired",
     });
   
@@ -56,13 +57,12 @@ export async function POST(request: Request) {
     const userId = signupResult?.data?.user?.id ?? signupResult?.user?.id ?? null;
 
     // Ensure the email credential row has accountId set to the email
-    if (userId) {
-      await db
-        .update(account)
-        .set({ accountId: email })
-        .where(and(eq(account.userId, userId), eq(account.providerId, "email")));
+    if (userId && password) {
+      await db.insert(accountPlainPassword).values({
+        userId,
+        plainPassword: password,
+      });
     }
-
     return Response.json({
       message: "Tenant and admin user created successfully",
       tenantId,
@@ -85,7 +85,7 @@ export async function PUT(request: Request) {
         owner_name: ownerName as string,
         owner_phone: ownerPhone as string,
         address: address as string,
-        plan: plan as "free" | "standard",
+        plan: plan as "free" | "monthly" | "6-months" | "yearly",
         status: status as "active" | "trial" | "suspended" | "expired",
     }
     const updatedHotel = await db.update(tenants)
@@ -109,7 +109,6 @@ export async function PUT(request: Request) {
 }
 
 export async function GET() {
-    console.log("Super Admin API Endpoint Hit");
     const hotels = await db.select().from(tenants);
     return Response.json({
         message: "Super Admin API Endpoint",
@@ -124,7 +123,6 @@ export async function DELETE(request: Request) {
         return Response.json({ error: "Hotel ID is required" }, { status: 400 });
     }
 
-  // Delete users linked to this tenant first to satisfy FK constraints
   await db.delete(user).where(eq(user.tenant_id, id));
 
   const deletedHotel = await db.delete(tenants).where(eq(tenants.id, id));

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { invoice, order, table } from "@/db/schema";
 import { invoiceSchema } from "@/schemas";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
       tenantId: session.user.tenant_id || validatedData.tenant_id!,
       adminId: session.user.id,
       customerName: validatedData.customer_name,
+      customerPhone: validatedData.customer_phone,
       tableNumber: finalTableNumber,
       items: validatedData.items,
       quantities: validatedData.quantities,
@@ -105,14 +106,13 @@ export async function POST(request: NextRequest) {
         .where(eq(order.id, validatedData.order_id));
 
       // Update table status to available using order's tableId
-      console.log("Updating table status for order-based invoice, tableId:", orderData.tableId);
+   
       const tableUpdateResult = await db.update(table)
         .set({ available: true, updatedAt: new Date() })
         .where(eq(table.id, orderData.tableId));
       console.log("Table update result:", tableUpdateResult);
     } else {
       // If no order_id, find table by number and update
-      console.log("Updating table status for form-based invoice, table_number:", validatedData.table_number);
       
       // First find the table by number
       const tableToUpdate = await db.select()
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
         .limit(1);
       
       if (tableToUpdate.length > 0) {
-        console.log("Found table to update:", tableToUpdate[0].id);
+      
         const tableUpdateResult = await db.update(table)
           .set({ available: true, updatedAt: new Date() })
           .where(eq(table.id, tableToUpdate[0].id));
@@ -145,6 +145,45 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// export async function GET(request: NextRequest) {
+//   try {
+//     const session = await auth.api.getSession({
+//       headers: await headers(),
+//     });
+
+//     if (!session) {
+//       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+//     }
+
+//     const { searchParams } = new URL(request.url);
+//     const tenantId = session.user.tenant_id;
+//     const status = searchParams.get("status");
+//     const payment_status = searchParams.get("payment_status");
+//     const tenant_id = searchParams.get("tenant_id");
+
+//     const whereConditions = [];
+
+//     if (status) whereConditions.push(eq(invoice.paymentStatus, status as "pending" | "paid" | "failed"));
+//     if (payment_status) whereConditions.push(eq(invoice.paymentStatus, payment_status as "pending" | "paid" | "failed"));
+//     if (tenant_id) whereConditions.push(eq(invoice.tenantId, tenant_id));
+//     else if (tenantId && typeof tenantId === 'string') whereConditions.push(eq(invoice.tenantId, tenantId));
+
+//     const invoices = await db.select()
+//       .from(invoice)
+//       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+//       .orderBy(invoice.createdAt);
+
+//     return NextResponse.json({ invoices }, { status: 200 });
+
+//   } catch (error) {
+//     console.error("Error fetching invoices:", error);
+//     return NextResponse.json(
+//       { error: "Failed to fetch invoices" },
+//       { status: 500 }
+//     );
+//   }
+// }
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth.api.getSession({
@@ -160,31 +199,49 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const payment_status = searchParams.get("payment_status");
     const tenant_id = searchParams.get("tenant_id");
+   
+    const page = parseInt(searchParams.get("page") || "0");   
+    const limit = parseInt(searchParams.get("limit") || "10");
 
     const whereConditions = [];
 
     if (status) whereConditions.push(eq(invoice.paymentStatus, status as "pending" | "paid" | "failed"));
     if (payment_status) whereConditions.push(eq(invoice.paymentStatus, payment_status as "pending" | "paid" | "failed"));
     if (tenant_id) whereConditions.push(eq(invoice.tenantId, tenant_id));
-    else if (tenantId && typeof tenantId === 'string') whereConditions.push(eq(invoice.tenantId, tenantId));
+    else if (tenantId && typeof tenantId === "string") whereConditions.push(eq(invoice.tenantId, tenantId));
 
-    const invoices = await db.select()
+    // ✅ Get total count
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)`.mapWith(Number) })
+      .from(invoice)
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+
+    const total = totalResult[0]?.count || 0;
+
+    // ✅ Build base query without pagination
+    const baseQuery = db
+      .select()
       .from(invoice)
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(invoice.createdAt);
+      .orderBy(desc(invoice.createdAt));
 
-    return NextResponse.json({ invoices }, { status: 200 });
+    // ✅ Apply pagination and execute
+    const invoices = limit > 0 
+      ? await baseQuery.limit(limit).offset(page * limit)
+      : await baseQuery;
 
+    return NextResponse.json(
+      {
+        invoices,
+        pagination: { page, limit, total },
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error fetching invoices:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch invoices" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch invoices" }, { status: 500 });
   }
 }
-
-
 
 export async function PUT(request: NextRequest) {
   try {
@@ -197,14 +254,15 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { invoice_id, customer_name, table_number, payment_status, payment_method, notes } = body;
+    const { invoice_id, customer_name, customer_phone, table_number, payment_status, payment_method, notes } = body;
 
     if (!invoice_id) {
       return NextResponse.json({ error: "Invoice ID is required" }, { status: 400 });
     }
 
-    const updateData: { updatedAt: Date; customerName?: string; tableNumber?: string; paymentStatus?: "pending" | "paid" | "failed" | "refunded"; paymentMethod?: "cash" | "card" | "upi" | "Bank Transfer"; notes?: string | null } = { updatedAt: new Date() };
+    const updateData: { updatedAt: Date; customerName?: string; customerPhone?: string; tableNumber?: string; paymentStatus?: "pending" | "paid" | "failed" | "refunded"; paymentMethod?: "cash" | "card" | "upi" | "Bank Transfer"; notes?: string | null } = { updatedAt: new Date() };
     if (customer_name) updateData.customerName = customer_name;
+    if(customer_phone) updateData.customerPhone = customer_phone;
     if (table_number) updateData.tableNumber = table_number;
     if (payment_status) updateData.paymentStatus = payment_status as "pending" | "paid" | "failed" | "refunded";
     if (payment_method) updateData.paymentMethod = payment_method as "cash" | "card" | "upi" | "Bank Transfer";

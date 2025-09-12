@@ -6,20 +6,6 @@ import type { auth } from "@/lib/auth";
 type Session = typeof auth.$Infer.Session;
 
 export async function middleware(request: NextRequest) {
-  // Restrict /users route: only allow if tenantId is present in query or cookie
-  if (request.nextUrl.pathname.startsWith("/users")) {
-    const url = request.nextUrl;
-    const tenantId = url.searchParams.get("tenantId") || request.cookies.get("tenantId")?.value;
-    if (!tenantId) {
-      return NextResponse.redirect(new URL("/scan-required", request.url));
-    }
-    // If tenantId is present in query, set it as a cookie for subsequent requests
-    if (url.searchParams.get("tenantId")) {
-      const response = NextResponse.next();
-      response.cookies.set("tenantId", tenantId, { path: "/", httpOnly: false });
-      return response;
-    }
-  }
   const { pathname } = request.nextUrl;
 
   try {
@@ -32,8 +18,23 @@ export async function middleware(request: NextRequest) {
     });
 
     // Handle unauthenticated users
-    if (!session?.user) {
+    if (!session?.user  ) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
+    }
+
+    // Restrict /users route: only allow if tenantId is present in query or cookie (after authentication)
+    if (request.nextUrl.pathname.startsWith("/users")) {
+      const url = request.nextUrl;
+      const tenantId = url.searchParams.get("tenantId") || request.cookies.get("tenantId")?.value;
+      if (!tenantId) {
+        return NextResponse.redirect(new URL("/scan-required", request.url));
+      }
+      // If tenantId is present in query, set it as a cookie for subsequent requests
+      if (url.searchParams.get("tenantId")) {
+        const response = NextResponse.next();
+        response.cookies.set("tenantId", tenantId, { path: "/", httpOnly: false });
+        return response;
+      }
     }
 
     const role = session.user.role;

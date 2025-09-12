@@ -43,54 +43,17 @@ import { betterFetch } from "@better-fetch/fetch";
 import { NotesPopover } from "@/components/table/NotesPopover";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import Image from "next/image";
+import { OrderType, QrCodeType, TableType } from "@/types";
 
-
-type Table = {
-  id: string;
-  number: string;
-  name: string;
-  capacity: number;
-  notes?: string;
-  available: boolean;
-  maintenance: boolean;
-  status?: "available" | "occupied" | "unavailable" | string;
-};
-
-type Ordertype = {
-  id: string;
-  tableId: string;
-  tableNumber: string;
-  tenantId: string;
-  managerId: string;
-  customerName: string;
-  items: string[];
-  quantity: string[];
-  status: "pending" | "completed" | "cancelled" | string;
-  totalPrice: string;
-  createdAt: string;
-  updatedAt: string;
-  managerName: string;
-  orderNumber: string;
-  itemNames: string[];
-};
-
-type QrCode = {
-  id: string;
-  tenantId: string;
-  url: string;
-  qrPath: string | null;
-  createdAt: string; // coming as ISO string from API
-  updatedAt: string;
-};
 
 export default function Tables() {
   const [tenantId, setTenantId] = useState<string | null>(null);
-  const [tableItem, setTableItem] = useState<Table[]>([])
+  const [tableItem, setTableItem] = useState<TableType[]>([])
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string } | null>(null);
-  const [editingOrder, setEditingOrder] = useState<Ordertype | null>(null);
-  const [qrCode, setQrCode] = useState<QrCode | null>(null);
+  const [editingOrder, setEditingOrder] = useState<OrderType | null>(null);
+  const [qrCode, setQrCode] = useState<QrCodeType | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -105,7 +68,7 @@ export default function Tables() {
       const res = await fetch("/api/admin/table");
       const data = await res.json();
       setTableItem(
-        (data.tables || []).map((table: Table) => ({
+        (data.tables || []).map((table: TableType) => ({
           ...table,
           status: table.maintenance
             ? "maintenance"
@@ -143,7 +106,7 @@ export default function Tables() {
   });
 
 
-  const handleToggleTableStatus = async (table: Table, field: "available" | "maintenance") => {
+  const handleToggleTableStatus = async (table: TableType, field: "available" | "maintenance") => {
 
     try {
       const res = await fetch("/api/admin/table", {
@@ -212,7 +175,7 @@ export default function Tables() {
 
       try {
         const res = await fetch(`/api/qr?tenantId=${tenantId}`);
-        const data: { success: boolean; qr?: QrCode; error?: string } = await res.json();
+        const data: { success: boolean; qr?: QrCodeType; error?: string } = await res.json();
         if (res.ok && data.success && data.qr) {
           setQrCode(data.qr);
 
@@ -381,7 +344,7 @@ export default function Tables() {
 
                                 if (res.ok && data.orders && data.orders.length > 0) {
                                   // Find the most recent active order (pending or preparing)
-                                  const activeOrder = data.orders.find((order: Ordertype) =>
+                                  const activeOrder = data.orders.find((order: OrderType) =>
                                     order.status === "pending" || order.status === "preparing"
                                   ) || data.orders[0];
 
@@ -452,6 +415,7 @@ export default function Tables() {
                           style={{ objectFit: "contain" }}
                           className="w-full h-full"
                           priority
+                           fetchPriority="high" 
                         />
                       </div>
                     ) : (
@@ -551,6 +515,8 @@ export default function Tables() {
                 width={300}
                 height={300}
                 className="rounded-lg border"
+                priority
+                 fetchPriority="high" 
               />
             )}
           </div>

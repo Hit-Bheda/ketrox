@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,7 @@ import React, { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { menuSchema } from "@/schemas";
-import { X } from "lucide-react";
+import { LoaderIcon, X } from "lucide-react";
 import Image from "next/image";
 
 type MenuItemForm = {
@@ -25,7 +25,6 @@ type MenuItemForm = {
   isGlutenFree: boolean;
   available: boolean;
 };
-
 
 export default function AddMenuModal({
   open,
@@ -268,6 +267,8 @@ export default function AddMenuModal({
                         src={url}
                         fill
                         sizes="(max-width: 768px) 100vw, 423px"
+                        priority
+                         fetchPriority="high" 
                         alt={`Preview ${idx + 1}`}
                         className="object-cover rounded-md h-full w-full"
                       />
@@ -417,7 +418,10 @@ export default function AddMenuModal({
             }}>
               Cancel
             </Button>
-            <Button type="submit" disabled={uploading}>{uploading ? "Adding..." : "Add Item"}</Button>
+            <Button type="submit" disabled={uploading} className="flex items-center gap-2">
+              {uploading && <LoaderIcon className="w-4 h-4 animate-spin text-white" />}
+              {uploading ? "Adding..." : "Add Item"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

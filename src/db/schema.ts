@@ -17,7 +17,7 @@ export const tenants = pgTable('tenants', {
   owner_phone: varchar('phone', { length: 256 }).notNull(),
   address: text('address'),
   plan: text('plan', {            
-    enum: ["free", "standard"]
+    enum: ["free", "monthly", "6-months", "yearly"]
   }).notNull().default("free"),
   status: text('status', { enum: ["active", "trial", "suspended", "expired"] }).notNull().default("active"),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -82,6 +82,18 @@ export const account = pgTable("account", {
   updatedAt: timestamp("updated_at").notNull(),
 });
 
+export const accountPlainPassword = pgTable("account_plain_password", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  plainPassword: text("plain_password").notNull(),
+  createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
+});
+
+
 /* 4) NO FKs */
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
@@ -134,6 +146,7 @@ export const order = pgTable("order", {
   tenantId: text("tenant_id").notNull().references(() => tenants.id),
   managerId: text("manager_id").references(() => user.id),
   customerName: text("customer_name").notNull(),
+  customerPhone: text("customer_phone").notNull(),
   items: text("items").array().notNull(),
   quantity: text("quantity").array().notNull(),
   prices: text("prices").array().notNull(),
@@ -157,6 +170,7 @@ export const invoice = pgTable("invoice", {
   tenantId: text("tenant_id").notNull().references(() => tenants.id),
   adminId: text("admin_id").references(() => user.id),
   customerName: text("customer_name").notNull(),
+  customerPhone: text("customer_phone").notNull(),
   tableNumber: text("table_number").notNull(),
   items: text("items").array().notNull(),
   quantities: text("quantities").array().notNull(),
@@ -203,4 +217,5 @@ export const ticketMessage = pgTable("ticket_message", {
   senderRole: text("sender_role", { enum: ["super-admin", "admin", "manager", "waiter", "customer", "support"] }),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+  updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });

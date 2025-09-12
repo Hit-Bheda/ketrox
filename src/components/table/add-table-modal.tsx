@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LoaderIcon } from "lucide-react";
 
 interface AddTableDialogProps {
   showAddModal: boolean;
@@ -21,6 +22,7 @@ interface AddTableDialogProps {
     notes: string;
   }>>;
   capacities: string[];
+  isSubmitting: boolean;
   handleAddTable: () => void;
   errors?: {
     tableNumber?: string;
@@ -37,6 +39,7 @@ export default function AddTableDialog({
   tableForm,
   setTableForm,
   capacities,
+  isSubmitting,
   handleAddTable,
   clearForm,
   errors,
@@ -136,9 +139,11 @@ export default function AddTableDialog({
           </Button>
           <Button
             onClick={handleAddTable}
+            disabled={isSubmitting}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            Add Table
+            {isSubmitting && <LoaderIcon className="w-4 h-4 animate-spin text-gray-100" />}
+            {isSubmitting ? "Adding..." : "Add Table"}
           </Button>
         </DialogFooter>
       </DialogContent>

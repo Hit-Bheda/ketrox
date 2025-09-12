@@ -9,25 +9,9 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import Image from "next/image";
-import { X } from "lucide-react";
+import { LoaderIcon, X } from "lucide-react";
+import { MenuItem } from "@/types";
 
-type DietaryOption = "vegetarian" | "vegan" | "glutenFree";
-
-
-type MenuItemForm = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  image?: string[];
-  dietary: DietaryOption[];
-  price: string | "";
-  preparationTime: string | "";
-  isVegetarian: boolean;
-  isVegan: boolean;
-  isGlutenFree: boolean;
-  available: boolean;
-};
 
 export default function EditMenuModal({
   open,
@@ -38,8 +22,8 @@ export default function EditMenuModal({
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  itemForm: MenuItemForm;
-  setItemForm: React.Dispatch<React.SetStateAction<MenuItemForm>>;
+  itemForm: MenuItem;
+  setItemForm: React.Dispatch<React.SetStateAction<MenuItem>>;
   menuCategories: { id: string; name: string }[];
   onSave: () => void;
 }) {
@@ -156,50 +140,7 @@ export default function EditMenuModal({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {/* <div>
-              <Label htmlFor="item-image" className="mb-2">Item Images</Label>
-              <Input
-                id="item-image"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => {
-                  const selectedFiles = Array.from(e.target.files ?? []);
-                  setFiles(selectedFiles);
-                  // Show previews for new files, keep old ones if not replaced
-                  if (selectedFiles.length === 0) {
-                    setPreviewUrls(itemForm.image || []);
-                    return;
-                  }
-                  previewUrls.forEach((url) => {
-                    if (url.startsWith("blob:")) URL.revokeObjectURL(url);
-                  });
-                  setPreviewUrls([
-                    ...((itemForm.image || []).filter(url => url.startsWith("http"))),
-                    ...selectedFiles.map((file) => URL.createObjectURL(file))
-                  ]);
-                }}
-              />
-
-              {uploadError && <div className="text-destructive text-xs mt-2">{uploadError}</div>}
-
-              {previewUrls.length > 0 && (
-                <div className="flex gap-2 mt-2">
-                  {previewUrls.map((url, idx) => (
-                    <div key={idx} className="relative h-20 w-20">
-                      <Image
-                        src={url}
-                        alt={`Preview ${idx + 1}`}
-                        className="object-cover rounded-md h-full w-full"
-                        width={80}
-                        height={80}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div> */}
-
+            
             <div className="mb-2">
               <label htmlFor="item-image" className="mb-2 block text-sm font-medium">
                 Item Image
@@ -244,6 +185,8 @@ export default function EditMenuModal({
                         className="object-cover rounded-md h-full w-full"
                         width={80}
                         height={80}
+                        priority
+                         fetchPriority="high" 
                       />
                       <button
                         type="button"
@@ -370,7 +313,10 @@ export default function EditMenuModal({
             <Button variant="outline" type="button" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={uploading}>{uploading ? "Saving..." : "Save Changes"}</Button>
+            <Button type="submit" disabled={uploading}>
+              {uploading && <LoaderIcon className="w-4 h-4 animate-spin text-white" />}
+              {uploading ? "Saving..." : "Save Changes"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

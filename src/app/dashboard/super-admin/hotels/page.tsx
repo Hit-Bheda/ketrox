@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState,Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -19,20 +19,20 @@ import { toggleEditModal } from "@/store/slices/hotel-store"; // Adjust path to 
 import { useSearchParams } from "next/navigation";
 
 // Move these to a constants file or keep here if specific to this page
-export const statusColorStyles: { [key: string]: string } = {
+ const statusColorStyles: { [key: string]: string } = {
   active: "bg-green-500/10 text-green-700 border-green-500/20 dark:text-green-300",
   trial: "bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-300",
   suspended: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20 dark:text-yellow-400",
   expired: "bg-red-500/10 text-red-700 border-red-500/20 dark:text-red-400",
 };
 
-export const planColorStyles: { [key: string]: string } = {
+ const planColorStyles: { [key: string]: string } = {
   Pro: "border-purple-500/20 text-purple-700 bg-purple-500/10 dark:text-purple-300",
   Standard: "border-blue-500/20 text-blue-700 bg-blue-500/10 dark:text-blue-300",
   Free: "border-border text-muted-foreground bg-muted/50",
 };
 
-export default function HotelsPage() {
+function HotelsContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [planFilter, setPlanFilter] = useState("all");
@@ -62,7 +62,7 @@ export default function HotelsPage() {
         throw new Error("Failed to fetch hotels");
       }
       const data = await res.json();
-      console.log("Fetched hotels data:", data);
+      
       return Array.isArray(data.hotels) ? data.hotels : [];
     } catch (error) {
       console.error("Error fetching hotels:", error);
@@ -95,7 +95,7 @@ export default function HotelsPage() {
   };
 
   const handleUpdateHotel = async (formData: z.infer<typeof hotelUpdateSchema>) => {
-    console.log("Updating hotel:", formData);
+  
     try {
       const res = await fetch("/api/super-admin/hotels", {
         method: "PUT",
@@ -196,5 +196,13 @@ export default function HotelsPage() {
       // Pass the hotel data to edit
       />
     </div>
+  );
+}
+
+export default function HotelsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HotelsContent />
+    </Suspense>
   );
 }

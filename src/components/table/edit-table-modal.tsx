@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LoaderIcon } from "lucide-react";
 
 
 interface EditTableDialogProps {
@@ -128,6 +129,7 @@ export default function EditTableDialog({
             className="bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={loading}
           >
+            {loading && <LoaderIcon className="w-4 h-4 animate-spin text-gray-100" />}
             {loading ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>

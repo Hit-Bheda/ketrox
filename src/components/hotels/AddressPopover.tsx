@@ -29,7 +29,7 @@ export function AddressPopover({ address }: { address: string }) {
       <PopoverContent
         side="top"
         align="start"
-        className="max-w-md text-sm bg-white text-gray-700 shadow-md rounded-md p-2 break-words"
+        className="max-w-md text-sm bg-[#f59e0a] text-gray-900 rounded-md p-2 break-words"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >

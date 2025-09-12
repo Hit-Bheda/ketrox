@@ -14,7 +14,8 @@ import {
   User,
   MapPin,
   Calendar,
-  Trash2
+  Trash2,
+  Phone
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,34 +58,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { toast } from "sonner";
+import { OrderType } from "@/types";
 
-type Order = {
-  id: string;
-  tableId: string;
-  tableNumber: string;
-  tenantId: string;
-  managerId: string;
-  customerName: string;
-  items: string[];
-  quantity: string[];
-  status: "pending" | "completed" | "cancelled" | string;
-  totalPrice: string;
-  createdAt: string;
-  updatedAt: string;
-  managerName: string;
-  orderNumber: string;
-  itemNames: string[];
-};
 
 export default function Orders() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [timeFilter, setTimeFilter] = useState("today");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderType | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
-  const [orders, setOrders] = useState<Order[]>([]);
-
+  const [orders, setOrders] = useState<OrderType[]>([]);
+  const [page, setPage] = useState(0);       // current page
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
 
   const now = new Date();
 
@@ -171,7 +158,7 @@ export default function Orders() {
     }
   };
 
-  const viewOrderDetails = (order: Order) => {
+  const viewOrderDetails = (order: OrderType) => {
     setSelectedOrder(order);
     setShowOrderDetails(true);
   };
@@ -188,28 +175,46 @@ export default function Orders() {
         : 0,
   };
 
+  // useEffect(() => {
+  //   const fetchOrders = async () => {
+  //     try {
+  //       const res = await fetch(
+  //         "/api/orders",
+  //         {
+  //           method: "GET",
+  //           headers: { "Content-Type": "application/json" },
+  //           cache: "no-store"
+  //         }
+  //       );
+  //       if (!res.ok) throw new Error("Failed to fetch orders");
+  //       const data = await res.json();
+  //       setOrders(data.orders || []);
+  //     } catch (error) {
+  //       console.error("Error fetching orders:", error);
+  //     }
+  //   };
+  //   fetchOrders();
+  // }, []);
+
+
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await fetch(
-          "/api/orders",
-          {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            cache: "no-store"
-          }
-        );
+        const res = await fetch(`/api/orders?page=${page}&limit=${limit}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Failed to fetch orders");
         const data = await res.json();
         setOrders(data.orders || []);
+        setTotal(data.pagination?.total || 0);
       } catch (error) {
         console.error("Error fetching orders:", error);
       }
     };
     fetchOrders();
-  }, []);
-
-
+  }, [page, limit]);
 
   const deleteOrder = async (orderId: string) => {
     try {
@@ -346,6 +351,19 @@ export default function Orders() {
                   <SelectItem value="lastMonth">Last Month</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* 👇 Add Limit Dropdown Here */}
+              <Select value={limit.toString()} onValueChange={(val) => setLimit(Number(val))}>
+                <SelectTrigger className="w-full sm:w-[100px]">
+                  <SelectValue placeholder="Rows" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Orders Table */}
@@ -380,9 +398,15 @@ export default function Orders() {
                           </Avatar>
                           <div>
                             <p className="font-medium text-sm">{order.customerName}</p>
-                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                              <MapPin className="w-3 h-3" />
-                              <span>{order.tableNumber}</span>
+                            <div className="flex flex-col items-start text-xs text-muted-foreground space-y-1">
+                              <div className="flex items-center space-x-1">
+                                <Phone className="w-3 h-3" />
+                                <span>{order.customerPhone}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <MapPin className="w-3 h-3" />
+                                <span>{order.tableNumber}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -510,6 +534,45 @@ export default function Orders() {
           </CardContent>
         </Card>
 
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} orders
+          </p>
+
+          <div className="flex gap-2 items-center">
+            {/* Prev Button */}
+            <Button
+              variant="outline"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(p - 1, 0))}
+            >
+              Prev
+            </Button>
+
+            {/* Page Numbers */}
+            {Array.from({ length: Math.ceil(total / limit) }, (_, i) => (
+              <Button
+                key={i}
+                variant={page === i ? "default" : "outline"} 
+                onClick={() => setPage(i)}
+              >
+                {i + 1}
+              </Button>
+            ))}
+
+            {/* Next Button */}
+            <Button
+              variant="outline"
+              disabled={(page + 1) * limit >= total}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+
+
         {/* Order Details Modal */}
         <Dialog open={showOrderDetails} onOpenChange={setShowOrderDetails}>
           <DialogContent className="sm:max-w-[700px]">
@@ -534,6 +597,10 @@ export default function Orders() {
                       <div className="flex items-center space-x-2">
                         <User className="w-4 h-4 text-muted-foreground" />
                         <span>{selectedOrder.customerName}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedOrder.customerPhone}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <MapPin className="w-4 h-4 text-muted-foreground" />

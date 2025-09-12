@@ -2,19 +2,14 @@
 // app/layout.tsx or components/layout.tsx
 import { ReactNode, useEffect, useState } from "react";
 import {
-  BarChart3,
   Users,
-  Utensils,
   FileText,
   CreditCard,
-  TrendingUp,
-  MessageSquare,
   Settings,
   LogOut,
   Bell,
   Menu,
   X,
-  ChefHat,
   ClipboardList as OrderIcon,
   CreditCard as PaymentIcon,
   UserCheck,
@@ -23,7 +18,14 @@ import {
   HandMetal,
   BellRing,
   Trash2,
-  User
+  User,
+  Building2,
+  LayoutDashboard,
+  MessageSquareText,
+  ChartNoAxesCombined,
+  ShoppingCart,
+  Utensils,
+  Grid3X3
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,8 +45,9 @@ import { betterFetch } from "@better-fetch/fetch";
 
 import Image from "next/image";
 
+
 interface LayoutProps {
-  children: ReactNode;
+  readonly children: ReactNode;
 }
 
 // Notification types and data
@@ -133,28 +136,28 @@ const mockNotifications: Notification[] = [
 ];
 
 const sidebarItems = [
-  { icon: BarChart3, label: "Dashboard", path: "/dashboard/admin" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard/admin" },
   { icon: Users, label: "Staff", path: "/dashboard/admin/staff" },
-  { icon: Utensils, label: "Tables", path: "/dashboard/admin/tables" },
-  { icon: ChefHat, label: "Menu", path: "/dashboard/admin/menu" },
-  { icon: OrderIcon, label: "Orders", path: "/dashboard/admin/orders", badge: 12 },
+  { icon: Grid3X3, label: "Tables", path: "/dashboard/admin/tables" },
+  { icon: Utensils, label: "Menu", path: "/dashboard/admin/menu" },
+  { icon: ShoppingCart, label: "Orders", path: "/dashboard/admin/orders", badge: 12 },
   { icon: FileText, label: "Invoices", path: "/dashboard/admin/invoices" },
-  { icon: TrendingUp, label: "Reports", path: "/dashboard/admin/reports" },
-  { icon: MessageSquare, label: "Messages", path: "/dashboard/admin/messages", badge: 3 },
+  { icon: ChartNoAxesCombined, label: "Reports", path: "/dashboard/admin/reports" },
+  { icon: MessageSquareText, label: "Messages", path: "/dashboard/admin/messages", badge: 3 },
   { icon: Settings, label: "Settings", path: "/dashboard/admin/settings" },
 ];
-
 const handleLogout = async () => {
   // Implement logout logic here
   console.log("Logging out...");
   await signOut();
-  window.location.href = "/";
+  window.location.href = "/signin";
 };
 
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const [user, setUser] = useState<{ name: string; role: string; image?: string } | null>(null);
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isActivePath = (path: string) => {
     return pathname === path;
@@ -189,7 +192,6 @@ export default function Layout({ children }: LayoutProps) {
     };
     fetchUserData();
 
-    // Listen for profile photo updates
     const handleProfileUpdate = () => {
       fetchUserData();
     };
@@ -219,9 +221,7 @@ export default function Layout({ children }: LayoutProps) {
     // Listen for tenant logo updates
     const handleTenantLogoUpdate = (event: CustomEvent) => {
       const { logoUrl } = event.detail;
-      if (logoUrl) {
-        setTenantLogoUrl(logoUrl);
-      }
+      setTenantLogoUrl(logoUrl || null);
     };
 
     window.addEventListener('tenant-logo-updated', handleTenantLogoUpdate as EventListener);
@@ -277,28 +277,74 @@ export default function Layout({ children }: LayoutProps) {
 
   const notifications = mockNotifications;
   const unreadCount = notifications.filter(n => !n.read).length;
-  const  urgentNotifications = notifications.filter(n => n.priority === 'urgent' && !n.read);
+  const urgentNotifications = notifications.filter(n => n.priority === 'urgent' && !n.read);
   const recentNotifications = notifications.slice(0, 6);
+
+  function getNotificationClasses(notification: Notification): string {
+    if (!notification.read) {
+      switch (notification.priority) {
+        case "urgent":
+          return "border-destructive bg-destructive/5";
+        case "high":
+          return "border-secondary bg-secondary/5";
+        default:
+          return "border-primary bg-primary/5";
+      }
+    }
+    return "border-border";
+  }
+
+  function getNotificationBg(priority: string): string {
+    switch (priority) {
+      case "urgent":
+        return "bg-destructive/10";
+      case "high":
+        return "bg-secondary/10";
+      default:
+        return "bg-primary/10";
+    }
+  }
 
   return (
     <div className="flex h-screen bg-background font-sans">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="hidden lg:flex lg:w-64 bg-sidebar border-r border-sidebar-border flex-col">
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border flex-col
+        transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex
+        ${sidebarOpen ? "translate-x-0 flex" : "-translate-x-full hidden"}
+      `}>
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-sidebar-border">
-            <div className="flex items-center justify-center h-20">
-              {tenantLogoUrl && (
-                <Image
-                  src={tenantLogoUrl}
-                  alt="Hotel Logo"
-                  width={200}
-                  height={64}
-                  unoptimized
-                  priority
-                  className="h-full w-auto object-contain"
-                />
-              )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center justify-center h-20 flex-1">
+                {tenantLogoUrl ? (
+                  <Image
+                    src={tenantLogoUrl}
+                    alt="Hotel Logo"
+                    width={200}
+                    height={64}
+                    unoptimized
+                    priority
+                    className="h-full w-auto object-contain"
+                  />
+                ) : (
+                  <Building2 className="w-16 h-16 text-muted-foreground" />
+                )}
+              </div>
+              <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
 
@@ -326,16 +372,17 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {sidebarItems.map((item, index) => {
+            {sidebarItems.map((item) => {
               const isActive = isActivePath(item.path);
               return (
                 <Link
-                  key={index}
+                  key={item.path}
                   href={item.path}
                   className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all duration-200 ${isActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
+                  onClick={() => setSidebarOpen(false)}
                 >
                   <div className="flex items-center space-x-3">
                     <item.icon className="w-5 h-5" />
@@ -373,7 +420,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="lg:hidden">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
                   <Menu className="w-4 h-4" />
                 </Button>
               </div>
@@ -450,21 +497,13 @@ export default function Layout({ children }: LayoutProps) {
                           return (
                             <div
                               key={notification.id}
-                              className={`p-3 hover:bg-accent rounded-md cursor-pointer transition-all duration-200 border-l-2 ${!notification.read
-                                ? notification.priority === 'urgent'
-                                  ? 'border-destructive bg-destructive/5'
-                                  : notification.priority === 'high'
-                                    ? 'border-secondary bg-secondary/5'
-                                    : 'border-primary bg-primary/5'
-                                : 'border-border'
-                                }`}
+                              className={`p-3 hover:bg-accent rounded-md cursor-pointer transition-all duration-200 border-l-2 ${getNotificationClasses(notification)}`}
                             >
                               <div className="flex items-start space-x-3">
-                                <div className={`p-1 rounded-full ${notification.priority === 'urgent' ? 'bg-destructive/10' :
-                                  notification.priority === 'high' ? 'bg-secondary/10' :
-                                    'bg-primary/10'
-                                  }`}>
-                                  <IconComponent className={`w-3 h-3 ${getNotificationColor(notification.priority)}`} />
+                                <div className={`p-1 rounded-full ${getNotificationBg(notification.priority)}`}>
+                                  <IconComponent
+                                    className={`w-3 h-3 ${getNotificationColor(notification.priority)}`}
+                                  />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
@@ -522,7 +561,7 @@ export default function Layout({ children }: LayoutProps) {
                     className="hover:bg-transparent hover:text-inherit"
                   >
                     <Avatar className="h-8 w-8">
-                     
+
                       <AvatarFallback className="bg-muted text-muted-foreground">
                         <User className="w-4 h-4" />
                       </AvatarFallback>

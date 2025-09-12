@@ -1,234 +1,18 @@
 "use client";
-// import { useState } from "react";
-// import { useForm } from "react-hook-form";
-// import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-// import { signinSchema } from "@/schemas";
-// import { signIn } from "@/lib/auth-client";
-// import { toast } from "sonner";
-
-// import { Eye, EyeOff, Lock, Mail, LoaderIcon } from "lucide-react";
-// import { Button } from "@/components/ui/button";
-// import {
-//     Card,
-//     CardContent,
-//     CardDescription,
-//     CardFooter,
-//     CardHeader,
-//     CardTitle,
-// } from "@/components/ui/card";
-// import { Input } from "@/components/ui/input";
-// import { Label } from "@/components/ui/label";
-// import { cn } from "@/lib/utils";
-
-// export default function LoginPage() {
-//     const [showPassword, setShowPassword] = useState(false);
-//     const [loading, setLoading] = useState(false);
-
-//     const form = useForm<z.infer<typeof signinSchema>>({
-//         resolver: zodResolver(signinSchema),
-//         defaultValues: {
-//             email: "",
-//             password: "",
-//         },
-//     });
-
-//     const togglePasswordVisibility = () => {
-//         setShowPassword((prev) => !prev);
-//     };
-
-//     const onSubmit = async (data: z.infer<typeof signinSchema>) => {
-//         try {
-//             setLoading(true);
-
-//             const { email, password } = data;
-
-//             const { error } = await signIn.email({
-//                 email,
-//                 password,
-//                 callbackURL: "/dashboard",
-//                 rememberMe: false,
-//             });
-
-//             if (error) {
-//                 toast.error(error.message || "Login failed");
-//                 return;
-//             }
-
-//             toast.success("Login successful");
-//             window.location.href = "/dashboard";
-//         } catch (err) {
-//             if (err instanceof Error) {
-//                 toast.error(err.message || "Something went wrong");
-//             } else {
-//                 toast.error("Something went wrong");
-//             }
-//         } finally {
-//             setLoading(false);
-//         }
-//     };
-
-//     return (
-//         <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
-
-
-//             {/* Background gradient overlay */}
-//             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/10" />
-
-//             <Card className="w-full max-w-md relative z-10 animate-fade-in shadow-lg border-border/50 backdrop-blur-sm">
-//                 <CardHeader className="space-y-1 text-center">
-//                     <div className="flex justify-center mb-4">
-//                         <div className="p-3 rounded-full bg-primary/10 ring-8 ring-primary/5">
-//                             <Lock className="h-6 w-6 text-primary" />
-//                         </div>
-//                     </div>
-//                     <CardTitle className="text-2xl font-semibold text-foreground">
-//                         Welcome back
-//                     </CardTitle>
-//                     <CardDescription className="text-muted-foreground">
-//                         Sign in to your account to continue
-//                     </CardDescription>
-//                 </CardHeader>
-
-//                 <form onSubmit={form.handleSubmit(onSubmit)}>
-//                     <CardContent className="space-y-4">
-//                         {/* Email */}
-//                         <div className="space-y-2">
-//                             <Label
-//                                 htmlFor="email"
-//                                 className="text-sm font-medium text-foreground"
-//                             >
-//                                 Email address
-//                             </Label>
-//                             <div className="relative">
-//                                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-//                                 <Input
-//                                     id="email"
-//                                     type="email"
-//                                     placeholder="Enter your email"
-//                                     disabled={loading}
-//                                     {...form.register("email")}
-//                                     className={cn(
-//                                         "pl-10 transition-all duration-200",
-//                                         "focus:ring-2 focus:ring-ring focus:border-ring",
-//                                         "hover:border-ring/50"
-//                                     )}
-//                                 />
-//                             </div>
-//                             {form.formState.errors.email && (
-//                                 <p className="text-sm text-destructive animate-slide-up">
-//                                     {form.formState.errors.email.message}
-//                                 </p>
-//                             )}
-//                         </div>
-
-//                         {/* Password */}
-//                         <div className="space-y-2">
-//                             <Label
-//                                 htmlFor="password"
-//                                 className="text-sm font-medium text-foreground"
-//                             >
-//                                 Password
-//                             </Label>
-//                             <div className="relative">
-//                                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-//                                 <Input
-//                                     id="password"
-//                                     type={showPassword ? "text" : "password"}
-//                                     placeholder="Enter your password"
-//                                     disabled={loading}
-//                                     {...form.register("password")}
-//                                     className={cn(
-//                                         "pl-10 pr-10 transition-all duration-200",
-//                                         "focus:ring-2 focus:ring-ring focus:border-ring",
-//                                         "hover:border-ring/50"
-//                                     )}
-//                                 />
-//                                 <Button
-//                                     type="button"
-//                                     variant="ghost"
-//                                     size="sm"
-//                                     className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
-//                                     onClick={togglePasswordVisibility}
-//                                     disabled={loading}
-//                                 >
-//                                     {showPassword ? (
-//                                         <EyeOff className="h-4 w-4 text-muted-foreground" />
-//                                     ) : (
-//                                         <Eye className="h-4 w-4 text-muted-foreground" />
-//                                     )}
-//                                 </Button>
-//                             </div>
-//                             {form.formState.errors.password && (
-//                                 <p className="text-sm text-destructive animate-slide-up">
-//                                     {form.formState.errors.password.message}
-//                                 </p>
-//                             )}
-//                         </div>
-
-//                         {/* Remember me + Forgot password */}
-//                         <div className="flex items-center justify-between text-sm">
-//                             <div className="flex items-center space-x-2">
-//                                 <input
-//                                     type="checkbox"
-//                                     id="remember"
-//                                     className="h-4 w-4 rounded border border-input bg-background text-primary focus:ring-2 focus:ring-ring"
-//                                 />
-//                                 <Label
-//                                     htmlFor="remember"
-//                                     className="text-muted-foreground cursor-pointer"
-//                                 >
-//                                     Remember me
-//                                 </Label>
-//                             </div>
-//                             <Button
-//                                 type="button"
-//                                 variant="link"
-//                                 size="sm"
-//                                 className="p-0 h-auto font-normal text-primary hover:text-primary/80"
-//                                 disabled={loading}
-//                             >
-//                                 Forgot password?
-//                             </Button>
-//                         </div>
-//                     </CardContent>
-
-//                     <CardFooter className="flex flex-col space-y-4">
-//                         <Button
-//                             type="submit"
-//                             className="w-full h-11 font-medium transition-all duration-200 hover:shadow-md disabled:opacity-50"
-//                             disabled={loading}
-//                         >
-//                             {loading ? (
-//                                 <div className="flex items-center justify-center space-x-2">
-//                                     <LoaderIcon className="w-4 h-4 animate-spin" /> 
-//                                     <span>Signing in...</span>
-//                                 </div>
-//                             ) : (
-//                                 "Sign in"
-//                             )}
-//                         </Button>
-//                     </CardFooter>
-//                 </form>
-//             </Card>
-//         </div>
-//     );
-// }
-
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, ChefHat, Mail, Lock,LoaderIcon } from "lucide-react";
+import { Eye, EyeOff, ChefHat, Mail, Lock, LoaderIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 import { cn } from "@/lib/utils";
 import { signinSchema } from "@/schemas";
 import { signIn } from "@/lib/auth-client";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
@@ -253,6 +37,8 @@ export default function LoginPage() {
                 callbackURL: "/dashboard",
 
             });
+
+            console.log("error in signin", error);
 
             if (error) {
                 toast.error(error.message || "Login failed");
@@ -280,10 +66,10 @@ export default function LoginPage() {
             <div
                 className="absolute inset-0 z-0"
                 style={{
-                    backgroundImage: `url('https://images.pexels.com/photos/1449773/pexels-photo-1449773.jpeg')`,
+                    backgroundImage: `url('/images/auth-bg.webp')`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat'
+                    backgroundRepeat: 'no-repeat',
                 }}
             >
                 <div className="absolute inset-0 bg-black/60 dark:bg-black/60" />
@@ -328,6 +114,7 @@ export default function LoginPage() {
                                             <Input
                                                 id="email"
                                                 type="email"
+
                                                 placeholder="Enter your email"
                                                 {...register("email")}
                                                 className={cn(
@@ -404,15 +191,17 @@ export default function LoginPage() {
                                                 Remember me
                                             </Label>
                                         </div>
-                                        <Button
-                                            type="button"
-                                            variant="link"
-                                            size="sm"
-                                            className="p-0 h-auto text-sm font-semibold text-primary hover:text-primary/80 hover:underline"
-                                            disabled={isSubmitting}
-                                        >
-                                            Forgot password?
-                                        </Button>
+                                        <Link href="/forgot-password">
+                                            <Button
+                                                type="button"
+                                                variant="link"
+                                                size="sm"
+                                                className="p-0 h-auto text-sm font-semibold text-primary hover:text-primary/80 hover:underline"
+                                                disabled={isSubmitting}
+                                            >
+                                                Forgot password?
+                                            </Button>
+                                        </Link>
                                     </div>
                                 </CardContent>
 
@@ -424,7 +213,7 @@ export default function LoginPage() {
                                     >
                                         {isSubmitting ? (
                                             <div className="flex items-center space-x-3">
-                                                 <LoaderIcon className="w-4 h-4 animate-spin text-gray-100" /> 
+                                                <LoaderIcon className="w-4 h-4 animate-spin text-gray-100" />
                                                 <span className="text-gray-300">Signing in...</span>
                                             </div>
                                         ) : (
@@ -437,8 +226,6 @@ export default function LoginPage() {
                                 </CardFooter>
                             </form>
                         </Card>
-
-
                     </div>
                 </div>
             </div>

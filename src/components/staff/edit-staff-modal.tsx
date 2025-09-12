@@ -19,6 +19,7 @@ import {
   SelectContent,
   SelectItem
 } from "@/components/ui/select";
+import { LoaderIcon } from "lucide-react";
 
 interface StaffFormData {
   name: string;
@@ -143,7 +144,8 @@ export default function UpdateStaffModal({
               </Button>
             </DialogClose>
 
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
+              {isSubmitting && <LoaderIcon className="w-4 h-4 animate-spin text-gray-100" />}
               {isSubmitting ? "Updating..." : "Update Staff Member"}
             </Button>
           </DialogFooter>

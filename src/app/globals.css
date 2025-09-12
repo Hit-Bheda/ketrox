@@ -10,9 +10,9 @@
   --card-foreground: oklch(0.2103 0.0059 285.8852);
   --popover: oklch(1.0000 0 0);
   --popover-foreground: oklch(0.2103 0.0059 285.8852);
-  --primary: oklch(76.856% 0.16472 70.113);
+  --primary: oklch(77.034% 0.16458 70.657);
   --primary-foreground: oklch(0.2103 0.0059 285.8852);
-  --secondary: oklch(0.5054 0.1905 27.5181);
+  --secondary: oklch(50.54% 0.19049 27.505);
   --secondary-foreground: oklch(1.0000 0 0);
   --muted: oklch(0.9674 0.0013 286.3752);
   --muted-foreground: oklch(0.5517 0.0138 285.9385);
@@ -164,6 +164,5 @@ body {
 }   
 
 [data-slot="select-trigger"] svg {
-color: #fff !important;
- 
+color: #fff !important; 
 }

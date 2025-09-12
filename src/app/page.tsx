@@ -66,6 +66,7 @@ export default function Home() {
           height={600}
           className="rounded-lg shadow-lg"
           priority
+           fetchPriority="high" 
         />
       </div>
     </div>

@@ -9,7 +9,6 @@ import {
   DollarSign,
   ChefHat,
   CheckCircle,
-
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,27 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MenuImageSlider } from "@/components/menu/MenuImageSlider";
-
-
 import { DescriptionPopover } from "@/components/menu/DescriptionPopover";
-
-
-type DietaryOption = "vegetarian" | "vegan" | "glutenFree";
-
-type MenuItem = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  price: string | "";
-  preparationTime: string | "";
-  dietary: DietaryOption[];
-  isVegetarian: boolean;
-  isVegan: boolean;
-  isGlutenFree: boolean;
-  available: boolean;
-  image?: string[];
-};
+import { ApiMenuItem, DietaryOption, MenuItem } from "@/types";
 
 
 export default function Menu() {
@@ -64,12 +44,12 @@ export default function Menu() {
     return matchesSearch && matchesCategory && matchesAvailability;
   });
 
-
   const badgeColors: Record<DietaryOption, string> = {
     vegetarian: "bg-emerald-700 text-white",
     vegan: "bg-indigo-700 text-white",
     glutenFree: "bg-amber-700 text-white",
   };
+
   const getDietaryBadges = (item: MenuItem) => {
     if (!item.dietary || !Array.isArray(item.dietary)) return null;
 
@@ -79,23 +59,6 @@ export default function Menu() {
       </Badge>
 
     ));
-  };
-
-  type ApiMenuItem = {
-    id: string;
-    item_name?: string;
-    name?: string;
-    category: string;
-    description: string;
-    price:
-    | "";
-    preparationTime: number | "";
-    item_logo?: string;
-    image?: string[];
-    prepTime?: number | string;
-    dietaty?: DietaryOption[];
-    dietary?: DietaryOption[];
-    isAvailable?: boolean;
   };
 
   const featchhMenuItems = async () => {
@@ -129,9 +92,7 @@ export default function Menu() {
 
   useEffect(() => {
     featchhMenuItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
 
   const uniqueCategories = Array.from(
     new Set(menuItems.map(item => item.category).filter(Boolean))
@@ -144,12 +105,10 @@ export default function Menu() {
     available: menuItems.filter(item => item.category === category && item.available).length,
   }));
 
- 
   const totalStats = {
     totalItems: menuItems.length,
     availableItems: menuItems.filter(item => item.available).length,
     avgPrice: menuItems.length > 0 ? menuItems.reduce((sum, item) => sum + Number(item.price), 0) / menuItems.length : 0,
-    topRated: menuItems.length > 0 ? menuItems[0] : { popularity: 0, name: "" }
   };
 
   return (
@@ -163,7 +122,7 @@ export default function Menu() {
               <ChefHat className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalStats.totalItems}</div>
+              <div className="text-2xl font-bold text-orange-500">{totalStats.totalItems}</div>
               <div className="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
                 <CheckCircle className="w-3 h-3 text-chart-3" />
                 <span>{totalStats.availableItems} available</span>
@@ -186,31 +145,33 @@ export default function Menu() {
 
           <Card className="hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Top Rated</CardTitle>
-              <Star className="h-4 w-4 text-chart-4" />
+              <CardTitle className="text-sm font-medium">Categories</CardTitle>
+              <Filter className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-
+              <div className="text-2xl font-bold text-indigo-500">{uniqueCategories.length}</div>
               <div className="text-xs text-muted-foreground mt-1">
-                {totalStats.topRated.name}
+                Menu categories
               </div>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Categories</CardTitle>
-              <Filter className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Most Expensive Item</CardTitle>
+              <Star className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{uniqueCategories.length}</div>
+              <div className="text-2xl font-bold text-yellow-500">
+                ${menuItems.length > 0 ? Math.max(...menuItems.map(item => Number(item.price))).toFixed(2) : '0.00'}
+              </div>
               <div className="text-xs text-muted-foreground mt-1">
-                Menu categories
+                Highest priced menu item
               </div>
             </CardContent>
           </Card>
         </div>
-
+        
         {/* Category Overview */}
         <Card>
           <CardHeader>
@@ -301,7 +262,7 @@ export default function Menu() {
                             <h3 className="font-semibold text-base">{item.name}</h3>
                             <p className="text-xl font-bold text-primary">${item.price}</p>
 
-                        <DescriptionPopover description={item.description} />
+                            <DescriptionPopover description={item.description} />
 
                             <div className="flex flex-wrap gap-1 mt-2">
                               {getDietaryBadges(item)}

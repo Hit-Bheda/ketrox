@@ -4,15 +4,15 @@ import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
-  Hotel,
-  CreditCard,
-  FileText,
-  MessageSquare,
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  LayoutDashboard,
+  MessageSquareText,
+  ChartNoAxesCombined,
+  Crown,
+  Building
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -32,12 +32,12 @@ interface LayoutProps {
 }
 
 const sidebarItems = [
-  { icon: BarChart3, label: "Dashboard", path: "/dashboard/super-admin" },
-  { icon: Hotel, label: "Hotels", path: "/dashboard/super-admin/hotels" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard/super-admin" },
+  { icon: Building, label: "Hotels", path: "/dashboard/super-admin/hotels" },
   // { icon: Users, label: "Users", path: "/dashboard/super-admin/users" },
-  { icon: CreditCard, label: "Plans", path: "/dashboard/super-admin/plans" },
-  { icon: FileText, label: "Reports", path: "/dashboard/super-admin/reports" },
-  { icon: MessageSquare, label: "Messages", path: "/dashboard/super-admin/messages", badge: 3 },
+  { icon: Crown, label: "Plans", path: "/dashboard/super-admin/plans" },
+  { icon: ChartNoAxesCombined, label: "Reports", path: "/dashboard/super-admin/reports" },
+  { icon: MessageSquareText, label: "Messages", path: "/dashboard/super-admin/messages", badge: 3 },
   { icon: Settings, label: "Settings", path: "/dashboard/super-admin/settings" },
 ];
 
@@ -48,8 +48,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
 
   const isActivePath = (path: string) => {
     if (pathname === path) {
-      console.log("Path", path, "pathname", pathname)
-
+      
       return true;
     }
     // return pathname.startsWith(path + '/');
@@ -64,7 +63,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
     // Implement logout logic here
     console.log("Logging out...");
     await signOut();
-    window.location.href = "/";
+    window.location.href = "/signin";
   };
 
   useEffect(() => {
@@ -91,13 +90,22 @@ export default function DashboardLayout({ children }: LayoutProps) {
     fetchUserData();
 
     // Listen for profile photo updates
-    const handleProfileUpdate = () => {
+    const handleProfilePhotoUpdate = () => {
       fetchUserData();
     };
 
-    window.addEventListener('profile-photo-updated', handleProfileUpdate);
+    // Listen for profile data updates (name, email, phone)
+    const handleProfileDataUpdate = (event: CustomEvent) => {
+      const { name } = event.detail;
+      setUser(prev => prev ? { ...prev, name } : null);
+    };
+
+    window.addEventListener('profile-photo-updated', handleProfilePhotoUpdate);
+    window.addEventListener('profile-updated', handleProfileDataUpdate as EventListener);
+    
     return () => {
-      window.removeEventListener('profile-photo-updated', handleProfileUpdate);
+      window.removeEventListener('profile-photo-updated', handleProfilePhotoUpdate);
+      window.removeEventListener('profile-updated', handleProfileDataUpdate as EventListener);
     };
   }, []);
 
@@ -131,6 +139,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
                     height={64}
                     unoptimized={true}
                     priority={true}
+                     fetchPriority="high" 
                     className="h-full w-auto object-contain"
                   />
                 </div>

@@ -27,13 +27,13 @@ import {
 
 export function NavDocuments({
   items,
-}: {
-  items: {
+}: Readonly<{
+  items: ReadonlyArray<{
     name: string
     url: string
     icon: Icon
-  }[]
-}) {
+  }>
+}>) {
   const { isMobile } = useSidebar()
 
   return (

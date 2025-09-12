@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 export const signinSchema = z.object({
-    email: z.email("Invalid email address"),
+    email: z.string().email("Invalid email address"),
     password: z.string().min(6, "Password must be at least 6 characters long")
 });
+
 
 export const signupSchema = z.object({
     fullName: z.string().min(1, "Full name is required"),
@@ -26,7 +27,7 @@ export const hotelSchema = z.object({
         .max(10, "Phone number must be 10 digits")
         .regex(/^[6-9]\d{9}$/, "Enter a valid Indian phone number"),
     address: z.string().min(1, "Hotel is required"),
-    plan: z.enum(["free", "standard"]),
+    plan: z.enum(["free", "monthly", "6-months", "yearly"]),
     status: z.enum(["active", "trial", "suspended", "expired"])
 })
 
@@ -43,7 +44,7 @@ export const hotelUpdateSchema = z.object({
         .max(10, "Phone number must be 10 digits")
         .regex(/^[6-9]\d{9}$/, "Enter a valid Indian phone number"),
     address: z.string().min(1, "Hotel is required"),
-    plan: z.enum(["free", "standard"]),
+    plan: z.enum(["free", "monthly", "6-months", "yearly"]),
     status: z.enum(["active", "trial", "suspended", "expired"])
 })
 
@@ -97,6 +98,7 @@ export const orderSchema = z.object({
     tenant_id: z.uuid("Invalid tenant ID").optional(),
     manager_id: z.string().min(1, "Invalid manager ID").optional(),
     customer_name: z.string().min(1, "Customer name is required"),
+    customer_phone: z.string().min(1, "Customer phone is required"),
     items: z.array(z.string()).min(1, "At least one item is required"),
     quantity: z.array(z.string()).min(1, "At least one quantity is required"),
     prices: z.array(z.string()).min(1, "At least one price is required"),
@@ -113,6 +115,7 @@ export const invoiceSchema = z.object({
     tenant_id: z.uuid("Invalid tenant ID").optional(),
     admin_id: z.string().min(1, "Invalid admin ID").optional(),
     customer_name: z.string().min(1, "Customer name is required"),
+    customer_phone: z.string().min(1, "Customer phone is required"),
     table_number: z.string().min(1, "Table number is required"),
     items: z.array(z.string()).min(1, "At least one item is required"),
     quantities: z.array(z.string()).min(1, "At least one quantity is required"),
@@ -152,15 +155,41 @@ export const ticketCreateSchema = z.object({
     priority: z.enum(["low", "medium", "high"]).default("medium"),
     message: z.string().min(1, "Initial message is required"),
     tenantId: z.string().uuid("Invalid tenant ID").optional(),
+    createdAt: z.date().optional(),
+    updatedAt: z.date().optional(),
 });
 
 export const ticketReplySchema = z.object({
     ticketId: z.string().min(1, "Ticket ID is required"),
     content: z.string().min(1, "Message content is required"),
+
 });
 
 export const ticketUpdateSchema = z.object({
     id: z.string().min(1, "Ticket ID is required"),
     status: z.enum(["open", "in_progress", "resolved"]).optional(),
     priority: z.enum(["low", "medium", "high"]).optional(),
+    createdAt: z.date().optional(),
+    updatedAt: z.date().optional(),
 });
+
+export const forgotPasswordSchema = z.object({
+    email: z
+        .string()
+        .email({ message: "Invalid email address" })
+        .min(1, { message: "Email is required" }),
+});
+
+export const betterAuthResetSchema = z.object({
+    token: z.string().min(1, "Reset token is required"),
+    newPassword: z.string().min(6, "Password must be at least 6 characters long"),
+  });
+
+// Client-side form schema for reset password page
+export const resetPasswordFormSchema = z.object({
+    newPassword: z.string().min(6, "Password must be at least 6 characters long"),
+    confirmPassword: z.string().min(6, "Password must be at least 6 characters long"),
+  }).refine((data) => data.newPassword === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
+  });

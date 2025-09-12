@@ -4,14 +4,20 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 
 export function NotesPopover({ notes }: { notes: string }) {
     const [open, setOpen] = useState(false);
-    const limit = 40;
+    const limit = 150;
 
+    const isLong = notes.length > limit;
+    const shortText = isLong ? notes.slice(0, limit) + "..." : notes;
+  
+    if (!isLong) {
+   
+      return (
+        <p className="text-sm text-muted-foreground">
+          {shortText}
+        </p>
+      );
+    }
 
-    const words = notes.split(" ");
-    const isLong = words.length > limit;
-    const shortText = isLong ? words.slice(0, limit).join(" ") + "..." : notes;
-
-    
 
     return (
         <Popover open={open} onOpenChange={setOpen}>

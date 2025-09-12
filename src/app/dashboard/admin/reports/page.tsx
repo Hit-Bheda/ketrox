@@ -2,7 +2,6 @@
 import { useEffect, useState, useMemo } from "react";
 import {
   Download,
-  TrendingUp,
   DollarSign,
   ShoppingCart,
   Clock,
@@ -43,56 +42,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
-
-const categoryData = [
-  { name: "Main Courses", value: 45, color: "#hsl(var(--chart-1))" },
-  { name: "Appetizers", value: 25, color: "#hsl(var(--chart-2))" },
-  { name: "Desserts", value: 18, color: "#hsl(var(--chart-3))" },
-  { name: "Beverages", value: 8, color: "#hsl(var(--chart-4))" },
-  { name: "Wines", value: 4, color: "#hsl(var(--chart-5))" }
-];
-
-type Order = {
-  id: string;
-  tableId: string;
-  tableNumber: string;
-  tenantId: string;
-  managerId: string;
-  customerName: string;
-  items: string[];
-  quantity: string[];
-  status: "pending" | "completed" | "cancelled" | string;
-  totalPrice: string;
-  createdAt: string;
-  updatedAt: string;
-  managerName: string;
-  orderNumber: string;
-  itemNames: string[];
-};
-
-type Invoice = {
-  id: string;
-  invoiceNumber: string;
-  orderId: string;
-  customerName: string;
-  tableNumber: string;
-  items: string[];
-  quantities: string[];
-  prices: string[];
-  subtotal: string;
-  totalAmount: string;
-  paymentMethod: string;
-  paymentStatus: string;
-  notes?: string;
-  createdAt: string;
-};
-
+import { Invoice, OrderType } from "@/types";
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState("today");
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [activeTab, setActiveTab] = useState("overview");
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderType[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [menuMap, setMenuMap] = useState<{ [id: string]: string }>({});
   const [isExporting, setIsExporting] = useState(false);
@@ -424,7 +380,7 @@ export default function Reports() {
   const tablePerformance = useMemo(() => {
     if (!filteredOrders.length) return [];
     const tableStats: Record<string, { orders: number; revenue: number }> = {};
-    filteredOrders.forEach((order: Order) => {
+    filteredOrders.forEach((order: OrderType) => {
       const table = order.tableNumber || "Unknown";
       if (!tableStats[table]) tableStats[table] = { orders: 0, revenue: 0 };
       tableStats[table].orders += 1;
@@ -549,19 +505,31 @@ export default function Reports() {
     }));
   }, [filteredInvoices]);
 
+  // Dynamic category data based on payment methods
+  const categoryData = useMemo(() => {
+    if (!paymentMethodStats.length) {
+
+      return [
+        { name: "No Data", value: 100, color: "#f59f0a" }
+      ];
+    }
+
+    return paymentMethodStats.map((method) => ({
+      name: method.method,
+      value: method.percentage,
+      color: "#f59f0a"
+    }));
+  }, [paymentMethodStats]);
+
 
   return (
     <>
       <div className="flex-1 space-y-6 p-6 animate-fadeIn">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Reports & Analytics</h1>
-            <p className="text-muted-foreground">Comprehensive insights into your restaurant performance</p>
-          </div>
-          <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-auto ">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -572,45 +540,58 @@ export default function Reports() {
                 <SelectItem value="custom">Custom Range</SelectItem>
               </SelectContent>
             </Select>
+
             {dateRange === "custom" && (
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <input
                   type="date"
                   className="px-3 py-2 border rounded-md"
-                  value={customDateRange?.from ? customDateRange.from.toISOString().split('T')[0] : ''}
+                  value={customDateRange?.from ? customDateRange.from.toISOString().split("T")[0] : ""}
                   onChange={(e) => {
                     const date = e.target.value ? new Date(e.target.value) : undefined;
-                    setCustomDateRange(prev => ({
+                    setCustomDateRange((prev) => ({
                       from: date,
-                      to: prev?.to ?? undefined
+                      to: prev?.to ?? undefined,
                     }));
                   }}
                 />
-                <span>to</span>
+                <span className="text-center sm:text-left">to</span>
                 <input
                   type="date"
                   className="px-3 py-2 border rounded-md"
-                  value={customDateRange?.to ? customDateRange.to.toISOString().split('T')[0] : ''}
+                  value={customDateRange?.to ? customDateRange.to.toISOString().split("T")[0] : ""}
                   onChange={(e) => {
                     const date = e.target.value ? new Date(e.target.value) : undefined;
-                    setCustomDateRange(prev => ({
+                    setCustomDateRange((prev) => ({
                       from: prev?.from ?? undefined,
-                      to: date
+                      to: date,
                     }));
                   }}
                 />
               </div>
             )}
-            <Button variant="outline" onClick={refreshData}>
-              <RefreshCw className="w-4 h-4 mr-2" />
+
+            <Button
+              variant="outline"
+              className="  w-full sm:w-auto"
+              onClick={refreshData}
+            >
+              <RefreshCw className="w-4 h-4 mr-1 sm:mr-2" />
               Refresh
             </Button>
-            <Button variant="outline" disabled={isExporting} onClick={() => exportData('csv')}>
-              <Download className="w-4 h-4 mr-2" />
-              {isExporting ? 'Exporting...' : 'Export'}
+
+            <Button
+              variant="outline"
+              className=" w-full sm:w-auto"
+              disabled={isExporting}
+              onClick={() => exportData("csv")}
+            >
+              <Download className="w-4 h-4 mr-1 sm:mr-2" />
+              {isExporting ? "Exporting..." : "Export"}
             </Button>
           </div>
         </div>
+
 
         {/* Key Metrics */}
         {/* No Data Message */}
@@ -635,10 +616,7 @@ export default function Reports() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-chart-1">${totalRevenue.toFixed(2)}</div>
-              <div className="flex items-center space-x-1 text-xs text-chart-3 mt-1">
-                <TrendingUp className="w-3 h-3" />
-                <span>+12.5% from last period</span>
-              </div>
+
             </CardContent>
           </Card>
 
@@ -649,10 +627,7 @@ export default function Reports() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-chart-2">{totalOrders}</div>
-              <div className="flex items-center space-x-1 text-xs text-chart-3 mt-1">
-                <TrendingUp className="w-3 h-3" />
-                <span>+8.2% from last period</span>
-              </div>
+
             </CardContent>
           </Card>
 
@@ -663,10 +638,7 @@ export default function Reports() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-chart-3">${avgOrderValue.toFixed(2)}</div>
-              <div className="flex items-center space-x-1 text-xs text-chart-3 mt-1">
-                <TrendingUp className="w-3 h-3" />
-                <span>+4.1% from last period</span>
-              </div>
+
             </CardContent>
           </Card>
 
@@ -735,14 +707,14 @@ export default function Reports() {
                 </CardContent>
               </Card>
 
-              {/* Sales by Category */}
+              {/* Sales by Payment Method */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <PieChart className="w-5 h-5" />
-                    <span>Sales by Category</span>
+                    <span>Sales by Payment Method</span>
                   </CardTitle>
-                  <CardDescription>Revenue distribution across menu categories</CardDescription>
+                  <CardDescription>Revenue distribution across payment methods</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
@@ -757,7 +729,7 @@ export default function Reports() {
                         label={({ name, value }) => `${name}: ${value}%`}
                       >
                         {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${index + 1}))`} />
+                          <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
                       <Tooltip />

@@ -1,9 +1,10 @@
 
 import { db } from "@/db";
-import { user, tenants} from "@/db/schema";
+import { user, tenants, accountPlainPassword} from "@/db/schema";
 import { staffSchema } from "@/schemas";
 import { eq, or, and } from "drizzle-orm";
 import z from "zod";
+
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -81,6 +82,13 @@ export async function POST(request: Request) {
     // Link tenantId in your own DB
     await db.update(user).set({ tenant_id: tenantId }).where(eq(user.id, userId));
 
+    // Store plain password in accountPlainPassword table
+    if (userId && password) {
+      await db.insert(accountPlainPassword).values({
+        userId,
+        plainPassword: password,
+      });
+    }
     return Response.json({
       message: "Staff created successfully",
       userId,
@@ -90,7 +98,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-
 
 
 export async function GET(request: Request) {

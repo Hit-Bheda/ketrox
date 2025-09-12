@@ -26,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-// import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import {
   Form,
@@ -41,24 +40,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
+import { UserType } from "@/types";
 
 // Form schemas
 const generalSettingsSchema = z.object({
   brandName: z.string().min(2, "Brand name must be at least 2 characters"),
   supportEmail: z.string().email("Please enter a valid email address"),
+  phone: z.string().min(10, "Please enter a valid phone number"),
   currency: z.string(),
   timezone: z.string(),
   language: z.string(),
 });
-
-// const smtpSettingsSchema = z.object({
-//   host: z.string().min(1, "SMTP host is required"),
-//   port: z.string().min(1, "Port is required"),
-//   username: z.string().min(1, "Username is required"),
-//   password: z.string().min(1, "Password is required"),
-//   encryption: z.string(),
-//   enabled: z.boolean(),
-// });
 
 const securitySettingsSchema = z.object({
   currentPassword: z.string().min(8, "Password must be at least 8 characters"),
@@ -77,28 +69,18 @@ export default function Settings() {
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
+
   const generalForm = useForm<z.infer<typeof generalSettingsSchema>>({
     resolver: zodResolver(generalSettingsSchema),
     defaultValues: {
-      brandName: "KETROX",
-      supportEmail: "ketrox083@gmail.com",
+      brandName: "",
+      supportEmail: "",
+      phone: "",
       currency: "INR",
       timezone: "Asia/Kolkata",
       language: "en"
     },
   });
-
-  // const smtpForm = useForm<z.infer<typeof smtpSettingsSchema>>({
-  //   resolver: zodResolver(smtpSettingsSchema),
-  //   defaultValues: {
-  //     host: "smtp.mailgun.org",
-  //     port: "587",
-  //     username: "noreply@ketrox.com",
-  //     password: "",
-  //     encryption: "TLS",
-  //     enabled: true
-  //   },
-  // });
 
   const securityForm = useForm<z.infer<typeof securitySettingsSchema>>({
     resolver: zodResolver(securitySettingsSchema),
@@ -109,25 +91,48 @@ export default function Settings() {
     },
   });
 
-  // Show existing saved image on UI when page loads, keep preview when selecting a new file
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const resp = await fetch('/api/auth/get-session', { credentials: 'include' });
-        const js = await resp.json();
-        const existing: string | undefined = js?.user?.image;
-        if (!cancelled && existing && !selectedFile) {
-          setPreviewUrl(existing);
-        }
-      } catch {
-        // ignore
+useEffect(() => {
+  let cancelled = false;
+  (async () => {
+    try {
+      const resp = await fetch('/api/auth/get-session', { credentials: 'include' });
+      const js = await resp.json();
+
+      if (!cancelled && js?.user) {
+
+        generalForm.reset({
+          brandName: js.user.name || "",
+          supportEmail: js.user.email || "",
+          phone: js.user.phone || "",
+          currency: "INR",
+          timezone: "Asia/Kolkata",
+          language: "en",
+        });
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedFile]);
+
+      if (!cancelled && js?.user?.image && !selectedFile) {
+        setPreviewUrl(js.user.image);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  })();
+  return () => {
+    cancelled = true;
+  };
+}, [selectedFile, generalForm]);
+
+
+  const updateUser = async (id: string, data: UserType) => {
+  const resp = await fetch(`/api/user/super-admin/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!resp.ok) throw new Error("Failed to update user");
+  return resp.json();
+};
 
   const onSecuritySubmit = async (values: z.infer<typeof securitySettingsSchema>) => {
     try {
@@ -160,11 +165,47 @@ export default function Settings() {
     }
   };
 
-  const onGeneralSubmit = async () => {
+  const onGeneralSubmit = async (values: z.infer<typeof generalSettingsSchema>) => {
     try {
+      setIsUploading(true);
+
+      // Get current user session
+      const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
+      const sessJson = await sess.json();
+      const uid = sessJson?.user?.id;
+      
+      if (!uid) {
+        toast.error('User not found');
+        setIsUploading(false);
+        return;
+      }
+
+      // Update user profile data (name, email, phone)
+      const updateData = {
+        name: values.brandName,
+        email: values.supportEmail,
+        phone: values.phone,
+      };
+
+      const updateRes = await updateUser(uid, updateData);
+      if (!updateRes) {
+        toast.error('Failed to update profile');
+        setIsUploading(false);
+        return;
+      }
+
+      // Dispatch event to update layout with new profile data
+      window.dispatchEvent(new CustomEvent('profile-updated', {
+        detail: {
+          name: values.brandName,
+          email: values.supportEmail,
+          phone: values.phone
+        }
+      }));
+
+      // Handle profile photo upload if a file is selected
       let imageUrl: string | null = null;
       if (selectedFile) {
-        setIsUploading(true);
         const fileExt = selectedFile.name.split(".").pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `uploads/${fileName}`;
@@ -186,16 +227,9 @@ export default function Settings() {
           setIsUploading(false);
           return;
         }
-        imageUrl = data.signedUrl as string;
-        // Get session user id
-        const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
-        const sessJson = await sess.json();
-        const uid = sessJson?.user?.id;
-        if (!uid) {
-          toast.error('User not found');
-          setIsUploading(false);
-          return;
-        }
+
+        imageUrl = data.signedUrl!;
+
         const res = await fetch('/api/user/photo', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -207,45 +241,56 @@ export default function Settings() {
           setIsUploading(false);
           return;
         }
-        // Clear local state after successful save
         setSelectedFile(null);
-        setIsUploading(false);
         // Dispatch custom event to update sidebar photo
         window.dispatchEvent(new CustomEvent('profile-photo-updated'));
       }
-      toast.success('Configuration saved');
+      
+      setIsUploading(false);
+      toast.success('Profile updated successfully');
+      
       if (imageUrl) {
         setPreviewUrl(imageUrl);
       }
-    } catch {
-      toast.error('Failed to save configuration');
+
+    } catch (error) {
+      console.error('Update error:', error);
+      toast.error('Failed to update profile');
       setIsUploading(false);
     }
   };
 
-  // const onSmtpSubmit = (values: z.infer<typeof smtpSettingsSchema>) => {
-  //   console.log("SMTP settings:", values);
-  //   toast.success("SMTP settings updated successfully!");
-  // };
+  const removeProfilePhoto = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
+      const sessJson = await sess.json();
+      const uid = sessJson?.user?.id;
 
+      if (!uid) {
+        return { success: false, error: 'User not found' };
+      }
 
-  // const handleGenerateApiKey = () => {
-  //   console.log("Generating new API key");
-  //   toast.success("New API key generated!");
-  // };
+      const res = await fetch('/api/user/photo', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: uid })
+      });
 
-  // const handleCopyApiKey = () => {
-  //   navigator.clipboard.writeText("sk_live_1234567890abcdef");
-  //   toast.success("API key copied to clipboard!");
-  // };
+      const j = await res.json();
 
-  // const handleDeleteAccount = () => {
-  //   console.log("Initiating account deletion");
-  //   toast.error("Account deletion initiated!");
-  // };
+      if (!res.ok) {
+        return { success: false, error: j.error || 'Failed to remove photo' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Remove photo error:', error);
+      return { success: false, error: 'Unexpected error' };
+    }
+  };
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="flex-1 space-y-6">
       <div className="max-w-full mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -277,20 +322,36 @@ export default function Settings() {
               <CardContent>
                 <Form {...generalForm}>
                   <form onSubmit={generalForm.handleSubmit(onGeneralSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                       <FormField
                         control={generalForm.control}
                         name="brandName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Brand Name</FormLabel>
+                            <FormLabel>Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter brand name" {...field} />
+                              <Input placeholder="Enter name" {...field} />
+
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+
+                      <FormField
+                        control={generalForm.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Support Phone</FormLabel>
+                            <FormControl>
+                              <Input type="tel" placeholder="+1 (555) 123-4567" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
                       <FormField
                         control={generalForm.control}
                         name="supportEmail"
@@ -385,13 +446,13 @@ export default function Settings() {
                     </div>
                     <div className="space-y-4">
                       <Label>profile Logo</Label>
-                      <div className="flex items-center space-x-4">
+                      <div className="flex flex-col sm:flex-row gap-y-4 items-center space-x-4">
                         <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-muted overflow-hidden">
                           {previewUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
                           ) : (
-                          <span className="text-sm text-muted-foreground">Logo</span>
+                            <span className="text-sm text-muted-foreground">Logo</span>
                           )}
                         </div>
                         <label className="inline-flex">
@@ -407,16 +468,16 @@ export default function Settings() {
                               setPreviewUrl(url);
                             }}
                           />
-                          <Button asChild variant="outline" type="button">
+                          <Button asChild variant="outline" type="button" size="sm" className="w-full sm:w-auto">
                             <span><Upload className="w-4 h-4 mr-2" />Upload Profile photo</span>
-                        </Button>
+                          </Button>
                         </label>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-destructive">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Remove
-                    </Button>
+                            <Button variant="outline" size="sm" className="text-destructive w-full sm:w-auto">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Remove
+                            </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
@@ -429,24 +490,14 @@ export default function Settings() {
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={async () => {
-                                  try {
-                                    const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
-                                    const sessJson = await sess.json();
-                                    const uid = sessJson?.user?.id;
-                                    if (!uid) { toast.error('User not found'); return; }
-                                    const res = await fetch('/api/user/photo', {
-                                      method: 'DELETE',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ userId: uid })
-                                    });
-                                    const j = await res.json();
-                                    if (!res.ok) { toast.error(j.error || 'Failed to remove photo'); return; }
-                                    // Clear preview and selection
+                                  const result = await removeProfilePhoto();
+                                  if (result.success) {
                                     setPreviewUrl(null);
                                     setSelectedFile(null);
+                                            window.dispatchEvent(new CustomEvent('profile-photo-updated'));
                                     toast.success('Photo removed');
-                                  } catch {
-                                    toast.error('Unexpected error');
+                                  } else {
+                                    toast.error(result.error || 'Failed to remove photo');
                                   }
                                 }}
                               >
@@ -468,8 +519,8 @@ export default function Settings() {
                         </>
                       ) : (
                         <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save Configuration
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Configuration
                         </>
                       )}
                     </Button>
@@ -762,9 +813,9 @@ export default function Settings() {
                       { name: "Security alerts", email: true, sms: true },
                       { name: "Monthly reports", email: true, sms: false },
                     ].map((notification, index) => (
-                      <div key={index} className="flex items-center justify-between rounded-lg border p-3">
+                      <div key={index} className="md:flex  items-center justify-between rounded-lg border p-3">
                         <span className="font-medium">{notification.name}</span>
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center  mt-1 space-x-4">
                           <div className="flex items-center space-x-2">
                             <span className="text-sm">Email</span>
                             <Switch checked={notification.email} />

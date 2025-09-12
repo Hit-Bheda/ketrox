@@ -109,10 +109,12 @@ const chartData = {
 // Dynamic hotels will be loaded from API into hotelsData
 
 const subscriptionPlans = [
-  { name: "Free", hotels: 45, maxBandwidth: 100, usedBandwidth: 65, color: "bg-" },
-  { name: "Standard", hotels: 128, maxBandwidth: 500, usedBandwidth: 340, color: "bg-" },
-  { name: "Pro", hotels: 169, maxBandwidth: 1000, usedBandwidth: 720, color: "bg-" },
+  { name: "Free", hotels: 45, maxBandwidth: 100, usedBandwidth: 65, color: "bg-green-100 border-green-300" },
+  { name: "Monthly", hotels: 78, maxBandwidth: 300, usedBandwidth: 190, color: "bg-blue-100 border-blue-300" },
+  { name: "6-Months", hotels: 95, maxBandwidth: 700, usedBandwidth: 400, color: "bg-yellow-100 border-yellow-300" },
+  { name: "Yearly", hotels: 120, maxBandwidth: 1500, usedBandwidth: 950, color: "bg-purple-100 border-purple-300" },
 ];
+
 
 const recentActivity = [
   { id: 1, action: "New hotel registered", user: "Grand Plaza Hotel", time: "2 minutes ago", avatar: "GP", type: "success" },
@@ -123,8 +125,6 @@ const recentActivity = [
 ];
 
 
-
-
 export default function Dashboard() {
   type HotelType = {
     id: string;
@@ -132,7 +132,7 @@ export default function Dashboard() {
     status: string;
     plan?: string;
     tenant_id?: string;
-    [key: string]: unknown; 
+    [key: string]: unknown;
   };
   const [selectedPeriod, setSelectedPeriod] = useState("monthly");
   const [selectedPlan, setSelectedPlan] = useState("All");
@@ -158,7 +158,7 @@ export default function Dashboard() {
         throw new Error("Failed to fetch hotels");
       }
       const data = await res.json();
-      console.log("Fetched hotels data:", data);
+
       return Array.isArray(data.hotels) ? data.hotels : [];
     } catch (error) {
       console.error("Error fetching hotels:", error);
@@ -175,6 +175,7 @@ export default function Dashboard() {
     total: hotelsData.length,
     active: hotelsData.filter(h => h.status === "active").length,
     trial: hotelsData.filter(h => h.status === "trial").length,
+    expired: hotelsData.filter(h => h.status === "expired").length,
     suspended: hotelsData.filter(h => h.status === "suspended").length,
   };
 
@@ -182,15 +183,34 @@ export default function Dashboard() {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case "active":
-        return "default";
+        return "bg-green-100 text-green-800 border border-green-300"; 
       case "trial":
-        return "secondary";
-      case "inactive":
-        return "outline";
+        return "bg-blue-100 text-blue-800 border border-blue-300"; 
+      case "suspended":
+        return "bg-yellow-100 text-yellow-800 border border-yellow-300"; 
+      case "expired":
+        return "bg-red-100 text-red-800 border border-red-300"; 
       default:
-        return "outline";
+        return "bg-gray-100 text-gray-800 border border-gray-300"; 
     }
-  };
+  }
+
+const getPlanBadgeStyle = (plan?: string) => {
+  switch (plan) {
+    case "free":
+      return "bg-purple-900 text-white border border-purple-900"; 
+    case "monthly":
+      return "bg-pink-900 text-white border border-pink-900";       
+    case "6-months":
+      return "bg-orange-700 text-white border border-orange-700";
+    case "yearly":
+      return "bg-teal-800 text-white border border-teal-800";    
+    default:
+      return "bg-gray-100 text-gray-800 border border-gray-300";
+  }
+};
+
+
 
   const getActivityTypeColor = (type: string) => {
     switch (type) {
@@ -248,10 +268,10 @@ export default function Dashboard() {
     }
   };
   return (
-    <div className="flex-1 space-y-8 p-8 bg-[var(--color-background)] text-[var(--color-foreground)] font-sans">
+    <div className="flex-1 space-y-8 bg-[var(--color-background)] text-[var(--color-foreground)] font-sans">
       {/* Time Period Tabs */}
       <Tabs value={selectedPeriod} onValueChange={setSelectedPeriod} className="space-y-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col items-center sm:flex-row gap-4 justify-between mb-4">
           <TabsList className="grid w-full max-w-[400px] grid-cols-3 rounded-xl bg-[var(--color-card)] shadow">
             <TabsTrigger value="weekly" className="rounded-xl data-[state=active]:bg-[var(--color-primary)] data-[state=active]:text-[var(--color-primary-foreground)] transition">Weekly</TabsTrigger>
             <TabsTrigger value="monthly" className="rounded-xl data-[state=active]:bg-[var(--color-primary)] data-[state=active]:text-[var(--color-primary-foreground)] transition">Monthly</TabsTrigger>
@@ -406,7 +426,7 @@ export default function Dashboard() {
           </div>
 
           {/* Hotels and Activity */}
-          <div className="grid gap-8 md:grid-cols-7">
+          <div className="grid gap-8 grid-cols-1 md:grid-cols-7">
             <Card className="col-span-4 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
               {/* ...existing hotels table code, update badge and button classes for rounded/contrast... */}
               <CardHeader>
@@ -425,7 +445,9 @@ export default function Dashboard() {
                     <DropdownMenuContent>
                       <DropdownMenuItem onClick={() => setSelectedPlan("All")}>All Plans</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSelectedPlan("Free")}>Free</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSelectedPlan("Standard")}>Standard</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedPlan("Monthly")}>Monthly</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedPlan("6-Months")}>6-Months</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedPlan("Yearly")}>Yearly</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -444,10 +466,10 @@ export default function Dashboard() {
                   <TableBody>
                     {filteredHotels.length > 0 ? (
                       filteredHotels.slice(0, 5).map((hotel) => (
-                      <TableRow key={hotel.id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="h-8 w-8 rounded-lg">
+                        <TableRow key={hotel.id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-8 w-8 rounded-lg">
                                 <AvatarFallback className="text-xs font-medium">
                                   {(hotel.name || "")
                                     .split(" ")
@@ -456,56 +478,55 @@ export default function Dashboard() {
                                     .slice(0, 2)
                                     .toUpperCase()}
                                 </AvatarFallback>
-                            </Avatar>
-                            <div>
+                              </Avatar>
+                              <div>
                                 <div className="font-medium text-[var(--color-foreground)]">
                                   {hotel.name}
                                 </div>
                                 <div className="text-sm text-[var(--color-muted-foreground)]">
                                   {(hotel as unknown as { owner_name?: string }).owner_name}
                                 </div>
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
+                          </TableCell>
+                          <TableCell>
                             <Badge
-                              variant={getStatusBadgeVariant(hotel.status as string)}
-                              className="rounded-lg"
+                              className={`rounded-lg ${getStatusBadgeVariant(hotel.status as string)}`}
                             >
                               {hotel.status as string}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                            <Badge variant="outline" className="rounded-lg">
-                              {(hotel as unknown as { plan?: string }).plan}
                             </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium text-[var(--color-foreground)]">
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`rounded-lg ${getPlanBadgeStyle(hotel.plan)}`}>
+                              {hotel.plan}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium text-[var(--color-foreground)]">
                             -
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="rounded-lg">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="rounded-lg">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditHotel(hotel)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   className="text-destructive"
                                   onClick={() => handleDeleteHotel(hotel.id as string)}
                                 >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : (
                       <TableRow>
@@ -527,7 +548,7 @@ export default function Dashboard() {
               onOpenChange={(open) => dispatch(toggleEditModal(open))}
               onSubmit={handleUpdateHotel}
             />
-            <Card className="col-span-3 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
+            <Card className="col-span-3 max-md:col-span-4 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
               {/* ...existing activity code, update icon and text classes for color/contrast... */}
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-[var(--color-primary)]">Recent Activity</CardTitle>
@@ -569,7 +590,7 @@ export default function Dashboard() {
               <CardDescription className="text-[var(--color-muted-foreground)]">Plan distribution and bandwidth usage</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-6 md:grid-cols-3">
+              <div className="grid gap-6 md:grid-cols-2">
                 {subscriptionPlans.map((plan, index) => (
                   <div key={index} className={`space-y-3 rounded-xl border p-5 ${plan.color} shadow hover:shadow-lg transition`}>
                     <div className="flex items-center justify-between">
