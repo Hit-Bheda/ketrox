@@ -217,4 +217,5 @@ export const ticketMessage = pgTable("ticket_message", {
   senderRole: text("sender_role", { enum: ["super-admin", "admin", "manager", "waiter", "customer", "support"] }),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+  updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });

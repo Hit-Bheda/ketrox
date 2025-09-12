@@ -38,7 +38,6 @@ interface Plan {
   subscribers: number;
   revenue: number;
 }
-
 interface PlanColorStyle {
   bg: string;
   border: string;

@@ -69,7 +69,9 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<OrderType | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orders, setOrders] = useState<OrderType[]>([]);
-
+  const [page, setPage] = useState(0);       // current page
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
 
   const now = new Date();
 
@@ -173,28 +175,46 @@ export default function Orders() {
         : 0,
   };
 
+  // useEffect(() => {
+  //   const fetchOrders = async () => {
+  //     try {
+  //       const res = await fetch(
+  //         "/api/orders",
+  //         {
+  //           method: "GET",
+  //           headers: { "Content-Type": "application/json" },
+  //           cache: "no-store"
+  //         }
+  //       );
+  //       if (!res.ok) throw new Error("Failed to fetch orders");
+  //       const data = await res.json();
+  //       setOrders(data.orders || []);
+  //     } catch (error) {
+  //       console.error("Error fetching orders:", error);
+  //     }
+  //   };
+  //   fetchOrders();
+  // }, []);
+
+
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await fetch(
-          "/api/orders",
-          {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            cache: "no-store"
-          }
-        );
+        const res = await fetch(`/api/orders?page=${page}&limit=${limit}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error("Failed to fetch orders");
         const data = await res.json();
         setOrders(data.orders || []);
+        setTotal(data.pagination?.total || 0);
       } catch (error) {
         console.error("Error fetching orders:", error);
       }
     };
     fetchOrders();
-  }, []);
-
-
+  }, [page, limit]);
 
   const deleteOrder = async (orderId: string) => {
     try {
@@ -329,6 +349,19 @@ export default function Orders() {
                   <SelectItem value="today">Today</SelectItem>
                   <SelectItem value="lastWeek">Last Week</SelectItem>
                   <SelectItem value="lastMonth">Last Month</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* 👇 Add Limit Dropdown Here */}
+              <Select value={limit.toString()} onValueChange={(val) => setLimit(Number(val))}>
+                <SelectTrigger className="w-full sm:w-[100px]">
+                  <SelectValue placeholder="Rows" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -500,6 +533,45 @@ export default function Orders() {
             )}
           </CardContent>
         </Card>
+
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} orders
+          </p>
+
+          <div className="flex gap-2 items-center">
+            {/* Prev Button */}
+            <Button
+              variant="outline"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(p - 1, 0))}
+            >
+              Prev
+            </Button>
+
+            {/* Page Numbers */}
+            {Array.from({ length: Math.ceil(total / limit) }, (_, i) => (
+              <Button
+                key={i}
+                variant={page === i ? "default" : "outline"} 
+                onClick={() => setPage(i)}
+              >
+                {i + 1}
+              </Button>
+            ))}
+
+            {/* Next Button */}
+            <Button
+              variant="outline"
+              disabled={(page + 1) * limit >= total}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+
 
         {/* Order Details Modal */}
         <Dialog open={showOrderDetails} onOpenChange={setShowOrderDetails}>

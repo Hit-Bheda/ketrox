@@ -1,12 +1,11 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react";
-import { 
-  Send, 
-  Search, 
-  MoreHorizontal, 
+import {
+  Send,
+  Search,
+  MoreHorizontal,
   Paperclip,
-  Archive,
   Flag,
   CheckCircle,
   Clock,
@@ -20,18 +19,18 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase/client";
 
@@ -42,7 +41,12 @@ interface ApiTicket {
   status: "open" | "in_progress" | "resolved";
   createdAt?: string;
   tenantId?: string;
-  createdById?: string; 
+  createdById?: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  lastMessageSenderRole?: string | null;
+  unread?: boolean;
+  tenantName?: string;
 }
 
 interface ApiMessage {
@@ -99,6 +103,7 @@ export default function Messages() {
     // polling fallback every 3s
     const interval = setInterval(loadMessages, 3000);
     return () => clearInterval(interval);
+// eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTicket?.id]);
 
   useEffect(() => {
@@ -113,7 +118,14 @@ export default function Messages() {
         table: 'ticket_message',
         filter: `ticket_id=eq.${selectedTicket.id}`,
       }, (payload) => {
-        const row = payload.new as any;
+        const row = payload.new as {
+          id: string;
+          ticket_id: string;
+          content: string;
+          sender_role?: string;
+          created_at?: string;
+          sender_id?: string;
+        };
         setMessages((prev) => [...prev, {
           id: row.id,
           ticketId: row.ticket_id,
@@ -128,6 +140,7 @@ export default function Messages() {
     return () => {
       client.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTicket?.id]);
 
   useEffect(() => {
@@ -140,17 +153,41 @@ export default function Messages() {
         schema: 'public',
         table: 'ticket',
       }, (payload) => {
-        const row = payload.new as any;
+        const row = payload.new as {
+          id: string;
+          subject: string;
+          priority: "high" | "medium" | "low";
+          status: "open" | "in_progress" | "resolved";
+          created_at?: string;
+          tenant_id?: string;
+          created_by_id?: string;
+        };
         setTickets((prev) => {
           const exists = prev.some((t) => t.id === row.id);
           if (payload.eventType === 'INSERT' && !exists) {
-            return [{ ...(row as any) }, ...prev];
+            return [{
+              id: row.id,
+              subject: row.subject,
+              priority: row.priority,
+              status: row.status,
+              createdAt: row.created_at,
+              tenantId: row.tenant_id,
+              createdById: row.created_by_id,
+              unread: true
+            }, ...prev];
           }
           if (payload.eventType === 'UPDATE') {
-            return prev.map((t) => t.id === row.id ? { ...t, status: row.status, priority: row.priority, subject: row.subject, createdAt: row.created_at } : t);
+            return prev.map((t) => t.id === row.id ? { 
+              ...t, 
+              status: row.status, 
+              priority: row.priority, 
+              subject: row.subject, 
+              createdAt: row.created_at 
+            } : t);
           }
           if (payload.eventType === 'DELETE') {
-            return prev.filter((t) => t.id !== (payload.old as any).id);
+            const oldRow = payload.old as { id: string };
+            return prev.filter((t) => t.id !== oldRow.id);
           }
           return prev;
         });
@@ -212,28 +249,29 @@ export default function Messages() {
     setTickets((prev) => prev.map((t) => (
       t.id === ticketId
         ? ({
-            ...(t as any),
-            lastMessage: content,
-            lastMessageAt: createdAtIso,
-            lastMessageSenderRole: senderRole || (t as any).lastMessageSenderRole || null,
-          } as any)
+          ...t,
+          lastMessage: content,
+          lastMessageAt: createdAtIso,
+          lastMessageSenderRole: senderRole || t.lastMessageSenderRole || null,
+          unread: senderRole !== 'super-admin' // Mark as unread if message is not from super-admin
+        } as ApiTicket)
         : t
     )));
   };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedTicket) return;
-    
+
     const messageContent = newMessage.trim();
     setNewMessage(""); // Clear input immediately for better UX
-    
+
     try {
       const res = await fetch("/api/super-admin/messages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticketId: selectedTicket.id, content: messageContent }),
       });
-      
+
       if (res.ok) {
         // Add the message optimistically to the UI immediately
         const tempMessage: ApiMessage = {
@@ -245,7 +283,7 @@ export default function Messages() {
         };
         setMessages(prev => [...prev, tempMessage]);
         updateTicketPreview(selectedTicket.id, messageContent, tempMessage.createdAt!, "super-admin");
-        
+
         // Refresh messages to get the actual message from server
         const refreshRes = await fetch(`/api/ticket/${selectedTicket.id}/messages`);
         if (refreshRes.ok) {
@@ -387,33 +425,32 @@ export default function Messages() {
                 </Select>
               </div>
             </div>
-            
+
             {/* Tickets */}
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {filteredTickets.map((ticket) => (
                 <div
                   key={ticket.id}
-                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedTicket?.id === ticket.id 
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedTicket?.id === ticket.id
                       ? "border-primary/50 bg-primary/5"
                       : "border-input hover:bg-accent"
-                  }`}
+                    }`}
                   onClick={() => setSelectedTicket(ticket)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-2">
                       <Avatar className="h-6 w-6">
                         <AvatarFallback className="text-xs">
-                          {(ticket as any).tenantName?.slice(0,2)?.toUpperCase() || ticket.subject.slice(0,2).toUpperCase()}
+                          {ticket.tenantName?.slice(0, 2)?.toUpperCase() || ticket.subject.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium text-sm">{(ticket as any).tenantName || ticket.subject}</span>
+                      <span className="font-medium text-sm">{ticket.tenantName || ticket.subject}</span>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {(ticket as any).lastMessageAt?.split('T')[1]?.slice(0,5) || ticket.createdAt?.split('T')[0]}
+                      {ticket.lastMessageAt?.split('T')[1]?.slice(0, 5) || ticket.createdAt?.split('T')[0]}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{(ticket as any).lastMessage}</p>
+                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{ticket.lastMessage}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex space-x-1">
                       <Badge variant="outline" className={getStatusColor(ticket.status)}>
@@ -440,22 +477,22 @@ export default function Messages() {
                 {selectedTicket && (
                   <Avatar className="h-10 w-10">
                     <AvatarFallback>
-                      {(selectedTicket as any).tenantName?.slice(0,2)?.toUpperCase() || selectedTicket.subject.slice(0,2).toUpperCase()}
+                      {selectedTicket.tenantName?.slice(0, 2)?.toUpperCase() || selectedTicket.subject.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <div>
                   <h3 className="font-semibold">{selectedTicket?.subject}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {(selectedTicket as any)?.tenantName || 'Unknown Hotel'} • Ticket #{selectedTicket?.id?.slice(0, 8)}
+                    {selectedTicket?.tenantName || 'Unknown Hotel'} • Ticket #{selectedTicket?.id?.slice(0, 8)}
                   </p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
                 {selectedTicket && (
                   <>
-                    <Select 
-                      value={selectedTicket.status} 
+                    <Select
+                      value={selectedTicket.status}
                       onValueChange={(value) => handleStatusChange(selectedTicket.id, value)}
                     >
                       <SelectTrigger className="w-32">
@@ -506,17 +543,18 @@ export default function Messages() {
                   className={`flex ${message.senderRole === 'super-admin' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.senderRole === 'super-admin'
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.senderRole === 'super-admin'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center space-x-2 mb-1">
                       <User className="w-3 h-3" />
                       <span className="text-xs font-medium">{message.senderRole || 'user'}</span>
                       <span className="text-xs opacity-75">
-                        {message.createdAt?.split('T')[1]?.slice(0,5)}
+                        {message.createdAt
+                          ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : '--:--'}
                       </span>
                     </div>
                     <p className="text-sm">{message.content}</p>
@@ -525,7 +563,7 @@ export default function Messages() {
               ))}
               <div ref={messagesEndRef} />
             </div>
-            
+
             {/* Message Input */}
             <div className="flex items-end space-x-2">
               <div className="flex-1">
@@ -546,8 +584,8 @@ export default function Messages() {
                 <Button variant="outline" size="sm">
                   <Paperclip className="w-4 h-4" />
                 </Button>
-                <Button 
-                  onClick={handleSendMessage} 
+                <Button
+                  onClick={handleSendMessage}
                   disabled={!newMessage.trim()}
                   size="sm"
                 >

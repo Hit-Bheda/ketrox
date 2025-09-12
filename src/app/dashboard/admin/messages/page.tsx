@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react";
-import { 
-  Send, 
-  Search, 
+import {
+  Send,
+  Search,
   Paperclip,
   Flag,
   CheckCircle,
@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -45,6 +45,12 @@ interface ApiTicket {
   priority: "high" | "medium" | "low";
   status: "open" | "in_progress" | "resolved";
   createdAt?: string;
+  tenantId?: string;
+  createdById?: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  lastMessageSenderRole?: string;
+  unread?: boolean;
 }
 
 interface ApiMessage {
@@ -53,6 +59,7 @@ interface ApiMessage {
   content: string;
   senderRole?: string;
   createdAt?: string;
+  senderId?: string;
 }
 
 export default function UserMessages() {
@@ -106,6 +113,7 @@ export default function UserMessages() {
     // polling fallback every 3s
     const interval = setInterval(loadMessages, 3000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTicket?.id]);
 
   useEffect(() => {
@@ -119,7 +127,14 @@ export default function UserMessages() {
         table: 'ticket_message',
         filter: `ticket_id=eq.${selectedTicket.id}`,
       }, (payload) => {
-        const row = payload.new as any;
+        const row = payload.new as {
+          id: string;
+          ticket_id: string;
+          content: string;
+          sender_role?: string;
+          created_at?: string;
+          sender_id?: string;
+        };
         setMessages((prev) => [...prev, {
           id: row.id,
           ticketId: row.ticket_id,
@@ -134,6 +149,7 @@ export default function UserMessages() {
     return () => {
       client.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTicket?.id]);
 
   useEffect(() => {
@@ -145,17 +161,41 @@ export default function UserMessages() {
         schema: 'public',
         table: 'ticket',
       }, (payload) => {
-        const row = payload.new as any;
+        const row = payload.new as {
+          id: string;
+          subject: string;
+          priority: "high" | "medium" | "low";
+          status: "open" | "in_progress" | "resolved";
+          created_at?: string;
+          tenant_id?: string;
+          created_by_id?: string;
+        };
         setTickets((prev) => {
           const exists = prev.some((t) => t.id === row.id);
           if (payload.eventType === 'INSERT' && !exists) {
-            return [{ ...(row as any) }, ...prev];
+            return [{
+              id: row.id,
+              subject: row.subject,
+              priority: row.priority,
+              status: row.status,
+              createdAt: row.created_at,
+              tenantId: row.tenant_id,
+              createdById: row.created_by_id,
+              unread: true
+            }, ...prev];
           }
           if (payload.eventType === 'UPDATE') {
-            return prev.map((t) => t.id === row.id ? { ...t, status: row.status, priority: row.priority, subject: row.subject, createdAt: row.created_at } : t);
+            return prev.map((t) => t.id === row.id ? { 
+              ...t, 
+              status: row.status, 
+              priority: row.priority, 
+              subject: row.subject, 
+              createdAt: row.created_at 
+            } : t);
           }
           if (payload.eventType === 'DELETE') {
-            return prev.filter((t) => t.id !== (payload.old as any).id);
+            const oldRow = payload.old as { id: string };
+            return prev.filter((t) => t.id !== oldRow.id);
           }
           return prev;
         });
@@ -217,28 +257,29 @@ export default function UserMessages() {
     setTickets((prev) => prev.map((t) => (
       t.id === ticketId
         ? ({
-            ...(t as any),
-            lastMessage: content,
-            lastMessageAt: createdAtIso,
-            lastMessageSenderRole: senderRole || (t as any).lastMessageSenderRole || null,
-          } as any)
+          ...t,
+          lastMessage: content,
+          lastMessageAt: createdAtIso,
+          lastMessageSenderRole: senderRole || t.lastMessageSenderRole || null,
+          unread: senderRole !== 'admin' // Mark as unread if message is not from admin
+        } as ApiTicket)
         : t
     )));
   };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedTicket) return;
-    
+
     const messageContent = newMessage.trim();
     setNewMessage(""); // Clear input immediately for better UX
-    
+
     try {
       const res = await fetch("/api/admin/messages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticketId: selectedTicket.id, content: messageContent }),
       });
-      
+
       if (res.ok) {
         // Add the message optimistically to the UI immediately
         const tempMessage: ApiMessage = {
@@ -250,7 +291,7 @@ export default function UserMessages() {
         };
         setMessages(prev => [...prev, tempMessage]);
         updateTicketPreview(selectedTicket.id, messageContent, tempMessage.createdAt!, "admin");
-        
+
         // Refresh messages to get the actual message from server
         const refreshRes = await fetch(`/api/ticket/${selectedTicket.id}/messages`);
         if (refreshRes.ok) {
@@ -374,17 +415,17 @@ export default function UserMessages() {
                       <Input
                         id="subject"
                         value={newTicketForm.subject}
-                        onChange={(e) => setNewTicketForm({...newTicketForm, subject: e.target.value})}
+                        onChange={(e) => setNewTicketForm({ ...newTicketForm, subject: e.target.value })}
                         className="col-span-3"
                         placeholder="Brief description of your issue"
                       />
                     </div>
-                    
+
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="priority" className="text-right">
                         Priority
                       </Label>
-                      <Select value={newTicketForm.priority} onValueChange={(value) => setNewTicketForm({...newTicketForm, priority: value as "high" | "medium" | "low"})}>
+                      <Select value={newTicketForm.priority} onValueChange={(value) => setNewTicketForm({ ...newTicketForm, priority: value as "high" | "medium" | "low" })}>
                         <SelectTrigger className="col-span-3">
                           <SelectValue />
                         </SelectTrigger>
@@ -402,7 +443,7 @@ export default function UserMessages() {
                       <Textarea
                         id="message"
                         value={newTicketForm.message}
-                        onChange={(e) => setNewTicketForm({...newTicketForm, message: e.target.value})}
+                        onChange={(e) => setNewTicketForm({ ...newTicketForm, message: e.target.value })}
                         className="col-span-3"
                         placeholder="Describe your issue in detail..."
                       />
@@ -455,31 +496,30 @@ export default function UserMessages() {
                 </Select>
               </div>
             </div>
-            
+
             {/* Tickets */}
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {filteredTickets.map((ticket) => (
                 <div
                   key={ticket.id}
-                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedTicket && selectedTicket.id === ticket.id 
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedTicket && selectedTicket.id === ticket.id
                       ? "border-primary/50 bg-primary/5"
                       : "border-input hover:bg-accent"
-                  }`}
+                    }`}
                   onClick={() => setSelectedTicket(ticket)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-2">
                       <Avatar className="h-6 w-6">
                         <AvatarFallback className="text-xs">
-                          {ticket.subject.slice(0,2).toUpperCase()}
+                          {ticket.subject.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <span className="font-medium text-sm">{ticket.subject}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{(ticket as any).lastMessageAt?.split('T')[1]?.slice(0,5) || ticket.createdAt?.split('T')[0]}</span>
+                    <span className="text-xs text-muted-foreground">{ticket.lastMessageAt?.split('T')[1]?.slice(0, 5) || ticket.createdAt?.split('T')[0]}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{(ticket as any).lastMessage}</p>
+                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{ticket.lastMessage}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex space-x-1">
                       <Badge variant="outline" className={getStatusColor(ticket.status)}>
@@ -494,13 +534,13 @@ export default function UserMessages() {
                   </div>
                 </div>
               ))}
-              
+
               {filteredTickets.length === 0 && (
                 <div className="text-center py-8">
                   <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">No tickets found matching your criteria.</p>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="mt-4"
                     onClick={() => {
                       setSearchTerm("");
@@ -523,7 +563,7 @@ export default function UserMessages() {
               <div className="flex items-center space-x-3">
                 {selectedTicket && (<Avatar className="h-10 w-10">
                   <AvatarFallback>
-                    {selectedTicket.subject.slice(0,2).toUpperCase()}
+                    {selectedTicket.subject.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>)}
                 <div>
@@ -555,16 +595,19 @@ export default function UserMessages() {
                   className={`flex ${message.senderRole === 'admin' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.senderRole === 'admin'
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.senderRole === 'admin'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center space-x-2 mb-1">
                       <User className="w-3 h-3" />
                       <span className="text-xs font-medium">{message.senderRole || 'user'}</span>
-                      <span className="text-xs opacity-75">{message.createdAt?.split('T')[1]?.slice(0,5)}</span>
+                      <span className="text-xs opacity-75">
+                        {message.createdAt
+                          ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : '--:--'}
+                      </span>
                     </div>
                     <p className="text-sm">{message.content}</p>
                   </div>
@@ -572,7 +615,7 @@ export default function UserMessages() {
               ))}
               <div ref={messagesEndRef} />
             </div>
-            
+
             {/* Message Input */}
             <div className="flex items-end space-x-2">
               <div className="flex-1">
@@ -593,8 +636,8 @@ export default function UserMessages() {
                 <Button variant="outline" size="sm">
                   <Paperclip className="w-4 h-4" />
                 </Button>
-                <Button 
-                  onClick={handleSendMessage} 
+                <Button
+                  onClick={handleSendMessage}
                   disabled={!newMessage.trim()}
                   size="sm"
                 >

@@ -46,7 +46,6 @@ import Image from "next/image";
 import { OrderType, QrCodeType, TableType } from "@/types";
 
 
-
 export default function Tables() {
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [tableItem, setTableItem] = useState<TableType[]>([])

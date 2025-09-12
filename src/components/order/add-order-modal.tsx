@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner"
-import { OrderType } from "@/types";
+import { ApiMenuItem, OrderType } from "@/types";
 import { LoaderIcon } from "lucide-react";
 
 export default function BookOrderModal({
@@ -31,14 +31,15 @@ export default function BookOrderModal({
     const [customerPhone, setCustomerPhone] = useState("");
     const [status, setStatus] = useState("pending");
     const [loading, setLoading] = useState(false);
-    // Fetch menu items
+
     useEffect(() => {
         if (open) {
             fetch("/api/admin/menu")
                 .then(res => res.json())
                 .then(data => {
                     console.log("Menu API response:", data);
-                    setMenuItems(data.menu || []);
+                    const availableMenu = (data.menu || []).filter((item: ApiMenuItem) => item.isAvailable === true);
+                    setMenuItems(availableMenu);
                 });
         }
     }, [open]);
@@ -54,14 +55,19 @@ export default function BookOrderModal({
     const tax = subtotal * taxRate;
     const totalPrice = subtotal + tax;
 
-    // Handle item selection
     const handleSelectItem = (itemId: string) => {
         setSelectedItems(prev => {
             if (prev.includes(itemId)) {
-                setQuantities(q => ({ ...q, [itemId]: (q[itemId] || 1) + 2 }));
-                return prev;
+                // Remove item when unchecking
+                setQuantities(q => {
+                    const newQuantities = { ...q };
+                    delete newQuantities[itemId];
+                    return newQuantities;
+                });
+                return prev.filter(id => id !== itemId);
             } else {
-                setQuantities(q => ({ ...q, [itemId]: q[itemId] || 1 }));
+                // Add item with default quantity 1
+                setQuantities(q => ({ ...q, [itemId]: 1 }));
                 return [...prev, itemId];
             }
         });
@@ -69,9 +75,28 @@ export default function BookOrderModal({
 
     // Handle quantity change
     const handleQuantityChange = (itemId: string, qty: number) => {
-        setQuantities(prev => ({ ...prev, [itemId]: qty }));
+        if (qty <= 0) {
+            // Remove item when quantity reaches 0
+            setSelectedItems(prev => prev.filter(id => id !== itemId));
+            setQuantities(prev => {
+                const newQuantities = { ...prev };
+                delete newQuantities[itemId];
+                return newQuantities;
+            });
+        } else {
+            // Update quantity
+            setQuantities(prev => ({ ...prev, [itemId]: qty }));
+        }
     };
 
+    // Handle increment/decrement buttons
+    const handleIncrement = (itemId: string) => {
+        handleQuantityChange(itemId, (quantities[itemId] || 1) + 1);
+    };
+
+    const handleDecrement = (itemId: string) => {
+        handleQuantityChange(itemId, (quantities[itemId] || 1) - 1);
+    };
 
     const resetForm = () => {
         setCustomerName("");
@@ -80,6 +105,7 @@ export default function BookOrderModal({
         setQuantities({});
         setStatus("pending");
     };
+
     // Submit order
     const handleSubmit = async () => {
         setLoading(true);
@@ -142,8 +168,9 @@ export default function BookOrderModal({
 
     useEffect(() => {
         if (order && open) {
-            console.log("Populating modal with order data:", order);
+
             setCustomerName(order.customerName);
+            setCustomerPhone(order.customerPhone);
             setSelectedItems(order.items);
             setQuantities(
                 order.items.reduce((acc: { [key: string]: number }, id, idx) => {
@@ -153,7 +180,7 @@ export default function BookOrderModal({
             );
             setStatus(order.status);
         } else if (!order && open) {
-            console.log("Resetting form for new order");
+
             resetForm();
         }
     }, [order, open]);
@@ -197,19 +224,17 @@ export default function BookOrderModal({
                                                 type="button"
                                                 size="icon"
                                                 variant="outline"
-                                                onClick={() =>
-                                                    handleQuantityChange(item.id, Math.max(1, (quantities[item.id] || 1) - 1))
-                                                }
+                                                onClick={() => handleDecrement(item.id)}
                                                 className="w-6 h-6 p-0"
                                             >-</Button>
-                                            <span className="px-2 min-w-[1.5rem] text-center">{quantities[item.id] || 1}</span>
+                                            <span className="px-2 min-w-[1.5rem] text-center">
+                                                {quantities[item.id] || 1}
+                                            </span>
                                             <Button
                                                 type="button"
                                                 size="icon"
                                                 variant="outline"
-                                                onClick={() =>
-                                                    handleQuantityChange(item.id, (quantities[item.id] || 1) + 1)
-                                                }
+                                                onClick={() => handleIncrement(item.id)}
                                                 className="w-6 h-6 p-0"
                                             >+</Button>
                                         </div>

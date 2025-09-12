@@ -40,11 +40,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
+import { UserType } from "@/types";
 
 // Form schemas
 const generalSettingsSchema = z.object({
   brandName: z.string().min(2, "Brand name must be at least 2 characters"),
   supportEmail: z.string().email("Please enter a valid email address"),
+  phone: z.string().min(10, "Please enter a valid phone number"),
   currency: z.string(),
   timezone: z.string(),
   language: z.string(),
@@ -66,14 +68,14 @@ export default function Settings() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string, email?: string, phone?: string } | null>(null);
 
 
   const generalForm = useForm<z.infer<typeof generalSettingsSchema>>({
     resolver: zodResolver(generalSettingsSchema),
     defaultValues: {
-      brandName: "KETROX",
-      supportEmail: "ketrox083@gmail.com",
+      brandName: "",
+      supportEmail: "",
+      phone: "",
       currency: "INR",
       timezone: "Asia/Kolkata",
       language: "en"
@@ -89,39 +91,48 @@ export default function Settings() {
     },
   });
 
-  // Show existing saved image on UI when page loads, keep preview when selecting a new file
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const resp = await fetch('/api/auth/get-session', { credentials: 'include' });
-        const js = await resp.json();
-        const existing: string | undefined = js?.user?.image;
-        
-        // Populate user state with session data
-        if (!cancelled && js?.user) {
-          setUser({
-            id: js.user.id,
-            name: js.user.name,
-            role: js.user.role,
-            image: js.user.image,
-            email: js.user.email,
-            phone: js.user.phone
-          });
-        }
-        
-        if (!cancelled && existing && !selectedFile) {
-          setPreviewUrl(existing);
-        }
+useEffect(() => {
+  let cancelled = false;
+  (async () => {
+    try {
+      const resp = await fetch('/api/auth/get-session', { credentials: 'include' });
+      const js = await resp.json();
 
-      } catch(error) {
-        console.error(error);
+      if (!cancelled && js?.user) {
+
+        generalForm.reset({
+          brandName: js.user.name || "",
+          supportEmail: js.user.email || "",
+          phone: js.user.phone || "",
+          currency: "INR",
+          timezone: "Asia/Kolkata",
+          language: "en",
+        });
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedFile]);
+
+      if (!cancelled && js?.user?.image && !selectedFile) {
+        setPreviewUrl(js.user.image);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  })();
+  return () => {
+    cancelled = true;
+  };
+}, [selectedFile, generalForm]);
+
+
+  const updateUser = async (id: string, data: UserType) => {
+  const resp = await fetch(`/api/user/super-admin/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!resp.ok) throw new Error("Failed to update user");
+  return resp.json();
+};
 
   const onSecuritySubmit = async (values: z.infer<typeof securitySettingsSchema>) => {
     try {
@@ -154,11 +165,47 @@ export default function Settings() {
     }
   };
 
-  const onGeneralSubmit = async () => {
+  const onGeneralSubmit = async (values: z.infer<typeof generalSettingsSchema>) => {
     try {
+      setIsUploading(true);
+
+      // Get current user session
+      const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
+      const sessJson = await sess.json();
+      const uid = sessJson?.user?.id;
+      
+      if (!uid) {
+        toast.error('User not found');
+        setIsUploading(false);
+        return;
+      }
+
+      // Update user profile data (name, email, phone)
+      const updateData = {
+        name: values.brandName,
+        email: values.supportEmail,
+        phone: values.phone,
+      };
+
+      const updateRes = await updateUser(uid, updateData);
+      if (!updateRes) {
+        toast.error('Failed to update profile');
+        setIsUploading(false);
+        return;
+      }
+
+      // Dispatch event to update layout with new profile data
+      window.dispatchEvent(new CustomEvent('profile-updated', {
+        detail: {
+          name: values.brandName,
+          email: values.supportEmail,
+          phone: values.phone
+        }
+      }));
+
+      // Handle profile photo upload if a file is selected
       let imageUrl: string | null = null;
       if (selectedFile) {
-        setIsUploading(true);
         const fileExt = selectedFile.name.split(".").pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `uploads/${fileName}`;
@@ -182,15 +229,6 @@ export default function Settings() {
         }
 
         imageUrl = data.signedUrl!;
-        // Get session user id
-        const sess = await fetch('/api/auth/get-session', { credentials: 'include' });
-        const sessJson = await sess.json();
-        const uid = sessJson?.user?.id;
-        if (!uid) {
-          toast.error('User not found');
-          setIsUploading(false);
-          return;
-        }
 
         const res = await fetch('/api/user/photo', {
           method: 'PUT',
@@ -203,23 +241,24 @@ export default function Settings() {
           setIsUploading(false);
           return;
         }
-        // Clear local state after successful save
         setSelectedFile(null);
-        setIsUploading(false);
         // Dispatch custom event to update sidebar photo
         window.dispatchEvent(new CustomEvent('profile-photo-updated'));
       }
-      toast.success('Configuration saved');
+      
+      setIsUploading(false);
+      toast.success('Profile updated successfully');
+      
       if (imageUrl) {
         setPreviewUrl(imageUrl);
       }
 
-    } catch {
-      toast.error('Failed to save configuration');
+    } catch (error) {
+      console.error('Update error:', error);
+      toast.error('Failed to update profile');
       setIsUploading(false);
     }
   };
-
 
   const removeProfilePhoto = async (): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -283,20 +322,36 @@ export default function Settings() {
               <CardContent>
                 <Form {...generalForm}>
                   <form onSubmit={generalForm.handleSubmit(onGeneralSubmit)} className="space-y-6">
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                       <FormField
                         control={generalForm.control}
                         name="brandName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Brand Name</FormLabel>
+                            <FormLabel>Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter brand name" {...field} />
+                              <Input placeholder="Enter name" {...field} />
+
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+
+                      <FormField
+                        control={generalForm.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Support Phone</FormLabel>
+                            <FormControl>
+                              <Input type="tel" placeholder="+1 (555) 123-4567" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
                       <FormField
                         control={generalForm.control}
                         name="supportEmail"
@@ -439,8 +494,7 @@ export default function Settings() {
                                   if (result.success) {
                                     setPreviewUrl(null);
                                     setSelectedFile(null);
-                                    setUser(prev => prev ? { ...prev, image: undefined } : null);
-                                    window.dispatchEvent(new CustomEvent('profile-photo-updated'));
+                                            window.dispatchEvent(new CustomEvent('profile-photo-updated'));
                                     toast.success('Photo removed');
                                   } else {
                                     toast.error(result.error || 'Failed to remove photo');

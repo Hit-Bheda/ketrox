@@ -17,6 +17,7 @@ import {
   Download,
   Copy,
   ExternalLink,
+  Star,
 } from "lucide-react";
 
 import {
@@ -63,7 +64,6 @@ import { ApiMenuItem, DietaryOption, MenuItem } from "@/types";
 
 
 export default function Menu() {
-
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [availabilityFilter, setAvailabilityFilter] = useState("all");
@@ -252,7 +252,6 @@ export default function Menu() {
     totalItems: menuItems.length,
     availableItems: menuItems.filter(item => item.available).length,
     avgPrice: menuItems.length > 0 ? menuItems.reduce((sum, item) => sum + Number(item.price), 0) / menuItems.length : 0,
-    topRated: menuItems.length > 0 ? menuItems[0] : { popularity: 0, name: "" }
   };
 
   function getCookie(name: string) {
@@ -532,7 +531,7 @@ export default function Menu() {
               <ChefHat className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalStats.totalItems}</div>
+              <div className="text-2xl font-bold text-orange-500 ">{totalStats.totalItems}</div>
               <div className="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
                 <CheckCircle className="w-3 h-3 text-chart-3" />
                 <span>{totalStats.availableItems} available</span>
@@ -546,25 +545,13 @@ export default function Menu() {
               <DollarSign className="h-4 w-4 text-chart-2" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-chart-2">${totalStats.avgPrice.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-chart-2 ">${totalStats.avgPrice.toFixed(2)}</div>
               <div className="text-xs text-muted-foreground mt-1">
                 Across all categories
               </div>
             </CardContent>
           </Card>
-          {/* 
-          <Card className="hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Top Rated</CardTitle>
-              <Star className="h-4 w-4 text-chart-4" />
-            </CardHeader>
-            <CardContent>
 
-              <div className="text-xs text-muted-foreground mt-1">
-                {totalStats.topRated.name}
-              </div>
-            </CardContent>
-          </Card> */}
 
           <Card className="hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -572,9 +559,23 @@ export default function Menu() {
               <Filter className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{uniqueCategories.length}</div>
+              <div className="text-2xl font-bold text-indigo-500">{uniqueCategories.length}</div>
               <div className="text-xs text-muted-foreground mt-1">
                 Menu categories
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-lg transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Most Expensive Item</CardTitle>
+              <Star className="h-4 w-4 text-yellow-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-500">
+                ${menuItems.length > 0 ? Math.max(...menuItems.map(item => Number(item.price))).toFixed(2) : '0.00'}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Highest priced menu item
               </div>
             </CardContent>
           </Card>
@@ -680,8 +681,8 @@ export default function Menu() {
                   </h2>
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {itemsInCategory.map((item) => (
-                      <Card 
-                        key={item.id} 
+                      <Card
+                        key={item.id}
                         className={`hover:shadow-lg transition-all py-0 duration-300 border-1 ${!item.available ? 'opacity-60' : ''} ${selectedItem?.id === item.id ? 'ring-2 ring-primary' : ''}`}
                         onClick={() => setSelectedItem(item)}
                       >
@@ -734,7 +735,7 @@ export default function Menu() {
                                     </>
                                   )}
                                 </DropdownMenuItem>
-                              
+
                                 <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                                   <AlertDialogTrigger asChild>
                                     <DropdownMenuItem

@@ -19,7 +19,6 @@ import {
   LoaderIcon,
 } from "lucide-react";
 
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +74,9 @@ export default function Invoices() {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [hotelsData, setHotelsData] = useState<HotelType | null>(null);
   const [menuMap, setMenuMap] = useState<{ [id: string]: string }>({});
+  const [page, setPage] = useState(0);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     fetch("/api/admin/menu")
@@ -164,7 +166,6 @@ export default function Invoices() {
     setTableLoading(false);
   };
 
-
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -188,10 +189,12 @@ export default function Invoices() {
   const fetchInvoices = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/invoices");
+      const response = await fetch(`/api/admin/invoices?page=${page}&limit=${limit}`);
       const data = await response.json();
+
       if (response.ok) {
         setInvoices(data.invoices || []);
+        setTotal(data.pagination?.total || 0);
       } else {
         toast.error("Failed to fetch invoices");
       }
@@ -203,6 +206,10 @@ export default function Invoices() {
     }
   };
 
+  useEffect(() => {
+    fetchInvoices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, limit]);
 
   // Create invoice from form data
   const handleCreateInvoice = async () => {
@@ -259,7 +266,6 @@ export default function Invoices() {
   };
 
   useEffect(() => {
-    fetchInvoices();
     fetchOrders();
   }, []);
 
@@ -1010,7 +1016,6 @@ export default function Invoices() {
                     </div>
                   </div>
 
-
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="payment-method" className="text-foreground mb-2">Payment Method</Label>
@@ -1039,6 +1044,7 @@ export default function Invoices() {
                           <SelectItem value="refunded">Refunded</SelectItem>
                         </SelectContent>
                       </Select>
+
                     </div>
 
                   </div>
@@ -1106,6 +1112,19 @@ export default function Invoices() {
                 <SelectItem value="month">This Month</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* 👇 Add Limit Dropdown Here */}
+            <Select value={limit.toString()} onValueChange={(val) => setLimit(Number(val))}>
+              <SelectTrigger className="w-full sm:w-[100px]">
+                <SelectValue placeholder="Rows" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Invoices Table */}
@@ -1128,8 +1147,20 @@ export default function Invoices() {
 
                     <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                     <TableCell>
-                      <div className="font-medium">
-                        {invoice.customerName} <span className="text-muted-foreground">• {invoice.customerPhone}</span>
+                      <div className="flex items-center space-x-3">
+                        {/* Initials Avatar */}
+                        <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold">
+                          {invoice.customerName
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </div>
+
+                        {/* Name and phone */}
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">{invoice.customerName}</span>
+                          <span className="text-xs text-muted-foreground">{invoice.customerPhone}</span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>{invoice.tableNumber}</TableCell>
@@ -1191,6 +1222,40 @@ export default function Invoices() {
           )}
         </CardContent>
       </Card>
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between mt-4">
+        <p className="text-sm text-muted-foreground">
+          Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} invoices
+        </p>
+        <div className="flex gap-2 items-center">
+          <Button
+            variant="outline"
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(p - 1, 0))}
+          >
+            Prev
+          </Button>
+
+          {Array.from({ length: Math.ceil(total / limit) }, (_, i) => (
+            <Button
+              key={i}
+              variant={page === i ? "default" : "outline"}
+              onClick={() => setPage(i)}
+              className="px-3"
+            >
+              {i + 1}
+            </Button>
+          ))}
+
+          <Button
+            variant="outline"
+            disabled={(page + 1) * limit >= total}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
 
       {/* Edit Invoice Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>

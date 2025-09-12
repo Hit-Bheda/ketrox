@@ -155,17 +155,22 @@ export const ticketCreateSchema = z.object({
     priority: z.enum(["low", "medium", "high"]).default("medium"),
     message: z.string().min(1, "Initial message is required"),
     tenantId: z.string().uuid("Invalid tenant ID").optional(),
+    createdAt: z.date().optional(),
+    updatedAt: z.date().optional(),
 });
 
 export const ticketReplySchema = z.object({
     ticketId: z.string().min(1, "Ticket ID is required"),
     content: z.string().min(1, "Message content is required"),
+
 });
 
 export const ticketUpdateSchema = z.object({
     id: z.string().min(1, "Ticket ID is required"),
     status: z.enum(["open", "in_progress", "resolved"]).optional(),
     priority: z.enum(["low", "medium", "high"]).optional(),
+    createdAt: z.date().optional(),
+    updatedAt: z.date().optional(),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -181,12 +186,10 @@ export const betterAuthResetSchema = z.object({
   });
 
 // Client-side form schema for reset password page
-export const resetPasswordFormSchema = z
-  .object({
+export const resetPasswordFormSchema = z.object({
     newPassword: z.string().min(6, "Password must be at least 6 characters long"),
     confirmPassword: z.string().min(6, "Password must be at least 6 characters long"),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
+  }).refine((data) => data.newPassword === data.confirmPassword, {
     path: ["confirmPassword"],
     message: "Passwords do not match",
   });

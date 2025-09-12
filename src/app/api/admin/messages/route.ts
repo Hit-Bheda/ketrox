@@ -74,6 +74,8 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid tenantId" }, { status: 400 });
     }
 
+    const now = new Date();
+
     const id = crypto.randomUUID();
     const created = await db.insert(ticket).values({
       id,
@@ -82,6 +84,8 @@ export async function POST(request: Request) {
       subject: parsed.data.subject,
       status: "open",
       priority: parsed.data.priority,
+      createdAt: now,    // ✅ explicitly set
+      updatedAt: now,
     }).returning();
 
     const msgId = crypto.randomUUID();
@@ -91,6 +95,8 @@ export async function POST(request: Request) {
       senderId: null,
       senderRole: "admin",
       content: parsed.data.message,
+      createdAt: now,    // ✅ explicitly set
+      updatedAt: now,
     });
 
     return Response.json({ ticket: created[0] }, { status: 201 });

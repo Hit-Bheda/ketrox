@@ -36,8 +36,6 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-
-
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
   const [showPassword, setShowPassword] = useState(false);
@@ -438,6 +436,29 @@ export default function Settings() {
                 </div>
               </div>
 
+              {hotelsData && (
+                <>
+                  <div className="space-y-4">
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <div>
+                        <Label className="mb-2">Hotel Name</Label>
+                        <div className="flex items-center h-10 px-3 py-2 border border-input bg-background rounded-md">
+                          {hotelsData.name}
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="mb-2">Address</Label>
+                        <div className="flex items-center px-3 py-2 border border-input bg-background rounded-md">
+                          {hotelsData.address}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <Separator />
 
               {/* Password Change */}
@@ -515,6 +536,8 @@ export default function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
+
+
       </Tabs>
     </div>
 

@@ -63,7 +63,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
     // Implement logout logic here
     console.log("Logging out...");
     await signOut();
-    window.location.href = "/";
+    window.location.href = "/signin";
   };
 
   useEffect(() => {
@@ -90,13 +90,22 @@ export default function DashboardLayout({ children }: LayoutProps) {
     fetchUserData();
 
     // Listen for profile photo updates
-    const handleProfileUpdate = () => {
+    const handleProfilePhotoUpdate = () => {
       fetchUserData();
     };
 
-    window.addEventListener('profile-photo-updated', handleProfileUpdate);
+    // Listen for profile data updates (name, email, phone)
+    const handleProfileDataUpdate = (event: CustomEvent) => {
+      const { name } = event.detail;
+      setUser(prev => prev ? { ...prev, name } : null);
+    };
+
+    window.addEventListener('profile-photo-updated', handleProfilePhotoUpdate);
+    window.addEventListener('profile-updated', handleProfileDataUpdate as EventListener);
+    
     return () => {
-      window.removeEventListener('profile-photo-updated', handleProfileUpdate);
+      window.removeEventListener('profile-photo-updated', handleProfilePhotoUpdate);
+      window.removeEventListener('profile-updated', handleProfileDataUpdate as EventListener);
     };
   }, []);
 

@@ -12,12 +12,12 @@ import {
   Users,
   ChefHat,
   CheckCircle,
-  ArrowUpRight,
-  ArrowDownRight,
+
   Clock,
   AlertCircle,
   Package,
-  Activity
+  Activity,
+  Wallet
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +37,17 @@ import {
 } from "recharts";
 import { useEffect, useState, useMemo } from "react";
 import { betterFetch } from "@better-fetch/fetch";
-import { OrderType } from "@/types";
+import { OrderType, Invoice } from "@/types";
+
+interface ActivityItem {
+  id: string;
+  action: string;
+  details: string;
+  time: string;
+  type: 'order' | 'invoice' | 'staff' | 'table';
+  user: string;
+  timestamp: Date;
+}
 
 const STATUS_COLORS: Record<string, string> = {
   Pending: 'rgb(246, 216, 144)',
@@ -46,12 +56,7 @@ const STATUS_COLORS: Record<string, string> = {
   Delivered: 'rgb(46, 204, 113)'
 };
 
-const recentActivity = [
-  { id: 1, action: "New order placed", details: "Table 5 - Order #ORD-1234", time: "2 minutes ago", type: "order", user: "Manager" },
-  { id: 2, action: "Order status updated", details: "Order #ORD-1230 marked as ready", time: "5 minutes ago", type: "order", user: "Manager" },
-  { id: 3, action: "Order completed", details: "Table 8 - Order #ORD-1228", time: "10 minutes ago", type: "order", user: "Manager" },
-  { id: 4, action: "New order placed", details: "Table 12 - Order #ORD-1235", time: "15 minutes ago", type: "order", user: "Manager" }
-];
+// Dynamic activity will be calculated from real data
 
 
 export default function Dashboard() {
@@ -59,6 +64,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string } | null>(null);
   const [orders, setOrders] = useState<OrderType[]>([]);
   const [staff, setStaff] = useState<{ id: string; name: string; role: string; status: string }[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,10 +87,14 @@ export default function Dashboard() {
     switch (type) {
       case 'order':
         return <Package className="w-4 h-4 text-primary" />;
+      case 'invoice':
+        return <DollarSign className="w-4 h-4 text-green-600" />;
       case 'payment':
         return <DollarSign className="w-4 h-4 text-chart-2" />;
       case 'staff':
         return <Users className="w-4 h-4 text-chart-3" />;
+      case 'table':
+        return <Clock className="w-4 h-4 text-chart-4" />;
       case 'reservation':
         return <Clock className="w-4 h-4 text-chart-4" />;
       case 'alert':
@@ -124,23 +134,27 @@ export default function Dashboard() {
       try {
         setLoading(true);
         const managerId = user?.id;
-        const [ordersRes, staffRes] = await Promise.all([
+        const [ordersRes, staffRes, invoicesRes] = await Promise.all([
           fetch(`/api/orders?managerId=${managerId}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             cache: "no-store"
           }),
-          fetch('/api/admin/hotel')
+          fetch('/api/admin/hotel'),
+          fetch('/api/admin/invoices')
         ]);
 
         if (!ordersRes.ok) throw new Error("Failed to fetch orders");
         if (!staffRes.ok) throw new Error("Failed to fetch staff");
+        if (!invoicesRes.ok) throw new Error("Failed to fetch invoices");
 
         const ordersData = await ordersRes.json();
         const staffData = await staffRes.json();
+        const invoicesData = await invoicesRes.json();
 
         setOrders(ordersData.orders || []);
         setStaff(Array.isArray(staffData.staff) ? staffData.staff : []);
+        setInvoices(Array.isArray(invoicesData.invoices) ? invoicesData.invoices : []);
         setError(null);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -218,6 +232,7 @@ export default function Dashboard() {
       ordersChange: 0,
       invoicesChange: 0,
       staffChange: 0,
+      filteredOrdersCount: filteredOrders.length,
     };
   }, [orders, staff, dateRange]);
 
@@ -256,7 +271,7 @@ export default function Dashboard() {
         time: timeAgo(o.createdAt),
         total: Number(o.totalPrice || 0).toFixed(2),
         customer: o.customerName,
-         phone: o.customerPhone,
+        phone: o.customerPhone,
         orderId: o.id
       }));
   }, [orders, dateRange]);
@@ -274,6 +289,68 @@ export default function Dashboard() {
     return `${days} day${days > 1 ? 's' : ''} ago`;
   }
 
+  // Dynamic Recent Activity - Manager-focused activities
+  const recentActivity = useMemo(() => {
+    const activities: ActivityItem[] = [];
+    
+    // Add order activities (manager perspective)
+    orders.slice(0, 8).forEach((order, index) => {
+      activities.push({
+        id: `order-${order.orderNumber}-${index}`,
+        action: "Order managed",
+        details: `Table ${order.tableNumber || 'N/A'} - Order #${order.orderNumber} - ${order.status}`,
+        time: timeAgo(order.createdAt),
+        type: 'order',
+        user: user?.name || 'Manager',
+        timestamp: new Date(order.createdAt)
+      });
+
+      // Add table management activity
+      if (order.tableNumber) {
+        activities.push({
+          id: `table-mgmt-${order.tableNumber}-${index}`,
+          action: "Table assignment",
+          details: `Table ${order.tableNumber} assigned to ${order.customerName || 'Customer'}`,
+          time: timeAgo(order.createdAt),
+          type: 'table',
+          user: user?.name || 'Manager',
+          timestamp: new Date(order.createdAt)
+        });
+      }
+    });
+
+    // Add invoice management activities
+    invoices.slice(0, 6).forEach((invoice, index) => {
+      const roundedAmount = Math.round(parseFloat(invoice.totalAmount || '0'));
+      activities.push({
+        id: `invoice-mgmt-${invoice.id || index}`,
+        action: "Invoice processed",
+        details: `Customer: ${invoice.customerName || 'N/A'} | #${invoice.invoiceNumber || `INV-${index + 1}`} | Amount: $${roundedAmount}`,
+        time: timeAgo(invoice.createdAt),
+        type: 'invoice',
+        user: user?.name || 'Manager',
+        timestamp: new Date(invoice.createdAt)
+      });
+    });
+
+    // Add order booking activities
+    orders.filter(order => order.status === 'pending').slice(0, 5).forEach((order, index) => {
+      activities.push({
+        id: `booking-${order.orderNumber}-${index}`,
+        action: "Order booked",
+        details: `Table ${order.tableNumber || 'N/A'} - ${order.customerName || 'Customer'} - ${order.items?.length || 0} items`,
+        time: timeAgo(order.createdAt),
+        type: 'order',
+        user: user?.name || 'Manager',
+        timestamp: new Date(order.createdAt)
+      });
+    });
+
+    // Sort by timestamp (most recent first) and limit to 12 items
+    return activities
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 12);
+  }, [orders, invoices, user]);
 
   return (
     <div className="flex-1 space-y-6 p-6 animate-fadeIn">
@@ -307,14 +384,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{kpiData.activeOrders}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              {kpiData.ordersChange > 0 ? (
-                <ArrowUpRight className="mr-1 h-3 w-3 text-chart-3" />
-              ) : (
-                <ArrowDownRight className="mr-1 h-3 w-3 text-destructive" />
-              )}
-              {Math.abs(kpiData.ordersChange)}% from yesterday
-            </div>
+
           </CardContent>
         </Card>
 
@@ -325,13 +395,9 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-chart-2">${kpiData.totalRevenue.toFixed(2)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <ArrowUpRight className="mr-1 h-3 w-3 text-chart-3" />
-              {kpiData.revenueChange}% from yesterday
-            </div>
+
           </CardContent>
         </Card>
-
 
         <Card className="hover:shadow-lg transition-all duration-300 ">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -343,6 +409,23 @@ export default function Dashboard() {
             <div className="flex items-center text-xs text-muted-foreground">
               <CheckCircle className="mr-1 h-3 w-3 text-chart-3" />
               All positions covered
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all duration-300 ">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg. Order Value</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-indigo-500">
+              {kpiData.filteredOrdersCount > 0
+                ? `$${(kpiData.totalRevenue / kpiData.filteredOrdersCount).toFixed(2)}`
+                : "$0.00"}
+            </div>
+            <div className="flex items-center text-xs text-muted-foreground">
+              Based on {kpiData.filteredOrdersCount} orders
             </div>
           </CardContent>
         </Card>

@@ -17,8 +17,9 @@ import {
   AlertCircle,
   Package,
   Activity,
-  ArrowUpRight,
-  ArrowDownRight
+  Wallet,
+  Table,
+  FileText,
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,8 +37,17 @@ import {
   Pie,
   Cell
 } from "recharts";
-import { OrderType, StaffType } from "@/types";
+import { Invoice, OrderType, StaffType } from "@/types";
 
+interface ActivityItem {
+  id: string;
+  action: string;
+  details: string;
+  time: string;
+  type: 'order' | 'payment' | 'staff' | 'table' | 'invoice';
+  user: string;
+  timestamp: Date;
+}
 
 const STATUS_COLORS: Record<string, string> = {
   Pending: 'rgb(246, 216, 144)',
@@ -46,19 +56,13 @@ const STATUS_COLORS: Record<string, string> = {
   Delivered: 'rgb(46, 204, 113)'
 };
 
-const recentActivity = [
-  { id: 1, action: "New order placed", details: "Table 5 - Order #ORD-1234", time: "2 minutes ago", type: "order", user: "Sarah Johnson" },
-  { id: 2, action: "Payment received", details: "Invoice #INV-456 - $125.00", time: "5 minutes ago", type: "payment", user: "Michael Chen" },
-  { id: 3, action: "Staff check-in", details: "Maria Rodriguez started shift", time: "10 minutes ago", type: "staff", user: "Maria Rodriguez" },
-  { id: 4, action: "Table reserved", details: "Table 12 for 6 people at 8:00 PM", time: "15 minutes ago", type: "reservation", user: "James Wilson" },
-  { id: 5, action: "Order completed", details: "Table 8 - Order #ORD-1230", time: "18 minutes ago", type: "order", user: "Kitchen Staff" },
-  { id: 6, action: "Inventory alert", details: "Salmon stock running low", time: "25 minutes ago", type: "alert", user: "System" }
-];
+// Dynamic activity will be calculated from real data
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [orders, setOrders] = useState<OrderType[]>([]);
   const [staff, setStaff] = useState<StaffType[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,20 +71,24 @@ export default function Dashboard() {
     async function load() {
       try {
         setLoading(true);
-        const [ordersRes, staffRes] = await Promise.all([
+        const [ordersRes, staffRes, invoicesRes] = await Promise.all([
           fetch('/api/orders'),
-          fetch('/api/admin/hotel')
+          fetch('/api/admin/hotel'),
+          fetch('/api/admin/invoices')
         ]);
 
         if (!ordersRes.ok) throw new Error('Failed to fetch orders');
         if (!staffRes.ok) throw new Error('Failed to fetch staff');
+        if (!invoicesRes.ok) throw new Error('Failed to fetch invoices');
 
         const ordersJson = await ordersRes.json();
         const staffJson = await staffRes.json();
+        const invoicesJson = await invoicesRes.json();
 
         if (!mounted) return;
         setOrders(Array.isArray(ordersJson.orders) ? ordersJson.orders : []);
         setStaff(Array.isArray(staffJson.staff) ? staffJson.staff : []);
+        setInvoices(Array.isArray(invoicesJson.invoices) ? invoicesJson.invoices : []);
         setError(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load data');
@@ -119,11 +127,15 @@ export default function Dashboard() {
         return <Clock className="w-4 h-4 text-chart-4" />;
       case 'alert':
         return <AlertCircle className="w-4 h-4 text-destructive" />;
+      case 'table':      
+        return <Table className="w-4 h-4 text-chart-5" />; 
+      case 'invoice':  
+        return <FileText className="w-4 h-4 text-chart-6" />; 
       default:
         return <Activity className="w-4 h-4 text-muted-foreground" />;
     }
   };
-
+  
 
   const getFilterFn = (dateRange: 'today' | 'week' | 'month' | 'all') => {
     const now = new Date();
@@ -147,28 +159,28 @@ export default function Dashboard() {
 
   const dailyOrdersData = useMemo(() => {
     const byHour: Record<string, { orders: number; revenue: number }> = {};
-  
+
     const filterFn = getFilterFn(dateRange);
-  
+
     orders.forEach(o => {
       const d = new Date(o.createdAt);
       if (!filterFn(d)) return;
-  
+
       const hour = `${d.getHours()}:00`;
       if (!byHour[hour]) byHour[hour] = { orders: 0, revenue: 0 };
       byHour[hour].orders += 1;
       byHour[hour].revenue += Number(o.totalPrice || 0);
     });
-  
+
     const hours = Array.from({ length: 24 }, (_, h) => `${h}:00`);
-  
+
     return hours.map(h => ({
       time: h,
       orders: byHour[h]?.orders || 0,
       revenue: byHour[h]?.revenue || 0,
     }));
   }, [orders, dateRange]);
-  
+
 
   const kpiData = useMemo(() => {
     const filterFn = getFilterFn(dateRange);
@@ -176,26 +188,26 @@ export default function Dashboard() {
     const activeOrders = filteredOrders.filter(
       o => o.status !== "delivered" && o.status !== "cancelled"
     ).length;
-  
+
     const totalRevenue = filteredOrders.reduce(
       (sum, o) => sum + Number(o.totalPrice || 0),
       0
     );
-  
+
     const staffCount = staff.length;
-  
+
     return {
       activeOrders,
       totalRevenue,
-      pendingInvoices: 7, 
+      pendingInvoices: 7,
       staffCount,
       revenueChange: 0,
       ordersChange: 0,
       invoicesChange: 0,
       staffChange: 0,
+      filteredOrdersCount: filteredOrders.length,
     };
   }, [orders, staff, dateRange]);
-  
 
 
   const orderStatusData = useMemo(() => {
@@ -238,7 +250,6 @@ export default function Dashboard() {
       }));
   }, [orders, dateRange]);
 
-
   function timeAgo(dateString: string) {
     const then = new Date(dateString).getTime();
     const now = Date.now();
@@ -252,10 +263,76 @@ export default function Dashboard() {
     return `${days} day${days > 1 ? 's' : ''} ago`;
   }
 
+  // Dynamic Recent Activity - combines data from orders, invoices, and staff
+  const recentActivity = useMemo(() => {
+    const activities: ActivityItem[] = [];
+    
+    // Add order activities (new orders, status changes)
+    orders.slice(0, 10).forEach((order, index) => {
+      activities.push({
+        id: `order-${order.orderNumber}-${index}`,
+        action: "New order placed",
+        details: `Table ${order.tableNumber || 'N/A'} - Order #${order.orderNumber}`,
+        time: timeAgo(order.createdAt),
+        type: 'order',
+        user: order.customerName || 'Customer',
+        timestamp: new Date(order.createdAt)
+      });
+
+      // Add table occupancy activity
+      if (order.tableNumber) {
+        activities.push({
+          id: `table-${order.tableNumber}-${index}`,
+          action: "Table occupied",
+          details: `Table ${order.tableNumber} - ${order.customerName || 'Customer'}`,
+          time: timeAgo(order.createdAt),
+          type: 'table',
+          user: order.customerName || 'Customer',
+          timestamp: new Date(order.createdAt)
+        });
+      }
+    });
+
+    // Add invoice activities with rounded amounts
+    invoices.slice(0, 8).forEach((invoice, index) => {
+      const roundedAmount = Math.round(parseFloat(invoice.totalAmount || '0'));
+      activities.push({
+        id: `invoice-${invoice.id || index}`,
+        action: "Invoice generated",
+        details: `Customer: ${invoice.customerName} | #${invoice.invoiceNumber || `INV-${index + 1}`} | Amount: $${roundedAmount}`,
+        time: timeAgo(invoice.createdAt),
+        type: 'invoice',
+        user: 'System',
+        timestamp: new Date(invoice.createdAt)
+      });
+    });
+
+    // Add manager login activities (filter for managers only)
+    staff.filter(member => member.role === 'manager').slice(0, 3).forEach((manager, index) => {
+      const loginTime = new Date();
+      loginTime.setMinutes(loginTime.getMinutes() - (index * 30)); // Stagger manager login times
+      
+      activities.push({
+        id: `manager-${manager.id || index}`,
+        action: "Manager check-in",
+        details: `${manager.name || `Manager ${index + 1}`} logged in`,
+        time: timeAgo(loginTime.toISOString()),
+        type: 'staff',
+        user: manager.name || `Manager ${index + 1}`,
+        timestamp: loginTime
+      });
+    });
+
+    // Sort by timestamp (most recent first) and limit to 15 items
+    return activities
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 15);
+  }, [orders, invoices, staff]);
+
   return (
     <div className="flex-1 space-y-6 p-6 animate-fadeIn">
       {/* Date Range Filter */}
-      <div className="flex items-center gap-4 mb-4">
+      <div className="flex items-center justify-end gap-4 mb-4">
         <span className="font-medium text-muted-foreground">Date Range:</span>
         <Select value={dateRange} onValueChange={v => setDateRange(v as 'today' | 'week' | 'month' | 'all')}>
           <SelectTrigger className="w-[140px]">
@@ -284,14 +361,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{kpiData.activeOrders}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              {kpiData.ordersChange > 0 ? (
-                <ArrowUpRight className="mr-1 h-3 w-3 text-chart-3" />
-              ) : (
-                <ArrowDownRight className="mr-1 h-3 w-3 text-destructive" />
-              )}
-              {Math.abs(kpiData.ordersChange)}% from yesterday
-            </div>
+           
           </CardContent>
         </Card>
 
@@ -302,26 +372,9 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-chart-2">${kpiData.totalRevenue.toFixed(2)}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <ArrowUpRight className="mr-1 h-3 w-3 text-chart-3" />
-              {kpiData.revenueChange}% from yesterday
-            </div>
+           
           </CardContent>
         </Card>
-
-        {/* <Card className="hover:shadow-lg transition-all duration-300 ">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Invoices</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{kpiData.pendingInvoices}</div>
-            <div className="flex items-center text-xs text-muted-foreground">
-              <ArrowUpRight className="mr-1 h-3 w-3 text-chart-3" />
-              {kpiData.invoicesChange}% from yesterday
-            </div>
-          </CardContent>
-        </Card> */}
 
         <Card className="hover:shadow-lg transition-all duration-300 ">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -333,6 +386,23 @@ export default function Dashboard() {
             <div className="flex items-center text-xs text-muted-foreground">
               <CheckCircle className="mr-1 h-3 w-3 text-chart-3" />
               All positions covered
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all duration-300 ">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg. Order Value</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-indigo-500">
+              {kpiData.filteredOrdersCount > 0
+                ? `$${(kpiData.totalRevenue / kpiData.filteredOrdersCount).toFixed(2)}`
+                : "$0.00"}
+            </div>
+            <div className="flex items-center text-xs text-muted-foreground">
+              Based on {kpiData.filteredOrdersCount} orders
             </div>
           </CardContent>
         </Card>

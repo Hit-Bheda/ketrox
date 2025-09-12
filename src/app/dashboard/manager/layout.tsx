@@ -140,7 +140,7 @@ const handleLogout = async () => {
   // Implement logout logic here
   console.log("Logging out...");
   await signOut();
-  window.location.href = "/";
+  window.location.href = "/signin";
 };
 
 export default function Layout({ children }: LayoutProps) {
