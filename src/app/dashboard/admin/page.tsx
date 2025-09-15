@@ -312,7 +312,7 @@ export default function Dashboard() {
     // Add manager login activities (filter for managers only)
     staff.filter(member => member.role === 'manager').slice(0, 3).forEach((manager, index) => {
       const loginTime = new Date();
-      loginTime.setMinutes(loginTime.getMinutes() - (index * 30)); // Stagger manager login times
+      loginTime.setMinutes(loginTime.getMinutes() - (index * 30)); 
 
       activities.push({
         id: `manager-${manager.id || index}`,

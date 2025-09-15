@@ -38,6 +38,7 @@ import {
 import { useEffect, useState, useMemo } from "react";
 import { betterFetch } from "@better-fetch/fetch";
 import { OrderType, Invoice } from "@/types";
+import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ActivityItem {
   id: string;
@@ -64,6 +65,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<{ id: string; name: string; role: string; image?: string } | null>(null);
   const [orders, setOrders] = useState<OrderType[]>([]);
   const [staff, setStaff] = useState<{ id: string; name: string; role: string; status: string }[]>([]);
+  const [expanded, setExpanded] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -292,7 +294,7 @@ export default function Dashboard() {
   // Dynamic Recent Activity - Manager-focused activities
   const recentActivity = useMemo(() => {
     const activities: ActivityItem[] = [];
-    
+
     // Add order activities (manager perspective)
     orders.slice(0, 8).forEach((order, index) => {
       activities.push({
@@ -355,7 +357,7 @@ export default function Dashboard() {
   return (
     <div className="flex-1 space-y-6 p-6 animate-fadeIn">
       {/* Date Range Filter */}
-      <div className="flex items-center gap-4 mb-4">
+      <div className="flex items-center justify-end gap-4 mb-4">
         <span className="font-medium text-muted-foreground">Date Range:</span>
         <Select value={dateRange} onValueChange={v => setDateRange(v as 'today' | 'week' | 'month' | 'all')}>
           <SelectTrigger className="w-[140px]">
@@ -557,27 +559,64 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {liveOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
+                <div
+                  key={order.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                >
+                  {/* Left section */}
+                  <div className="flex-1 min-w-0">
+                    {/* Order header row */}
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:space-x-3 mb-2">
                       <span className="font-semibold text-sm">{order.id}</span>
                       <span className="text-sm text-muted-foreground">{order.table}</span>
-                      <span className="text-sm text-muted-foreground">•</span>
-                      <span className="text-sm text-muted-foreground">{order.customer}</span>
-                      <span className="text-sm text-muted-foreground">•</span>
-                      <span className="text-sm text-muted-foreground">{order.phone}</span>
+                      <span className="hidden sm:inline text-sm text-muted-foreground">•</span>
+                      <span className="text-sm text-muted-foreground break-words">{order.customer}</span>
+                      <span className="hidden sm:inline text-sm text-muted-foreground">•</span>
+                      <span className="text-sm text-muted-foreground break-words">{order.phone}</span>
                     </div>
-                    <div className="text-xs text-muted-foreground mb-2">
-                      {order.items.join(', ')}
-                    </div>
-                    <div className="flex items-center space-x-2">
+
+                    {/* Items */}
+                    <TooltipProvider>
+                      <UiTooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="text-xs text-muted-foreground mb-2 cursor-pointer"
+                            onClick={() => setExpanded(!expanded)}
+                            style={{
+                              display: "-webkit-box",
+                              WebkitLineClamp: expanded ? "unset" : 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {order.items.join(", ")}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          align="start"
+                          className="max-w-[90vw] break-words"
+                        >
+                          <p>{order.items.join(", ")}</p>
+                        </TooltipContent>
+                      </UiTooltip>
+                    </TooltipProvider>
+
+                    {/* Price + time */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
                       <span className="text-sm font-medium">${order.total}</span>
-                      <span className="text-xs text-muted-foreground">•</span>
+                      <span className="hidden sm:inline text-xs text-muted-foreground">•</span>
                       <span className="text-xs text-muted-foreground">{order.time}</span>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getStatusColor(order.status)}>
+
+                  {/* Status badge */}
+                  <div className="mt-2 sm:mt-0 sm:ml-4 flex items-center">
+                    <Badge
+                      className={`${getStatusColor(order.status)} cursor-pointer`}
+                      onClick={() => console.log("Clicked Badge")}
+                    >
                       {order.status}
                     </Badge>
                   </div>
