@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import {
   User,
   Building2,
-  Bell,
   Shield,
   Save,
   Eye,
@@ -63,17 +62,6 @@ export default function Settings() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
-  const [notifications, setNotifications] = useState({
-    newOrders: true,
-    customerMessages: true,
-    staffAlerts: true,
-    systemUpdates: false,
-    marketingEmails: false,
-    smsNotifications: true,
-    emailDigest: true,
-    pushNotifications: true
-  });
-
   const [profileForm, setProfileForm] = useState({
     name: "",
     email: "",
@@ -99,12 +87,6 @@ export default function Settings() {
     dataRetention: "365",
     maintenanceMode: false
   });
-
-
-  const handleSaveNotifications = () => {
-    console.log("Saving notification settings:", notifications);
-    // In a real app, this would save to backend
-  };
 
   const handleSaveSystem = () => {
     console.log("Saving system settings:", systemSettings);
@@ -546,10 +528,9 @@ export default function Settings() {
 
       {/* Settings Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="system">System</TabsTrigger>
         </TabsList>
 
@@ -969,89 +950,6 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Notifications */}
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Bell className="w-5 h-5" />
-                <span>Notification Preferences</span>
-              </CardTitle>
-              <CardDescription>Manage how you receive alerts and updates</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>New Orders</Label>
-                    <p className="text-sm text-muted-foreground">Get notified when new orders are placed</p>
-                  </div>
-                  <Switch
-                    checked={notifications.newOrders}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, newOrders: checked })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Customer Messages</Label>
-                    <p className="text-sm text-muted-foreground">Notifications for customer inquiries and feedback</p>
-                  </div>
-                  <Switch
-                    checked={notifications.customerMessages}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, customerMessages: checked })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Staff Alerts</Label>
-                    <p className="text-sm text-muted-foreground">Important alerts from staff members</p>
-                  </div>
-                  <Switch
-                    checked={notifications.staffAlerts}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, staffAlerts: checked })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>System Updates</Label>
-                    <p className="text-sm text-muted-foreground">Updates about system maintenance and new features</p>
-                  </div>
-                  <Switch
-                    checked={notifications.systemUpdates}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, systemUpdates: checked })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>SMS Notifications</Label>
-                    <p className="text-sm text-muted-foreground">Receive critical alerts via SMS</p>
-                  </div>
-                  <Switch
-                    checked={notifications.smsNotifications}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, smsNotifications: checked })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Email Digest</Label>
-                    <p className="text-sm text-muted-foreground">Daily summary of restaurant activity</p>
-                  </div>
-                  <Switch
-                    checked={notifications.emailDigest}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, emailDigest: checked })}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={handleSaveNotifications}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Preferences
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* System Settings */}
         <TabsContent value="system" className="space-y-6">
@@ -1184,9 +1082,9 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <Button onClick={handleSaveSystem}>
-                  <Save className="w-4 h-4 mr-2" />
+              <div className="flex justify-center sm:justify-end ">
+                <Button onClick={handleSaveSystem} >
+                  <Save className="w-4 h-4 mr-2 " />
                   Save Settings
                 </Button>
               </div>

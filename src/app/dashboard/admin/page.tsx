@@ -38,6 +38,7 @@ import {
   Cell
 } from "recharts";
 import { Invoice, OrderType, StaffType } from "@/types";
+import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ActivityItem {
   id: string;
@@ -64,6 +65,7 @@ export default function Dashboard() {
   const [staff, setStaff] = useState<StaffType[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -127,15 +129,15 @@ export default function Dashboard() {
         return <Clock className="w-4 h-4 text-chart-4" />;
       case 'alert':
         return <AlertCircle className="w-4 h-4 text-destructive" />;
-      case 'table':      
-        return <Table className="w-4 h-4 text-chart-5" />; 
-      case 'invoice':  
-        return <FileText className="w-4 h-4 text-chart-6" />; 
+      case 'table':
+        return <Table className="w-4 h-4 text-chart-5" />;
+      case 'invoice':
+        return <FileText className="w-4 h-4 text-chart-6" />;
       default:
         return <Activity className="w-4 h-4 text-muted-foreground" />;
     }
   };
-  
+
 
   const getFilterFn = (dateRange: 'today' | 'week' | 'month' | 'all') => {
     const now = new Date();
@@ -266,7 +268,7 @@ export default function Dashboard() {
   // Dynamic Recent Activity - combines data from orders, invoices, and staff
   const recentActivity = useMemo(() => {
     const activities: ActivityItem[] = [];
-    
+
     // Add order activities (new orders, status changes)
     orders.slice(0, 10).forEach((order, index) => {
       activities.push({
@@ -311,7 +313,7 @@ export default function Dashboard() {
     staff.filter(member => member.role === 'manager').slice(0, 3).forEach((manager, index) => {
       const loginTime = new Date();
       loginTime.setMinutes(loginTime.getMinutes() - (index * 30)); // Stagger manager login times
-      
+
       activities.push({
         id: `manager-${manager.id || index}`,
         action: "Manager check-in",
@@ -361,7 +363,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{kpiData.activeOrders}</div>
-           
+
           </CardContent>
         </Card>
 
@@ -372,7 +374,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-chart-2">${kpiData.totalRevenue.toFixed(2)}</div>
-           
+
           </CardContent>
         </Card>
 
@@ -535,33 +537,66 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {liveOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
+                <div
+                  key={order.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                >
+                  {/* Left section */}
+                  <div className="flex-1 min-w-0">
+                    {/* Order header row */}
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:space-x-3 mb-2">
                       <span className="font-semibold text-sm">{order.id}</span>
                       <span className="text-sm text-muted-foreground">{order.table}</span>
-                      <span className="text-sm text-muted-foreground">•</span>
-                      <span className="text-sm text-muted-foreground">{order.customer}</span>
-                      <span className="text-sm text-muted-foreground">•</span>
-                      <span className="text-sm text-muted-foreground">{order.phone}</span>
+                      <span className="hidden sm:inline text-sm text-muted-foreground">•</span>
+                      <span className="text-sm text-muted-foreground break-words">{order.customer}</span>
+                      <span className="hidden sm:inline text-sm text-muted-foreground">•</span>
+                      <span className="text-sm text-muted-foreground break-words">{order.phone}</span>
                     </div>
-                    <div className="text-xs text-muted-foreground mb-2">
-                      {order.items.join(', ')}
-                    </div>
-                    <div className="flex items-center space-x-2">
+
+                    {/* Items */}
+                    <TooltipProvider>
+                      <UiTooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="text-xs text-muted-foreground mb-2 cursor-pointer"
+                            onClick={() => setExpanded(!expanded)} 
+                            style={{
+                              display: "-webkit-box",
+                              WebkitLineClamp: expanded ? "unset" : 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {order.items.join(", ")}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          align="start"
+                          className="max-w-[90vw] break-words"
+                        >
+                          <p>{order.items.join(", ")}</p>
+                        </TooltipContent>
+                      </UiTooltip>
+                    </TooltipProvider>
+
+                    {/* Price + time */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
                       <span className="text-sm font-medium">${order.total}</span>
-                      <span className="text-xs text-muted-foreground">•</span>
+                      <span className="hidden sm:inline text-xs text-muted-foreground">•</span>
                       <span className="text-xs text-muted-foreground">{order.time}</span>
                     </div>
                   </div>
-                  <div className="flex items-center cursor-pointer space-x-2">
+
+                  {/* Status badge */}
+                  <div className="mt-2 sm:mt-0 sm:ml-4 flex items-center">
                     <Badge
                       className={`${getStatusColor(order.status)} cursor-pointer`}
                       onClick={() => console.log("Clicked Badge")}
                     >
                       {order.status}
                     </Badge>
-
                   </div>
                 </div>
               ))}

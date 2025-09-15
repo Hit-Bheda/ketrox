@@ -7,9 +7,6 @@ import { eq } from "drizzle-orm";
 import { generateQrImage } from "@/lib/qr";
 
 
-
-
-    
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -83,25 +80,41 @@ export async function PUT(req: Request) {
     const { tenantId, url: path } = parsed;
 
     if (!tenantId) {
-      return NextResponse.json({ success: false, message: "Tenant ID is missing" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Tenant ID is missing" },
+        { status: 400 }
+      );
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL as string;
-    const fullUrl = `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+
+    // Ensure path starts with "/" and append tenantId query param
+    let urlPath = path.startsWith("/") ? path : `/${path}`;
+    urlPath = urlPath.replace(/([?&])tenantId=[^&]*/g, ""); // remove existing tenantId if any
+    const fullUrl = `${baseUrl}${urlPath}${urlPath.includes("?") ? "&" : "?"}tenantId=${tenantId}`;
+
     const qrPath = await generateQrImage(fullUrl);
     const now = new Date();
 
-    // Use .returning() to get updated rows
     const updated = await db.update(qr_codes)
-      .set({ url: fullUrl, qrPath, updatedAt: now })
+      .set({ url: fullUrl, qrPath, updatedAt: now }) // only update URL and qrPath
       .where(eq(qr_codes.tenantId, tenantId))
       .returning();
 
     if (updated && updated.length > 0) {
-      return NextResponse.json({ success: true, message: "QR code updated successfully", qrPath });
+      return NextResponse.json({
+        success: true,
+        message: "QR code updated successfully",
+        qrPath,
+        url: fullUrl
+      });
     } else {
-      return NextResponse.json({ success: false, message: "No QR code found to update" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "No QR code found to update" },
+        { status: 404 }
+      );
     }
+
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ success: false, message }, { status: 400 });
