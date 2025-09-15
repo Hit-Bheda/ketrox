@@ -4,20 +4,20 @@ import { ReactNode, useEffect, useState } from "react";
 import {
   Users,
   FileText,
-  CreditCard,
+  // CreditCard,
   Settings,
   LogOut,
-  Bell,
+  // Bell,
   Menu,
   X,
-  ClipboardList as OrderIcon,
-  CreditCard as PaymentIcon,
-  UserCheck,
-  AlertTriangle,
-  CheckCircle,
-  HandMetal,
-  BellRing,
-  Trash2,
+  // ClipboardList as OrderIcon,
+  // CreditCard as PaymentIcon,
+  // UserCheck,
+  // AlertTriangle,
+  // CheckCircle,
+  // HandMetal,
+  // BellRing,
+  // Trash2,
   User,
   Building2,
   LayoutDashboard,
@@ -51,89 +51,89 @@ interface LayoutProps {
 }
 
 // Notification types and data
-interface Notification {
-  id: string;
-  type: 'order' | 'payment' | 'staff' | 'waiter_call' | 'checkout' | 'system';
-  title: string;
-  message: string;
-  timestamp: Date;
-  read: boolean;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  tableNumber?: string;
-  orderId?: string;
-}
+// interface Notification {
+//   id: string;
+//   type: 'order' | 'payment' | 'staff' | 'waiter_call' | 'checkout' | 'system';
+//   title: string;
+//   message: string;
+//   timestamp: Date;
+//   read: boolean;
+//   priority: 'low' | 'medium' | 'high' | 'urgent';
+//   tableNumber?: string;
+//   orderId?: string;
+// }
 
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'order',
-    title: 'New Order Received',
-    message: 'Order #1234 from Table 5 - 2 items',
-    timestamp: new Date(Date.now() - 2 * 60 * 1000),
-    read: false,
-    priority: 'high',
-    tableNumber: 'T005',
-    orderId: '#1234'
-  },
-  {
-    id: '2',
-    type: 'waiter_call',
-    title: 'Waiter Assistance Requested',
-    message: 'Table 8 has requested assistance',
-    timestamp: new Date(Date.now() - 3 * 60 * 1000),
-    read: false,
-    priority: 'urgent',
-    tableNumber: 'T008'
-  },
-  {
-    id: '3',
-    type: 'checkout',
-    title: 'Checkout Request',
-    message: 'Table 12 is ready to pay - Total: $127.50',
-    timestamp: new Date(Date.now() - 5 * 60 * 1000),
-    read: false,
-    priority: 'high',
-    tableNumber: 'T012'
-  },
-  {
-    id: '4',
-    type: 'payment',
-    title: 'Payment Received',
-    message: 'Invoice #INV-2024-003 paid - $254.00',
-    timestamp: new Date(Date.now() - 8 * 60 * 1000),
-    read: true,
-    priority: 'medium'
-  },
-  {
-    id: '5',
-    type: 'staff',
-    title: 'Staff Check-in',
-    message: 'Maria Rodriguez has checked in for evening shift',
-    timestamp: new Date(Date.now() - 15 * 60 * 1000),
-    read: true,
-    priority: 'low'
-  },
-  {
-    id: '6',
-    type: 'order',
-    title: 'Order Ready',
-    message: 'Order #1230 is ready for Table 3',
-    timestamp: new Date(Date.now() - 12 * 60 * 1000),
-    read: false,
-    priority: 'high',
-    tableNumber: 'T003',
-    orderId: '#1230'
-  },
-  {
-    id: '7',
-    type: 'system',
-    title: 'Kitchen Alert',
-    message: 'Low stock: Salmon fillet (3 portions remaining)',
-    timestamp: new Date(Date.now() - 25 * 60 * 1000),
-    read: true,
-    priority: 'medium'
-  }
-];
+// const mockNotifications: Notification[] = [
+//   {
+//     id: '1',
+//     type: 'order',
+//     title: 'New Order Received',
+//     message: 'Order #1234 from Table 5 - 2 items',
+//     timestamp: new Date(Date.now() - 2 * 60 * 1000),
+//     read: false,
+//     priority: 'high',
+//     tableNumber: 'T005',
+//     orderId: '#1234'
+//   },
+//   {
+//     id: '2',
+//     type: 'waiter_call',
+//     title: 'Waiter Assistance Requested',
+//     message: 'Table 8 has requested assistance',
+//     timestamp: new Date(Date.now() - 3 * 60 * 1000),
+//     read: false,
+//     priority: 'urgent',
+//     tableNumber: 'T008'
+//   },
+//   {
+//     id: '3',
+//     type: 'checkout',
+//     title: 'Checkout Request',
+//     message: 'Table 12 is ready to pay - Total: $127.50',
+//     timestamp: new Date(Date.now() - 5 * 60 * 1000),
+//     read: false,
+//     priority: 'high',
+//     tableNumber: 'T012'
+//   },
+//   {
+//     id: '4',
+//     type: 'payment',
+//     title: 'Payment Received',
+//     message: 'Invoice #INV-2024-003 paid - $254.00',
+//     timestamp: new Date(Date.now() - 8 * 60 * 1000),
+//     read: true,
+//     priority: 'medium'
+//   },
+//   {
+//     id: '5',
+//     type: 'staff',
+//     title: 'Staff Check-in',
+//     message: 'Maria Rodriguez has checked in for evening shift',
+//     timestamp: new Date(Date.now() - 15 * 60 * 1000),
+//     read: true,
+//     priority: 'low'
+//   },
+//   {
+//     id: '6',
+//     type: 'order',
+//     title: 'Order Ready',
+//     message: 'Order #1230 is ready for Table 3',
+//     timestamp: new Date(Date.now() - 12 * 60 * 1000),
+//     read: false,
+//     priority: 'high',
+//     tableNumber: 'T003',
+//     orderId: '#1230'
+//   },
+//   {
+//     id: '7',
+//     type: 'system',
+//     title: 'Kitchen Alert',
+//     message: 'Low stock: Salmon fillet (3 portions remaining)',
+//     timestamp: new Date(Date.now() - 25 * 60 * 1000),
+//     read: true,
+//     priority: 'medium'
+//   }
+// ];
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard/admin" },
@@ -231,79 +231,79 @@ export default function Layout({ children }: LayoutProps) {
   }, []);
 
   // Notification functions
-  const getNotificationIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'order':
-        return OrderIcon;
-      case 'payment':
-        return PaymentIcon;
-      case 'staff':
-        return UserCheck;
-      case 'waiter_call':
-        return HandMetal;
-      case 'checkout':
-        return CreditCard;
-      case 'system':
-        return AlertTriangle;
-      default:
-        return Bell;
-    }
-  };
+  // const getNotificationIcon = (type: Notification['type']) => {
+  //   switch (type) {
+  //     case 'order':
+  //       return OrderIcon;
+  //     case 'payment':
+  //       return PaymentIcon;
+  //     case 'staff':
+  //       return UserCheck;
+  //     case 'waiter_call':
+  //       return HandMetal;
+  //     case 'checkout':
+  //       return CreditCard;
+  //     case 'system':
+  //       return AlertTriangle;
+  //     default:
+  //       return Bell;
+  //   }
+  // };
 
-  const getNotificationColor = (priority: Notification['priority']) => {
-    switch (priority) {
-      case 'urgent':
-        return 'text-destructive';
-      case 'high':
-        return 'text-orange-500';
-      case 'medium':
-        return 'text-secondary';
-      case 'low':
-        return 'text-chart-3';
-      default:
-        return 'text-muted-foreground';
-    }
-  };
+  // const getNotificationColor = (priority: Notification['priority']) => {
+  //   switch (priority) {
+  //     case 'urgent':
+  //       return 'text-destructive';
+  //     case 'high':
+  //       return 'text-orange-500';
+  //     case 'medium':
+  //       return 'text-secondary';
+  //     case 'low':
+  //       return 'text-chart-3';
+  //     default:
+  //       return 'text-muted-foreground';
+  //   }
+  // };
 
-  const formatTimeAgo = (timestamp: Date) => {
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60));
+  // const formatTimeAgo = (timestamp: Date) => {
+  //   const now = new Date();
+  //   const diffInMinutes = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60));
 
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return `${Math.floor(diffInMinutes / 1440)}d ago`;
-  };
+  //   if (diffInMinutes < 1) return 'Just now';
+  //   if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  //   if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+  //   return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  // };
 
-  const notifications = mockNotifications;
-  const unreadCount = notifications.filter(n => !n.read).length;
-  const urgentNotifications = notifications.filter(n => n.priority === 'urgent' && !n.read);
-  const recentNotifications = notifications.slice(0, 6);
+  // const notifications = mockNotifications;
+  // const unreadCount = notifications.filter(n => !n.read).length;
+  // const urgentNotifications = notifications.filter(n => n.priority === 'urgent' && !n.read);
+  // const recentNotifications = notifications.slice(0, 6);
 
-  function getNotificationClasses(notification: Notification): string {
-    if (!notification.read) {
-      switch (notification.priority) {
-        case "urgent":
-          return "border-destructive bg-destructive/5";
-        case "high":
-          return "border-secondary bg-secondary/5";
-        default:
-          return "border-primary bg-primary/5";
-      }
-    }
-    return "border-border";
-  }
+  // function getNotificationClasses(notification: Notification): string {
+  //   if (!notification.read) {
+  //     switch (notification.priority) {
+  //       case "urgent":
+  //         return "border-destructive bg-destructive/5";
+  //       case "high":
+  //         return "border-secondary bg-secondary/5";
+  //       default:
+  //         return "border-primary bg-primary/5";
+  //     }
+  //   }
+  //   return "border-border";
+  // }
 
-  function getNotificationBg(priority: string): string {
-    switch (priority) {
-      case "urgent":
-        return "bg-destructive/10";
-      case "high":
-        return "bg-secondary/10";
-      default:
-        return "bg-primary/10";
-    }
-  }
+  // function getNotificationBg(priority: string): string {
+  //   switch (priority) {
+  //     case "urgent":
+  //       return "bg-destructive/10";
+  //     case "high":
+  //       return "bg-secondary/10";
+  //     default:
+  //       return "bg-primary/10";
+  //   }
+  // }
 
   return (
     <div className="flex h-screen bg-background font-sans">
@@ -436,7 +436,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             <div className="flex items-center space-x-4">
 
-              <DropdownMenu>
+              {/* <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="relative">
                     {urgentNotifications.length > 0 ? (
@@ -552,7 +552,7 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                   </div>
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </DropdownMenu> */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
