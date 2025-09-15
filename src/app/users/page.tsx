@@ -1,12 +1,15 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { Clock, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, XCircle, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { UserMenuImageSlider } from "@/components/usercompoments/UserMenuImageSlider";
 import Image from "next/image";
 import { UserDescPopover } from "@/components/usercompoments/UserDescPopover";
 import { ApiMenuItem, DietaryOption, MenuItem } from "@/types";
-
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
+import "swiper/css/autoplay";
+import { Autoplay } from "swiper/modules";
 
 const badgeColors: Record<DietaryOption, string> = {
   vegetarian: "bg-emerald-700 text-white",
@@ -40,53 +43,63 @@ const getDietaryBadges = (item: MenuItem) => {
 export default function Page() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
 
 
-useEffect(() => {
-  const fetchMenuItems = async () => {
-    try {
-      const response = await fetch("/api/admin/menu", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) throw new Error("Failed to fetch menu items");
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      try {
+        // Get tenantId from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const tenantId = urlParams.get('tenantId');
 
-      const data = await response.json();
+        // Build the API URL with tenantId if available
+        const apiUrl = tenantId
+          ? `/api/admin/menu?tenantId=${tenantId}`
+          : "/api/admin/menu";
 
-      const mappedMenu: MenuItem[] = (data.menu || []).map((item: ApiMenuItem) => ({
-        id: String(item.id),
-        name: item.item_name || item.name || "",
-        category: normalizeCategoryId(item.category),
-        description: item.description,
-        price: Number(item.price),
-        image: item.item_logo || [],
-        preparationTime: Number(item.prepTime || item.preparationTime || 0),
-        dietary: (item.dietaty || item.dietary || []) as DietaryOption[],
-        isVegetarian: (item.dietaty || item.dietary || []).includes("vegetarian"),
-        isVegan: (item.dietaty || item.dietary || []).includes("vegan"),
-        isGlutenFree: (item.dietaty || item.dietary || []).includes("glutenFree"),
-        available: item.isAvailable ?? true,
-      }));
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) throw new Error("Failed to fetch menu items");
 
-      setMenuItems(mappedMenu);
+        const data = await response.json();
 
-      // 🔹 Extract unique categories dynamically
-      const uniqueCats = Array.from(
-        new Set(mappedMenu.map((item) => item.category))
-      ).map((cat) => ({
-        id: cat,
-        name: cat.charAt(0).toUpperCase() + cat.slice(1),
-      }));
+        const mappedMenu: MenuItem[] = (data.menu || []).map((item: ApiMenuItem) => ({
+          id: String(item.id),
+          name: item.item_name || item.name || "",
+          category: normalizeCategoryId(item.category),
+          description: item.description,
+          price: Number(item.price),
+          image: item.item_logo || [],
+          preparationTime: Number(item.prepTime || item.preparationTime || 0),
+          dietary: (item.dietaty || item.dietary || []) as DietaryOption[],
+          isVegetarian: (item.dietaty || item.dietary || []).includes("vegetarian"),
+          isVegan: (item.dietaty || item.dietary || []).includes("vegan"),
+          isGlutenFree: (item.dietaty || item.dietary || []).includes("glutenFree"),
+          available: item.isAvailable ?? true,
+        }));
 
-      setCategories(uniqueCats);
-    } catch (error) {
-      console.error("Error fetching menu items:", error);
-    }
-  };
+        setMenuItems(mappedMenu);
 
-  fetchMenuItems();
-}, []);
+        // 🔹 Extract unique categories dynamically
+        const uniqueCats = Array.from(
+          new Set(mappedMenu.map((item) => item.category))
+        ).map((cat) => ({
+          id: cat,
+          name: cat.charAt(0).toUpperCase() + cat.slice(1),
+        }));
+
+        setCategories(uniqueCats);
+      } catch (error) {
+        console.error("Error fetching menu items:", error);
+      }
+    };
+
+    fetchMenuItems();
+  }, []);
 
   const categoriesRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -111,76 +124,108 @@ useEffect(() => {
     contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [activeCategory]);
 
+  const filteredItems = menuItems.filter((item) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      item.name.toLowerCase().includes(term) ||
+      (item.description?.toLowerCase() || "").includes(term)
+    );
+  });
+
   return (
     <div className="min-h-screen bg-[#0b0d0f] text-gray-100">
       {/* Hero */}
       <div className="relative h-64 sm:h-80 md:h-96 lg:h-[420px] w-full">
-        <Image
-          src="/images/login-bg.jpg"
-          fill
-          alt="Menu hero"
-          priority
-          fetchPriority="high"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/70" />
-        <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4 sm:px-6">
+        <Swiper
+          modules={[Autoplay]}
+          autoplay={{ delay: 2000, disableOnInteraction: false }}
+          loop
+          className="h-full w-full"
+        >
+          {["/images/img-1.webp ", "/images/img-2.webp", "/images/img-3.webp","/images/img-4.webp"].map((img, idx) => (
+            <SwiperSlide key={idx}>
+              <Image
+                src={img}
+                fill
+                alt="Food hero"
+                className="absolute inset-0 h-full w-full  object-cover"
+              />
+              <div className="absolute inset-0 bg-black/50" />
+            </SwiperSlide>
+          ))}
+        </Swiper>
+
+        {/* Content over slider */}
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-4 sm:px-6">
           <p className="uppercase tracking-[0.35em] text-amber-300/80 text-xs sm:text-sm">
             Delicious • Amazing
           </p>
           <h1 className="mt-3 text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold">
             Our Menu
           </h1>
-        </div>
-
-        {/* Category Nav */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 max-w-[90vw] px-4 sm:px-6 z-20">
-          <div className="relative">
-            <div
-              ref={categoriesRef}
-              className="flex flex-nowrap items-center gap-2 rounded-full bg-black/40 backdrop-blur supports-[backdrop-filter]:bg-black/30 px-3 py-2 border border-white/10 overflow-x-auto scrollbar-hidden"
-            >
-              {[{ id: "all", name: "All" }, ...categories].map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition whitespace-nowrap border cursor-pointer ${activeCategory === cat.id
+          {/* Search Input */}
+          <div className="mt-6 w-full max-w-md">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search for a dish..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-full bg-black/50 border border-white/20 text-sm sm:text-base px-4 py-2 pl-10 placeholder-gray-400 text-white focus:outline-none focus:border-amber-400 transition"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+          </div>
+          {/* Category Nav */}
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 max-w-[90vw] px-4 sm:px-6 z-20">
+            <div className="relative">
+              <div
+                ref={categoriesRef}
+                className="flex flex-nowrap items-center scrollbar-hidden gap-2 rounded-full bg-black/40 backdrop-blur supports-[backdrop-filter]:bg-black/30 px-3 py-2 border border-white/10 overflow-x-auto"
+              >
+                {[{ id: "all", name: "All" }, ...categories].map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition whitespace-nowrap border cursor-pointer ${activeCategory === cat.id
                       ? "bg-amber-400 text-black border-amber-400"
                       : "text-gray-200 border-white/10 hover:border-amber-400/60"
-                    }`}
-                >
-                  {cat.name}
-                </button>
-              ))}
+                      }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+
+              {isOverflowing && (
+                <>
+                  <button
+                    aria-label="Scroll categories left"
+                    onClick={() => scrollCats(-150)}
+                    className="absolute -left-4 sm:-left-4 top-1/2 -translate-y-1/2 grid place-items-center h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-[#f59f0a] text-white/90 hover:bg-black/80 border border-white/10"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    aria-label="Scroll categories right"
+                    onClick={() => scrollCats(150)}
+                    className="absolute -right-4 sm:-right-4 top-1/2 -translate-y-1/2 grid place-items-center h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-[#f59f0a] text-white/90 hover:bg-black/80 border border-white/10"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              )}
             </div>
-            {isOverflowing && (
-              <>
-                <button
-                  aria-label="Scroll categories left"
-                  onClick={() => scrollCats(-150)}
-                  className="absolute -left-3 sm:-left-4 top-1/2 -translate-y-1/2 grid place-items-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-black/60 text-white/90 hover:bg-black/80 border border-white/10"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  aria-label="Scroll categories right"
-                  onClick={() => scrollCats(150)}
-                  className="absolute -right-3 sm:-right-4 top-1/2 -translate-y-1/2 grid place-items-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-black/60 text-white/90 hover:bg-black/80 border border-white/10"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </>
-            )}
           </div>
         </div>
       </div>
-
       {/* Content */}
       <section className="relative" ref={contentRef}>
         <div className="relative mx-auto w-full max-w-[95vw] sm:max-w-4xl md:max-w-5xl px-4 sm:px-6 pt-12 sm:pt-16 pb-16">
           {(activeCategory === "all" ? categories : categories.filter((c) => c.id === activeCategory)).map(
             (category) => {
-              const itemsInCategory = menuItems.filter(
+              const itemsInCategory = filteredItems.filter(
                 (item) => normalizeCategoryId(item.category) === category.id
               );
               if (itemsInCategory.length === 0) return null;

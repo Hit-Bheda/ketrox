@@ -219,3 +219,4 @@ export const ticketMessage = pgTable("ticket_message", {
   createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
   updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });
+
