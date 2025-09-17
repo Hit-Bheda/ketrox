@@ -336,7 +336,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
             {sidebarItems.map((item, index) => {
               const isActive = isActivePath(item.path);
               return (

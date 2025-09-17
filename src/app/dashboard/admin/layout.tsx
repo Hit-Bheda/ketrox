@@ -320,7 +320,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Sidebar */}
       <div className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border flex-col
-        transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex
+        transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex 
         ${sidebarOpen ? "translate-x-0 flex" : "-translate-x-full hidden"}
       `}>
         <div className="flex flex-col h-full">
@@ -371,7 +371,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
             {sidebarItems.map((item) => {
               const isActive = isActivePath(item.path);
               return (

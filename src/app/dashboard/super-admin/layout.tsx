@@ -172,7 +172,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-1">
+            <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
               {sidebarItems.map((item, index) => (
                 <Link
                   key={index}

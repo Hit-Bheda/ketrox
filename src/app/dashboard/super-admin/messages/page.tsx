@@ -5,7 +5,6 @@ import {
   Send,
   Search,
   MoreHorizontal,
-  Paperclip,
   Flag,
   CheckCircle,
   Clock,
@@ -33,6 +32,8 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase/client";
+import { FileUpload, FileAttachment } from "@/components/message/file-upload";
+import { MessageAttachments } from "@/components/message/message-attachments";
 
 interface ApiTicket {
   id: string;
@@ -56,6 +57,14 @@ interface ApiMessage {
   senderRole?: string;
   createdAt?: string;
   senderId?: string;
+  messageAttachments?: Array<{
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    fileType: string;
+    fileSize: string;
+    mimeType: string;
+  }>;
 }
 
 export default function Messages() {
@@ -66,6 +75,7 @@ export default function Messages() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [newMessage, setNewMessage] = useState<string>("");
+  const [selectedFiles, setSelectedFiles] = useState<FileAttachment[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages change
@@ -103,7 +113,7 @@ export default function Messages() {
     // polling fallback every 3s
     const interval = setInterval(loadMessages, 3000);
     return () => clearInterval(interval);
-// eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTicket?.id]);
 
   useEffect(() => {
@@ -177,12 +187,12 @@ export default function Messages() {
             }, ...prev];
           }
           if (payload.eventType === 'UPDATE') {
-            return prev.map((t) => t.id === row.id ? { 
-              ...t, 
-              status: row.status, 
-              priority: row.priority, 
-              subject: row.subject, 
-              createdAt: row.created_at 
+            return prev.map((t) => t.id === row.id ? {
+              ...t,
+              status: row.status,
+              priority: row.priority,
+              subject: row.subject,
+              createdAt: row.created_at
             } : t);
           }
           if (payload.eventType === 'DELETE') {
@@ -260,16 +270,22 @@ export default function Messages() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedTicket) return;
+    if ((!newMessage.trim() && selectedFiles.length === 0) || !selectedTicket) return;
 
     const messageContent = newMessage.trim();
+    const attachments = selectedFiles.length > 0 ? selectedFiles : undefined;
     setNewMessage(""); // Clear input immediately for better UX
+    setSelectedFiles([]); // Clear selected files
 
     try {
       const res = await fetch("/api/super-admin/messages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticketId: selectedTicket.id, content: messageContent }),
+        body: JSON.stringify({ 
+          ticketId: selectedTicket.id, 
+          content: messageContent,
+          attachments: attachments
+        }),
       });
 
       if (res.ok) {
@@ -383,7 +399,7 @@ export default function Messages() {
       {/* Main Messages Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Tickets List */}
-        <Card className="border-0 shadow-sm">
+        <Card className="border-0 shadow-sm lg:col-span-1 order-1 lg:order-1">
           <CardHeader>
             <CardTitle>Support Tickets</CardTitle>
             <CardDescription>Manage customer support requests</CardDescription>
@@ -400,9 +416,9 @@ export default function Messages() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-col lg:flex-col gap-y-2 sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="flex-1">
+                  <SelectTrigger className="flex-1 w-full">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -412,8 +428,9 @@ export default function Messages() {
                     <SelectItem value="resolved">Resolved</SelectItem>
                   </SelectContent>
                 </Select>
+
                 <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                  <SelectTrigger className="flex-1">
+                  <SelectTrigger className="flex-1  w-full">
                     <SelectValue placeholder="Priority" />
                   </SelectTrigger>
                   <SelectContent>
@@ -424,16 +441,17 @@ export default function Messages() {
                   </SelectContent>
                 </Select>
               </div>
+
             </div>
 
             {/* Tickets */}
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto sm:max-h-96 scrollbar-hide">
               {filteredTickets.map((ticket) => (
                 <div
                   key={ticket.id}
                   className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedTicket?.id === ticket.id
-                      ? "border-primary/50 bg-primary/5"
-                      : "border-input hover:bg-accent"
+                    ? "border-primary/50 bg-primary/5"
+                    : "border-input hover:bg-accent"
                     }`}
                   onClick={() => setSelectedTicket(ticket)}
                 >
@@ -441,23 +459,37 @@ export default function Messages() {
                     <div className="flex items-center space-x-2">
                       <Avatar className="h-6 w-6">
                         <AvatarFallback className="text-xs">
-                          {ticket.tenantName?.slice(0, 2)?.toUpperCase() || ticket.subject.slice(0, 2).toUpperCase()}
+                          {ticket.tenantName?.slice(0, 2)?.toUpperCase() ||
+                            ticket.subject.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium text-sm">{ticket.tenantName || ticket.subject}</span>
+                      <span className="font-medium text-sm">
+                        {ticket.tenantName || ticket.subject}
+                      </span>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {ticket.lastMessageAt?.split('T')[1]?.slice(0, 5) || ticket.createdAt?.split('T')[0]}
+                      {ticket.lastMessageAt?.split("T")[1]?.slice(0, 5) ||
+                        ticket.createdAt?.split("T")[0]}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{ticket.lastMessage}</p>
+                  <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                    {ticket.lastMessage}
+                  </p>
                   <div className="flex items-center justify-between">
                     <div className="flex space-x-1">
-                      <Badge variant="outline" className={getStatusColor(ticket.status)}>
+                      <Badge
+                        variant="outline"
+                        className={getStatusColor(ticket.status)}
+                      >
                         {getStatusIcon(ticket.status)}
-                        <span className="ml-1 capitalize">{ticket.status.replace('_', ' ')}</span>
+                        <span className="ml-1 capitalize">
+                          {ticket.status.replace("_", " ")}
+                        </span>
                       </Badge>
-                      <Badge variant="outline" className={getPriorityColor(ticket.priority)}>
+                      <Badge
+                        variant="outline"
+                        className={getPriorityColor(ticket.priority)}
+                      >
                         <Flag className="w-3 h-3 mr-1" />
                         {ticket.priority}
                       </Badge>
@@ -470,21 +502,24 @@ export default function Messages() {
         </Card>
 
         {/* Chat Interface */}
-        <Card className="lg:col-span-2 border-0 shadow-sm">
+        <Card className="lg:col-span-2 border-0 shadow-sm order-2 lg:order-2">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 ">
+          
+              <div className="flex items-center space-x-3 ">
                 {selectedTicket && (
                   <Avatar className="h-10 w-10">
                     <AvatarFallback>
-                      {selectedTicket.tenantName?.slice(0, 2)?.toUpperCase() || selectedTicket.subject.slice(0, 2).toUpperCase()}
+                      {selectedTicket.tenantName?.slice(0, 2)?.toUpperCase() ||
+                        selectedTicket.subject.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <div>
                   <h3 className="font-semibold">{selectedTicket?.subject}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {selectedTicket?.tenantName || 'Unknown Hotel'} • Ticket #{selectedTicket?.id?.slice(0, 8)}
+                    {selectedTicket?.tenantName || "Unknown Hotel"} • Ticket #
+                    {selectedTicket?.id?.slice(0, 8)}
                   </p>
                 </div>
               </div>
@@ -493,7 +528,9 @@ export default function Messages() {
                   <>
                     <Select
                       value={selectedTicket.status}
-                      onValueChange={(value) => handleStatusChange(selectedTicket.id, value)}
+                      onValueChange={(value) =>
+                        handleStatusChange(selectedTicket.id, value)
+                      }
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />
@@ -504,29 +541,37 @@ export default function Messages() {
                         <SelectItem value="resolved">Resolved</SelectItem>
                       </SelectContent>
                     </Select>
-                    <DropdownMenu>
+                    <DropdownMenu >
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => handlePriorityChange(selectedTicket.id, 'low')}>
+                      <DropdownMenuContent className="mx-2 mt-1">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handlePriorityChange(selectedTicket.id, "low")
+                          }
+                        >
                           <Flag className="w-4 h-4 mr-2" />
                           Set Priority: Low
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handlePriorityChange(selectedTicket.id, 'medium')}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handlePriorityChange(selectedTicket.id, "medium")
+                          }
+                        >
                           <Flag className="w-4 h-4 mr-2" />
                           Set Priority: Medium
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handlePriorityChange(selectedTicket.id, 'high')}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handlePriorityChange(selectedTicket.id, "high")
+                          }
+                        >
                           <Flag className="w-4 h-4 mr-2" />
                           Set Priority: High
                         </DropdownMenuItem>
-                        {/* <DropdownMenuItem>
-                          <Archive className="w-4 h-4 mr-2" />
-                          Archive
-                        </DropdownMenuItem> */}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </>
@@ -536,28 +581,39 @@ export default function Messages() {
           </CardHeader>
           <CardContent>
             {/* Messages */}
-            <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
+            <div className="space-y-4 mb-4 max-h-[50vh] sm:max-h-96 overflow-y-auto scrollbar-hide">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.senderRole === 'super-admin' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${message.senderRole === "super-admin"
+                    ? "justify-end"
+                    : "justify-start"
+                    }`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.senderRole === 'super-admin'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
+                    className={`max-w-[80%] px-4 py-2 rounded-lg ${message.senderRole === "super-admin"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
                       }`}
                   >
                     <div className="flex items-center space-x-2 mb-1">
                       <User className="w-3 h-3" />
-                      <span className="text-xs font-medium">{message.senderRole || 'user'}</span>
+                      <span className="text-xs font-medium">
+                        {message.senderRole || "user"}
+                      </span>
                       <span className="text-xs opacity-75">
                         {message.createdAt
-                          ? new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          : '--:--'}
+                          ? new Date(message.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                          : "--:--"}
                       </span>
                     </div>
                     <p className="text-sm">{message.content}</p>
+                    {message.messageAttachments && message.messageAttachments.length > 0 && (
+                      <MessageAttachments attachments={message.messageAttachments} />
+                    )}
                   </div>
                 </div>
               ))}
@@ -565,31 +621,42 @@ export default function Messages() {
             </div>
 
             {/* Message Input */}
-            <div className="flex items-end space-x-2">
-              <div className="flex-1">
-                <Textarea
-                  placeholder="Type your response..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  className="min-h-[80px] resize-none"
-                />
-              </div>
-              <div className="flex flex-col space-y-2">
-                <Button variant="outline" size="sm">
-                  <Paperclip className="w-4 h-4" />
-                </Button>
+            <div className="space-y-3">
+              {/* File Upload Preview Area */}
+              <FileUpload
+                onFilesSelected={setSelectedFiles}
+                selectedFiles={selectedFiles}
+                onRemoveFile={(index) => {
+                  const newFiles = [...selectedFiles];
+                  newFiles.splice(index, 1);
+                  setSelectedFiles(newFiles);
+                }}
+                disabled={!selectedTicket}
+              />
+              
+              <div className="flex flex-col sm:flex-row items-end space-y-2 sm:space-y-0 sm:space-x-2">
+                <div className="flex-1 w-full">
+                  <Textarea
+                    placeholder="Type your response..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                   className="min-h-[20px] sm:min-h-[20px] resize-none w-full max-w-full break-words"
+                  />
+                </div>
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
+                  disabled={(!newMessage.trim() && selectedFiles.length === 0) || !selectedTicket}
                   size="sm"
+                  className="w-full sm:w-auto"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-4 h-4 mr-2 sm:mr-0" />
+                  <span className="sm:hidden">Send Message</span>
                 </Button>
               </div>
             </div>

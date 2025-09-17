@@ -1130,7 +1130,8 @@ export default function Invoices() {
           {/* Invoices Table */}
           <div className="rounded-lg border overflow-hidden rounded-b-lg">
             <Table>
-              <TableHeader>
+              <TableHeader className={`[&_tr]:${filteredInvoices.length === 0 ? "border-b-0" : "border-b"
+                }`}>
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
                   <TableHead>Customer</TableHead>
@@ -1222,41 +1223,61 @@ export default function Invoices() {
           )}
         </CardContent>
       </Card>
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-muted-foreground">
-          Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} invoices
-        </p>
-        <div className="flex gap-2 items-center">
-          <Button
-            variant="outline"
-            disabled={page === 0}
-            onClick={() => setPage((p) => Math.max(p - 1, 0))}
-          >
-            Prev
-          </Button>
+  
+       {/* Pagination Controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-2">
+          {/* Info Text */}
+          <p className="text-sm text-muted-foreground">
+            Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} orders
+          </p>
 
-          {Array.from({ length: Math.ceil(total / limit) }, (_, i) => (
+          {/* Pagination Controls */}
+          <div className="flex flex-wrap gap-2 items-center justify-center">
+            {/* Prev Button */}
             <Button
-              key={i}
-              variant={page === i ? "default" : "outline"}
-              onClick={() => setPage(i)}
-              className="px-3"
+              variant="outline"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(p - 1, 0))}
             >
-              {i + 1}
+              Prev
             </Button>
-          ))}
 
-          <Button
-            variant="outline"
-            disabled={(page + 1) * limit >= total}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
+            {/* Page Numbers */}
+            {Array.from({ length: Math.ceil(total / limit) }, (_, i) => {
+              // Only show first, last, current ±1, else show "..."
+              if (
+                i === 0 || // first page
+                i === Math.ceil(total / limit) - 1 || // last page
+                (i >= page - 1 && i <= page + 1) // current ±1
+              ) {
+                return (
+                  <Button
+                    key={i}
+                    variant={page === i ? "default" : "outline"}
+                    onClick={() => setPage(i)}
+                  >
+                    {i + 1}
+                  </Button>
+                );
+              } else if (
+                (i === page - 2 && page > 2) ||
+                (i === page + 2 && page < Math.ceil(total / limit) - 3)
+              ) {
+                return <span key={i} className="px-2">...</span>;
+              }
+              return null;
+            })}
+
+            {/* Next Button */}
+            <Button
+              variant="outline"
+              disabled={(page + 1) * limit >= total}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-      </div>
-
       {/* Edit Invoice Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="sm:max-w-[500px]">

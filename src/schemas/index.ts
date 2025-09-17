@@ -139,7 +139,6 @@ export const updateOrderStatusSchema = z.object({
     payment_status: z.enum(["unpaid", "paid", "refunded"]).optional(),
 });
 
-
 export const qrCodeSchema = z.object({
     tenantId: z.string().uuid("Invalid tenant ID").optional(),
     //   url: z.string().url("Provide a valid URL"),
@@ -161,8 +160,20 @@ export const ticketCreateSchema = z.object({
 
 export const ticketReplySchema = z.object({
     ticketId: z.string().min(1, "Ticket ID is required"),
-    content: z.string().min(1, "Message content is required"),
-
+    content: z.string().optional(),
+    attachments: z.array(z.object({
+        fileName: z.string(),
+        fileUrl: z.string().url(),
+        fileType: z.enum(["image", "video", "document"]),
+        fileSize: z.string(),
+        mimeType: z.string(),
+    })).optional(),
+}).refine((data) => {
+    // Either content or attachments must be provided
+    return (data.content && data.content.trim().length > 0) || (data.attachments && data.attachments.length > 0);
+}, {
+    message: "Either message content or attachments must be provided",
+    path: ["content"]
 });
 
 export const ticketUpdateSchema = z.object({

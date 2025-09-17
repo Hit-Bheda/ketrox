@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { ticket, ticketMessage, tenants } from "@/db/schema";
+import { ticket, ticketMessage, tenants, messageAttachment } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { ticketCreateSchema, ticketReplySchema, ticketUpdateSchema } from "@/schemas";
 
@@ -135,8 +135,24 @@ export async function PATCH(request: Request) {
       ticketId: parsed.data.ticketId,
       senderId: null,
       senderRole: "admin",
-      content: parsed.data.content,
+      content: parsed.data.content || "",
+      attachments: parsed.data.attachments?.map(att => att.fileUrl) || null,
     }).returning();
+
+    // Insert attachments if any
+    if (parsed.data.attachments && parsed.data.attachments.length > 0) {
+      const attachmentInserts = parsed.data.attachments.map(att => ({
+        id: crypto.randomUUID(),
+        messageId: id,
+        fileName: att.fileName,
+        fileUrl: att.fileUrl,
+        fileType: att.fileType,
+        fileSize: att.fileSize,
+        mimeType: att.mimeType,
+      }));
+      await db.insert(messageAttachment).values(attachmentInserts);
+    }
+
     return Response.json({ message: inserted[0] }, { status: 201 });
   } catch (err) {
     console.error("PATCH /admin/messages error", err);

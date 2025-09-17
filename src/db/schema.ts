@@ -216,7 +216,19 @@ export const ticketMessage = pgTable("ticket_message", {
   senderId: text("sender_id").references(() => user.id),
   senderRole: text("sender_role", { enum: ["super-admin", "admin", "manager", "waiter", "customer", "support"] }),
   content: text("content").notNull(),
+  attachments: text("attachments").array(),
   createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
   updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+});
+
+export const messageAttachment = pgTable("message_attachment", {
+  id: text("id").primaryKey(),
+  messageId: text("message_id").notNull().references(() => ticketMessage.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileType: text("file_type").notNull(), // image, video, document
+  fileSize: text("file_size").notNull(),
+  mimeType: text("mime_type").notNull(),
+  createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
 });
 

@@ -234,7 +234,8 @@ export default function Orders() {
 
     <div className="flex-1 space-y-6 p-6 animate-fadeIn">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
+
         <Card className="hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
@@ -523,41 +524,59 @@ export default function Orders() {
       </Card>
 
       {/* Pagination Controls */}
-      <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-muted-foreground">
-          Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} orders
-        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-2">
+          {/* Info Text */}
+          <p className="text-sm text-muted-foreground">
+            Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} orders
+          </p>
 
-        <div className="flex gap-2 items-center">
-          <Button
-            variant="outline"
-            disabled={page === 0}
-            onClick={() => setPage((p) => Math.max(p - 1, 0))}
-          >
-            Prev
-          </Button>
-
-          {Array.from({ length: Math.ceil(total / limit) }, (_, i) => (
+          {/* Pagination Controls */}
+          <div className="flex flex-wrap gap-2 items-center justify-center">
+            {/* Prev Button */}
             <Button
-              key={i}
-              variant={page === i ? "default" : "outline"}
-              onClick={() => setPage(i)}
+              variant="outline"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(p - 1, 0))}
             >
-              {i + 1}
+              Prev
             </Button>
-          ))}
 
-          {/* Next Button */}
-          <Button
-            variant="outline"
-            disabled={(page + 1) * limit >= total}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
+            {/* Page Numbers */}
+            {Array.from({ length: Math.ceil(total / limit) }, (_, i) => {
+              // Only show first, last, current ±1, else show "..."
+              if (
+                i === 0 || // first page
+                i === Math.ceil(total / limit) - 1 || // last page
+                (i >= page - 1 && i <= page + 1) // current ±1
+              ) {
+                return (
+                  <Button
+                    key={i}
+                    variant={page === i ? "default" : "outline"}
+                    onClick={() => setPage(i)}
+                  >
+                    {i + 1}
+                  </Button>
+                );
+              } else if (
+                (i === page - 2 && page > 2) ||
+                (i === page + 2 && page < Math.ceil(total / limit) - 3)
+              ) {
+                return <span key={i} className="px-2">...</span>;
+              }
+              return null;
+            })}
+
+            {/* Next Button */}
+            <Button
+              variant="outline"
+              disabled={(page + 1) * limit >= total}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-      </div>
-
 
       {/* Order Details Modal */}
       <Dialog open={showOrderDetails} onOpenChange={setShowOrderDetails}>
