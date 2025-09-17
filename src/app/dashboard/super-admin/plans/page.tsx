@@ -191,7 +191,7 @@ export default function Plans() {
 
   return (
     <div className="min-h-screen dark:from-background dark:via-background dark:to-background">
-      <div className="container py-2 space-y-10">
+      <div className="py-2 space-y-10">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Subscription Plans</h1>
@@ -319,7 +319,7 @@ export default function Plans() {
               <CardDescription>Current subscriber breakdown</CardDescription>
             </CardHeader>
             <CardContent className="h-80">
-              <div className="grid grid-cols-2 gap-4 h-full">
+              <div className="flex flex-col gap-2 h-full">
                 <div className="h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -339,7 +339,7 @@ export default function Plans() {
                 </div>
                 <div className="flex flex-col justify-center gap-3">
                   {planDistribution.map((item) => (
-                    <div key={item.name} className="flex items-center justify-between">
+                    <div key={item.name} className="flex items-center justify-between px-2">
                       <div className="flex items-center gap-2">
                         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                         <span className="text-sm text-muted-foreground">{item.name}</span>

@@ -278,7 +278,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 xl:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -286,7 +286,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Sidebar */}
       <div className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border flex-col
-        transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex
+        transform transition-transform duration-300 ease-in-out xl:relative xl:translate-x-0 xl:flex
         ${sidebarOpen ? "translate-x-0 flex" : "-translate-x-full hidden"}
       `}>
         <div className="flex flex-col h-full">
@@ -307,7 +307,7 @@ export default function Layout({ children }: LayoutProps) {
                   />
                 )}
               </div>
-              <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
+              <Button variant="ghost" size="sm" className="xl:hidden" onClick={() => setSidebarOpen(false)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -381,10 +381,10 @@ export default function Layout({ children }: LayoutProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Navigation */}
-        <header className="bg-card border-b border-border px-4 lg:px-6 py-4 shadow-sm">
+        <header className="bg-card border-b border-border px-4 xl:px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="lg:hidden">
+              <div className="xl:hidden">
                 <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
                   <Menu className="w-4 h-4" />
                 </Button>

@@ -115,7 +115,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
       <div className="flex h-screen bg-[var(--color-background)] text-[var(--color-foreground)] font-sans antialiased">
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            className="fixed inset-0 z-40 bg-black/50 xl:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -123,7 +123,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
         <aside
           className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-[var(--color-sidebar)] border-r border-[var(--color-sidebar-border)]
-        transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
+        transform transition-transform duration-300 ease-in-out xl:relative xl:translate-x-0
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
       `}
         >
@@ -143,7 +143,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
                     className="h-full w-auto object-contain"
                   />
                 </div>
-                <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
+                <Button variant="ghost" size="sm" className="xl:hidden" onClick={() => setSidebarOpen(false)}>
                   <X className="w-4 h-4" />
                 </Button>
               </div>
@@ -213,13 +213,13 @@ export default function DashboardLayout({ children }: LayoutProps) {
         {/* Main */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <header className="bg-[var(--color-background)] border-b border-[var(--color-border)] px-4 lg:px-6 py-4">
+          <header className="bg-[var(--color-background)] border-b border-[var(--color-border)] px-4 xl:px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="lg:hidden"
+                  className="xl:hidden"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <Menu className="w-4 h-4" />
