@@ -1,5 +1,4 @@
 "use client"
-
 import { useEffect, useState, useRef } from "react";
 import {
   Send,
@@ -281,8 +280,8 @@ export default function Messages() {
       const res = await fetch("/api/super-admin/messages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          ticketId: selectedTicket.id, 
+        body: JSON.stringify({
+          ticketId: selectedTicket.id,
           content: messageContent,
           attachments: attachments
         }),
@@ -358,7 +357,7 @@ export default function Messages() {
   };
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="border-0 shadow-sm">
@@ -505,7 +504,7 @@ export default function Messages() {
         <Card className="lg:col-span-2 border-0 shadow-sm order-2 lg:order-2">
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 ">
-          
+
               <div className="flex items-center space-x-3 ">
                 {selectedTicket && (
                   <Avatar className="h-10 w-10">
@@ -633,7 +632,7 @@ export default function Messages() {
                 }}
                 disabled={!selectedTicket}
               />
-              
+
               <div className="flex flex-col sm:flex-row items-end space-y-2 sm:space-y-0 sm:space-x-2">
                 <div className="flex-1 w-full">
                   <Textarea
@@ -646,7 +645,7 @@ export default function Messages() {
                         handleSendMessage();
                       }
                     }}
-                   className="min-h-[20px] sm:min-h-[20px] resize-none w-full max-w-full break-words"
+                    className="min-h-[20px] sm:min-h-[20px] resize-none w-full max-w-full break-words"
                   />
                 </div>
                 <Button

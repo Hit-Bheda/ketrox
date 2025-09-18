@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { invoice, order, table } from "@/db/schema";
+import { invoice, notification, order, table, user } from "@/db/schema";
 import { invoiceSchema } from "@/schemas";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       paymentStatus: validatedData.payment_status,
       notes: validatedData.notes || null,
     }).returning({
+      id: invoice.id,
       invoiceNumber: invoice.invoiceNumber 
     })
 
@@ -129,6 +130,30 @@ export async function POST(request: NextRequest) {
       } else {
         console.error("Table not found with number:", validatedData.table_number);
       }
+    }
+
+     const adminUsers = await db
+      .select()
+      .from(user)
+      .where(
+        and(
+          eq(user.tenant_id, session.user.tenant_id || validatedData.tenant_id!),
+          inArray(user.role, ["admin"])
+        )
+      );
+    for (const admin of adminUsers) {
+      await db.insert(notification).values({
+        id: crypto.randomUUID(),
+        tenantId: session.user.tenant_id || validatedData.tenant_id!,
+        userId: admin.id,
+        type: "invoice",
+        title: `Invoice ${invoiceNumber} Generated`,
+        message: `Invoice for ${validatedData.customer_name || "Customer"} has been created. Total: $${Number(validatedData.total_amount).toFixed(2)}`,
+        invoiceId: newInvoice[0].id,
+        read: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
     }
 
     return NextResponse.json({

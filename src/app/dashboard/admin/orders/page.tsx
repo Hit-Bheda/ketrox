@@ -175,27 +175,6 @@ export default function Orders() {
         : 0,
   };
 
-  // useEffect(() => {
-  //   const fetchOrders = async () => {
-  //     try {
-  //       const res = await fetch(
-  //         "/api/orders",
-  //         {
-  //           method: "GET",
-  //           headers: { "Content-Type": "application/json" },
-  //           cache: "no-store"
-  //         }
-  //       );
-  //       if (!res.ok) throw new Error("Failed to fetch orders");
-  //       const data = await res.json();
-  //       setOrders(data.orders || []);
-  //     } catch (error) {
-  //       console.error("Error fetching orders:", error);
-  //     }
-  //   };
-  //   fetchOrders();
-  // }, []);
-
 
   useEffect(() => {
     const fetchOrders = async () => {

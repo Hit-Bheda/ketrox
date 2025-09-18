@@ -204,3 +204,15 @@ export const resetPasswordFormSchema = z.object({
     path: ["confirmPassword"],
     message: "Passwords do not match",
   });
+
+  export const createNotificationSchema = z.object({
+  tenantId: z.string().uuid("Invalid tenant ID"),
+  userId: z.string().uuid("Invalid user ID"),
+  type: z.enum(["order", "status", "invoice", "chat"]),
+  title: z.string().min(1, "Title is required"),
+  message: z.string().optional(),
+  orderId: z.string().uuid("Invalid order ID").optional(),
+  invoiceId: z.string().uuid("Invalid invoice ID").optional(),
+  ticketMessageId: z.string().uuid("Invalid chat/ticket message ID").optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+});

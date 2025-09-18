@@ -116,9 +116,9 @@ export function FileUpload({ onFilesSelected, selectedFiles, onRemoveFile, disab
       <div className="flex flex-col gap-2">
         {/* Preview Area (aligned to end) */}
         {selectedFiles.length > 0 && (
-          <div className="space-y-2 max-h-48 overflow-y-auto flex flex-col items-end sm:items-end">
+          <div className="space-y-2 max-h-60 overflow-y-auto flex flex-col items-end sm:items-end">
             {selectedFiles.map((file, index) => (
-              <div key={index} className="space-y-2 w-full sm:w-auto">
+              <div key={index} className="space-y-2 w-full sm:w-auto overflow-y-auto scrollbar-hide">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 bg-muted rounded-md text-sm w-full sm:w-auto gap-2">
                   <div className="flex items-center space-x-2 flex-1 min-w-0">
                     {getFileIcon(file.fileType)}

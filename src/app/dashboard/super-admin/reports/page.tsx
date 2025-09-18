@@ -156,7 +156,7 @@ export default function Reports() {
   const avgOccupancy = revenueData.reduce((sum, item) => sum + item.occupancy, 0) / revenueData.length;
   
   return (
-      <div className="flex-1 space-y-6 p-6">
+      <div className="flex-1 space-y-6">
         {/* Header with Date Picker and Filters */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
@@ -306,7 +306,7 @@ export default function Reports() {
           <TabsContent value="revenue" className="space-y-6">
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 items-center justify-between">
                   <div>
                     <CardTitle>Revenue & Bookings Trends</CardTitle>
                     <CardDescription>Monthly performance over the last 6 months</CardDescription>
@@ -374,7 +374,7 @@ export default function Reports() {
           <TabsContent value="hotels" className="space-y-6">
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 items-center justify-between">
                   <div>
                     <CardTitle>Top Performing Hotels</CardTitle>
                     <CardDescription>Revenue and performance metrics by hotel</CardDescription>
@@ -435,7 +435,7 @@ export default function Reports() {
           <TabsContent value="traffic" className="space-y-6">
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 items-center justify-between">
                   <div>
                     <CardTitle>Peak Traffic Hours</CardTitle>
                     <CardDescription>Booking activity throughout the day</CardDescription>
@@ -555,7 +555,7 @@ export default function Reports() {
         {/* Generated Reports */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 items-start sm:items-center justify-between">
               <div>
                 <CardTitle>Generated Reports</CardTitle>
                 <CardDescription>Download previously generated reports and analytics</CardDescription>

@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { order, table, user, menu } from "@/db/schema";
+import { order, table, user, menu, notification } from "@/db/schema";
 import { orderSchema } from "@/schemas";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = orderSchema.parse(body);
 
-    // Generate sequential order number
+    
     const lastOrder = await db.select({ orderNumber: order.orderNumber })
       .from(order)
       .where(eq(order.tenantId, session.user.tenant_id || validatedData.tenant_id!))
@@ -67,6 +67,34 @@ export async function POST(request: NextRequest) {
     await db.update(table)
       .set({ available: false, updatedAt: new Date() })
       .where(eq(table.id, validatedData.table_id!));
+
+
+    // create a notification for the admins of this tenant
+    const adminUsers = await db
+      .select()
+      .from(user)
+      .where(
+        and(
+          eq(user.tenant_id, session.user.tenant_id || validatedData.tenant_id!),
+          inArray(user.role, ["admin"])
+        )
+      );
+
+    for (const admin of adminUsers) {
+      await db.insert(notification).values({
+        id: crypto.randomUUID(),
+        tenantId: session.user.tenant_id || validatedData.tenant_id!,
+        userId: admin.id,
+        type: "order",
+        title: `New Order: ${orderNumber}`,
+        message: `A new order has been placed by ${validatedData.customer_name}`,
+        orderId: newOrder[0].id,
+        read: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+
 
     return NextResponse.json({
       message: "Order created successfully",
@@ -191,8 +219,8 @@ export async function GET(request: NextRequest) {
     const table_id = searchParams.get("tableId");
 
     // ✅ pagination params
-    const page = parseInt(searchParams.get("page") || "0");   
-    const limit = parseInt(searchParams.get("limit") || "0"); 
+    const page = parseInt(searchParams.get("page") || "0");
+    const limit = parseInt(searchParams.get("limit") || "0");
 
     const whereConditions = [];
     whereConditions.push(eq(order.tenantId, session.user.tenant_id || tenant_id || ""));
@@ -238,7 +266,7 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(order.createdAt));
 
     // ✅ Apply pagination and execute
-    const orders = limit > 0 
+    const orders = limit > 0
       ? await baseQuery.limit(limit).offset(page * limit)
       : await baseQuery;
 
@@ -360,6 +388,7 @@ export async function PUT(request: NextRequest) {
         .set({ available: true, updatedAt: new Date() })
         .where(eq(table.id, updatedOrder[0].tableId));
     }
+    
 
     return NextResponse.json({
       message: "Order updated successfully",

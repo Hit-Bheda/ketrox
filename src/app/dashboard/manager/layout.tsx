@@ -390,7 +390,7 @@ export default function Layout({ children }: LayoutProps) {
                 </Button>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">{getPageTitle()}</h1>
+                <h1 className="text-lg sm:text-2xl font-bold text-foreground">{getPageTitle()}</h1>
                 <p className="text-muted-foreground hidden sm:block">
                   {getPageTitle() === "Dashboard"
                     ? "Welcome back! Here's what's happening in your restaurant."

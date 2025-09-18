@@ -157,7 +157,7 @@ function HotelsContent() {
   }, [searchParams]);
 
   return (
-    <div className="bg-background text-foreground min-h-screen p-4 lg:p-6 space-y-6">
+    <div className="bg-background text-foreground min-h-screen space-y-6">
       <HotelStats stats={stats} />
       <Card>
         <HotelFiltersAndActions

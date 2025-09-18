@@ -9,9 +9,9 @@ import {
   BarChart3,
   PieChart,
   FileText,
-  RefreshCw,
   Share2
 } from "lucide-react";
+
 import {
   BarChart,
   Bar,
@@ -24,7 +24,7 @@ import {
   Pie,
   Cell,
   Area,
-  AreaChart
+  AreaChart,
 } from 'recharts';
 import { format, subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 
@@ -43,6 +43,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import { Invoice, OrderType } from "@/types";
+
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState("today");
@@ -312,48 +313,6 @@ export default function Reports() {
     }
   };
 
-  const refreshData = async () => {
-    try {
-
-      const ordersRes = await fetch("/api/orders", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store"
-      });
-      if (ordersRes.ok) {
-        const ordersData = await ordersRes.json();
-        setOrders(ordersData.orders || []);
-      }
-
-      // Fetch invoices
-      const invoicesRes = await fetch("/api/admin/invoices");
-      if (invoicesRes.ok) {
-        const invoicesData = await invoicesRes.json();
-        setInvoices(invoicesData.invoices || []);
-      }
-
-      // Fetch menu
-      const menuRes = await fetch("/api/admin/menu");
-      if (menuRes.ok) {
-        const menuData = await menuRes.json();
-        if (Array.isArray(menuData.menu)) {
-          const map: { [id: string]: string } = {};
-          type MenuItem = { id: string; item_name: string };
-          menuData.menu.forEach((item: MenuItem) => {
-            map[item.id] = item.item_name;
-          });
-          setMenuMap(map);
-        }
-      }
-
-
-      toast.success(`Data refreshed successfully for ${dateRange === 'custom' ? 'custom date range' : dateRange}`);
-    } catch (error) {
-      console.error("Error refreshing data:", error);
-      toast.error("Failed to refresh data");
-    }
-  };
-
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -506,19 +465,21 @@ export default function Reports() {
   }, [filteredInvoices]);
 
   // Dynamic category data based on payment methods
+  const COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#6b7280"];
+
   const categoryData = useMemo(() => {
     if (!paymentMethodStats.length) {
-
       return [
         { name: "No Data", value: 100, color: "#f59f0a" }
       ];
     }
 
-    return paymentMethodStats.map((method) => ({
+    return paymentMethodStats.map((method, index) => ({
       name: method.method,
       value: method.percentage,
-      color: "#f59f0a"
+      color: COLORS[index % COLORS.length],
     }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentMethodStats]);
 
 
@@ -570,15 +531,6 @@ export default function Reports() {
                 />
               </div>
             )}
-
-            <Button
-              variant="outline"
-              className="  w-full sm:w-auto"
-              onClick={refreshData}
-            >
-              <RefreshCw className="w-4 h-4 mr-1 sm:mr-2" />
-              Refresh
-            </Button>
 
             <Button
               variant="outline"
@@ -679,6 +631,14 @@ export default function Reports() {
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={salesData}>
+                      <defs>
+
+                        <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#b91c1c" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#b91c1c" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="date"
@@ -698,45 +658,76 @@ export default function Reports() {
                       <Area
                         type="monotone"
                         dataKey="revenue"
-                        stroke="hsl(var(--chart-1))"
-                        fill="hsl(var(--chart-1))"
-                        fillOpacity={0.3}
+                        stroke="#b91c1c"
+                        fill="url(#revenueGradient)"
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
 
+
               {/* Sales by Payment Method */}
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <PieChart className="w-5 h-5" />
                     <span>Sales by Payment Method</span>
                   </CardTitle>
-                  <CardDescription>Revenue distribution across payment methods</CardDescription>
+                  <CardDescription>
+                    Revenue distribution across payment methods
+                  </CardDescription>
                 </CardHeader>
+
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <RechartsPieChart>
-                      <Pie
-                        dataKey="value"
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        label={({ name, value }) => `${name}: ${value}%`}
-                      >
-                        {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </RechartsPieChart>
-                  </ResponsiveContainer>
+                  <div className="flex flex-col items-center justify-center gap-6">
+                    {/* Pie Chart */}
+                    <div className="w-full h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPieChart>
+                          <Pie
+                            dataKey="value"
+                            data={categoryData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={100}
+                            label={false}
+                          >
+                            {categoryData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Custom Legend (below chart, in column) */}
+                    <div className="flex flex-col gap-4 text-sm w-full">
+                      {categoryData.map((entry, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between w-full"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span className="font-medium">{entry.name}</span>
+                          </div>
+                          <span className="text-muted-foreground">{entry.value}%</span>
+                        </div>
+                      ))}
+                    </div>
+
+                  </div>
                 </CardContent>
               </Card>
+
+
             </div>
           </TabsContent>
 
@@ -902,14 +893,14 @@ export default function Reports() {
         {/* Export Options */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center  space-x-2">
               <Download className="w-5 h-5" />
               <span>Export Reports</span>
             </CardTitle>
             <CardDescription>Download comprehensive reports in various formats</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap justify-center sm:justify-normal gap-3">
               <Button variant="outline" disabled={isExporting} onClick={() => exportData('pdf')}>
                 <FileText className="w-4 h-4 mr-2" />
                 Export PDF
