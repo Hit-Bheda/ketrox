@@ -1,7 +1,7 @@
 // app/api/notifications/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { notification, order } from "@/db/schema";
+import { notification, order, ticketMessage } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { createNotificationSchema } from "@/schemas";
 
@@ -32,6 +32,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
       }
     }
+
+      if(validated.ticketMessageId){
+        const existingTicketMessage = await db
+          .select()
+          .from(ticketMessage)
+          .where(eq(ticketMessage.id, validated.ticketMessageId));
+        if (existingTicketMessage.length === 0) {
+          return NextResponse.json({ error: "Ticket message not found" }, { status: 404 });
+        }
+      }
 
     const id = crypto.randomUUID();
 

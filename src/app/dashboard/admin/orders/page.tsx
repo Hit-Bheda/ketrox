@@ -69,39 +69,12 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<OrderType | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orders, setOrders] = useState<OrderType[]>([]);
-  const [page, setPage] = useState(0);       // current page
+  const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
 
   const now = new Date();
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch =
-      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-
-    let matchesTime = true;
-    const orderTime = new Date(order.createdAt);
-
-    if (timeFilter === "today") {
-      matchesTime =
-        orderTime.getDate() === now.getDate() &&
-        orderTime.getMonth() === now.getMonth() &&
-        orderTime.getFullYear() === now.getFullYear();
-    } else if (timeFilter === "lastWeek") {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(now.getDate() - 7);
-      matchesTime = orderTime >= oneWeekAgo && orderTime <= now;
-    } else if (timeFilter === "lastMonth") {
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(now.getMonth() - 1);
-      matchesTime = orderTime >= oneMonthAgo && orderTime <= now;
-    }
-
-    return matchesSearch && matchesStatus && matchesTime;
-  });
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -163,27 +136,20 @@ export default function Orders() {
     setShowOrderDetails(true);
   };
 
-  const stats = {
-    total: filteredOrders.length,
-    pending: filteredOrders.filter(o => o.status === "pending").length,
-    preparing: filteredOrders.filter(o => o.status === "preparing").length,
-    delivered: filteredOrders.filter(o => o.status === "delivered").length,
-    totalValue: filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0),
-    avgOrderValue:
-      filteredOrders.length > 0
-        ? filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0) / filteredOrders.length
-        : 0,
-  };
-
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await fetch(`/api/orders?page=${page}&limit=${limit}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
-        });
+        const res = await fetch(
+          `/api/orders?page=${page}&limit=${limit}&searchTerm=${encodeURIComponent(
+            searchTerm
+          )}&status=${statusFilter}&timeFilter=${timeFilter}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+          }
+        );
         if (!res.ok) throw new Error("Failed to fetch orders");
         const data = await res.json();
         setOrders(data.orders || []);
@@ -193,7 +159,36 @@ export default function Orders() {
       }
     };
     fetchOrders();
-  }, [page, limit]);
+  }, [page, limit, searchTerm, statusFilter, timeFilter]);
+
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+
+    let matchesTime = true;
+    const orderTime = new Date(order.createdAt);
+
+    if (timeFilter === "today") {
+      matchesTime =
+        orderTime.getDate() === now.getDate() &&
+        orderTime.getMonth() === now.getMonth() &&
+        orderTime.getFullYear() === now.getFullYear();
+    } else if (timeFilter === "lastWeek") {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(now.getDate() - 7);
+      matchesTime = orderTime >= oneWeekAgo && orderTime <= now;
+    } else if (timeFilter === "lastMonth") {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(now.getMonth() - 1);
+      matchesTime = orderTime >= oneMonthAgo && orderTime <= now;
+    }
+
+    return matchesSearch && matchesStatus && matchesTime;
+  });
+
 
   const deleteOrder = async (orderId: string) => {
     try {
@@ -213,6 +208,18 @@ export default function Orders() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
     }
+  };
+
+  const stats = {
+    total: filteredOrders.length,
+    pending: filteredOrders.filter(o => o.status === "pending").length,
+    preparing: filteredOrders.filter(o => o.status === "preparing").length,
+    delivered: filteredOrders.filter(o => o.status === "delivered").length,
+    totalValue: filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0),
+    avgOrderValue:
+      filteredOrders.length > 0
+        ? filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0) / filteredOrders.length
+        : 0,
   };
 
   return (
@@ -515,14 +522,10 @@ export default function Orders() {
 
         {/* Pagination Controls */}
         <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-2">
-          {/* Info Text */}
           <p className="text-sm text-muted-foreground">
             Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} orders
           </p>
-
-          {/* Pagination Controls */}
           <div className="flex flex-wrap gap-2 items-center justify-center">
-            {/* Prev Button */}
             <Button
               variant="outline"
               disabled={page === 0}
@@ -531,13 +534,11 @@ export default function Orders() {
               Prev
             </Button>
 
-            {/* Page Numbers */}
             {Array.from({ length: Math.ceil(total / limit) }, (_, i) => {
-              // Only show first, last, current ±1, else show "..."
               if (
-                i === 0 || // first page
-                i === Math.ceil(total / limit) - 1 || // last page
-                (i >= page - 1 && i <= page + 1) // current ±1
+                i === 0 ||
+                i === Math.ceil(total / limit) - 1 ||
+                (i >= page - 1 && i <= page + 1)
               ) {
                 return (
                   <Button
@@ -557,7 +558,6 @@ export default function Orders() {
               return null;
             })}
 
-            {/* Next Button */}
             <Button
               variant="outline"
               disabled={(page + 1) * limit >= total}

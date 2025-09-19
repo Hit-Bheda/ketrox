@@ -186,30 +186,39 @@ export default function Invoices() {
   };
 
   // Fetch existing invoices
-  const fetchInvoices = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/admin/invoices?page=${page}&limit=${limit}`);
-      const data = await response.json();
+const fetchInvoices = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `/api/admin/invoices?page=${page}&limit=${limit}&searchTerm=${encodeURIComponent(
+            searchTerm
+          )}&status=${statusFilter}&dateFilter=${dateFilter}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+          }
+        );
+        const data = await response.json();
 
-      if (response.ok) {
-        setInvoices(data.invoices || []);
-        setTotal(data.pagination?.total || 0);
-      } else {
+        if (response.ok) {
+          setInvoices(data.invoices || []);
+          setTotal(data.pagination?.total || 0);
+        } else {
+          toast.error("Failed to fetch invoices");
+        }
+      } catch (error) {
+        console.error("Error fetching invoices:", error);
         toast.error("Failed to fetch invoices");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-      toast.error("Failed to fetch invoices");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   useEffect(() => {
     fetchInvoices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, limit]);
+  }, [page, limit, searchTerm, statusFilter, dateFilter]);
 
   // Create invoice from form data
   const handleCreateInvoice = async () => {
@@ -294,51 +303,6 @@ export default function Invoices() {
     getHotelsData();
   }, []);
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch =
-      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase());
-    invoice.customerPhone.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === "all" || invoice.paymentStatus === statusFilter;
-
-    let matchesDate: boolean;
-    const invoiceDate = new Date(invoice.createdAt);
-    const now = new Date();
-
-    switch (dateFilter) {
-      case "today": {
-        matchesDate =
-          invoiceDate.getUTCFullYear() === now.getUTCFullYear() &&
-          invoiceDate.getUTCMonth() === now.getUTCMonth() &&
-          invoiceDate.getUTCDate() === now.getUTCDate();
-        break;
-      }
-      case "week": {
-        const weekAgo = new Date(now);
-        weekAgo.setDate(now.getDate() - 6);
-        weekAgo.setHours(0, 0, 0, 0);
-        const invoiceDateOnly = new Date(invoiceDate);
-        invoiceDateOnly.setHours(0, 0, 0, 0);
-        matchesDate = invoiceDateOnly >= weekAgo && invoiceDateOnly <= now;
-        break;
-      }
-      case "month": {
-        const monthAgo = new Date(now);
-        monthAgo.setDate(now.getDate() - 29);
-        monthAgo.setHours(0, 0, 0, 0);
-        const invoiceDateOnly = new Date(invoiceDate);
-        invoiceDateOnly.setHours(0, 0, 0, 0);
-        matchesDate = invoiceDateOnly >= monthAgo && invoiceDateOnly <= now;
-        break;
-      }
-      default:
-        matchesDate = true;
-    }
-
-    return matchesSearch && matchesStatus && matchesDate;
-  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -870,16 +834,6 @@ export default function Invoices() {
     }
   };
 
-  const stats = {
-    totalInvoices: filteredInvoices.length,
-    paidInvoices: filteredInvoices.filter(
-      inv => inv.paymentStatus === "paid"
-    ).length,
-    totalRevenue: filteredInvoices
-      .filter(inv => inv.paymentStatus === "paid")
-      .reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0),
-  };
-
   function formatDate(dateString: string): string {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -900,6 +854,56 @@ export default function Invoices() {
       return parseFloat(selectedInvoice.subtotal) * 0.18;
     }
     return 0;
+  };
+
+    const filteredInvoices = invoices.filter(invoice => {
+    const matchesSearch =
+      invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase());
+    invoice.customerPhone.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" || invoice.paymentStatus === statusFilter;
+
+    let matchesDate: boolean;
+    const invoiceDate = new Date(invoice.createdAt);
+    const now = new Date();
+
+    switch (dateFilter) {
+      case "today": {
+        matchesDate =
+          invoiceDate.getDate() === now.getDate() &&
+          invoiceDate.getMonth() === now.getMonth() &&
+          invoiceDate.getFullYear() === now.getFullYear();
+        break;
+      }
+      case "lastWeek": {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(now.getDate() - 7);
+        matchesDate = invoiceDate >= oneWeekAgo && invoiceDate <= now;
+        break;
+      }
+      case "lastMonth": {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(now.getMonth() - 1);
+        matchesDate = invoiceDate >= oneMonthAgo && invoiceDate <= now;
+        break;
+      }
+      default:
+        matchesDate = true;
+    }
+
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
+    const stats = {
+    totalInvoices: filteredInvoices.length,
+    paidInvoices: filteredInvoices.filter(
+      inv => inv.paymentStatus === "paid"
+    ).length,
+    totalRevenue: filteredInvoices
+      .filter(inv => inv.paymentStatus === "paid")
+      .reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0),
   };
 
   return (
@@ -1108,8 +1112,8 @@ export default function Invoices() {
               <SelectContent>
                 <SelectItem value="all">All Time</SelectItem>
                 <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="lastWeek">This Week</SelectItem>
+                <SelectItem value="lastMonth">This Month</SelectItem>
               </SelectContent>
             </Select>
 
@@ -1226,58 +1230,52 @@ export default function Invoices() {
   
        {/* Pagination Controls */}
         <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-2">
-          {/* Info Text */}
-          <p className="text-sm text-muted-foreground">
-            Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} orders
-          </p>
+        <p className="text-sm text-muted-foreground">
+          Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} invoices
+        </p>
+        <div className="flex flex-wrap gap-2 items-center justify-center">
+          <Button
+            variant="outline"
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(p - 1, 0))}
+          >
+            Prev
+          </Button>
 
-          {/* Pagination Controls */}
-          <div className="flex flex-wrap gap-2 items-center justify-center">
-            {/* Prev Button */}
-            <Button
-              variant="outline"
-              disabled={page === 0}
-              onClick={() => setPage((p) => Math.max(p - 1, 0))}
-            >
-              Prev
-            </Button>
+          {Array.from({ length: Math.ceil(total / limit) }, (_, i) => {
+            if (
+              i === 0 ||
+              i === Math.ceil(total / limit) - 1 ||
+              (i >= page - 1 && i <= page + 1)
+            ) {
+              return (
+                <Button
+                  key={i}
+                  variant={page === i ? "default" : "outline"}
+                  onClick={() => setPage(i)}
+                >
+                  {i + 1}
+                </Button>
+              );
+            } else if (
+              (i === page - 2 && page > 2) ||
+              (i === page + 2 && page < Math.ceil(total / limit) - 3)
+            ) {
+              return <span key={i} className="px-2">...</span>;
+            }
+            return null;
+          })}
 
-            {/* Page Numbers */}
-            {Array.from({ length: Math.ceil(total / limit) }, (_, i) => {
-              // Only show first, last, current ±1, else show "..."
-              if (
-                i === 0 || // first page
-                i === Math.ceil(total / limit) - 1 || // last page
-                (i >= page - 1 && i <= page + 1) // current ±1
-              ) {
-                return (
-                  <Button
-                    key={i}
-                    variant={page === i ? "default" : "outline"}
-                    onClick={() => setPage(i)}
-                  >
-                    {i + 1}
-                  </Button>
-                );
-              } else if (
-                (i === page - 2 && page > 2) ||
-                (i === page + 2 && page < Math.ceil(total / limit) - 3)
-              ) {
-                return <span key={i} className="px-2">...</span>;
-              }
-              return null;
-            })}
-
-            {/* Next Button */}
-            <Button
-              variant="outline"
-              disabled={(page + 1) * limit >= total}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            disabled={(page + 1) * limit >= total}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
         </div>
+      </div>
+
       {/* Edit Invoice Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="sm:max-w-[500px]">

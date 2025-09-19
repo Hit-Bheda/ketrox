@@ -80,7 +80,7 @@ const sidebarItems = [
   { icon: ShoppingCart, label: "Orders", path: "/dashboard/admin/orders" },
   { icon: FileText, label: "Invoices", path: "/dashboard/admin/invoices" },
   { icon: ChartNoAxesCombined, label: "Reports", path: "/dashboard/admin/reports" },
-  { icon: MessageSquareText, label: "Messages", path: "/dashboard/admin/messages", badge: 3 },
+  { icon: MessageSquareText, label: "Messages", path: "/dashboard/admin/messages" },
   { icon: Settings, label: "Settings", path: "/dashboard/admin/settings" },
 ];
 const handleLogout = async () => {
@@ -216,6 +216,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const unreadOrderCount = notifications.filter(n => n.type === 'order' && !n.read).length;
+  const unreadChatCount = notifications.filter(n => n.type === 'chat' && !n.read).length;
   const urgentNotifications = notifications.filter(n => n.priority === 'urgent' && !n.read);
   const displayedNotifications = showAll
     ? notifications
@@ -522,7 +523,8 @@ export default function Layout({ children }: LayoutProps) {
             {sidebarItems.map((item) => {
               const isActive = isActivePath(item.path);
               const dynamicBadge =
-                item.label === "Orders" ? unreadOrderCount : item.badge;
+                item.label === "Orders" ? unreadOrderCount :
+                item.label === "Messages" ? unreadChatCount : undefined;
 
               return (
                 <Link

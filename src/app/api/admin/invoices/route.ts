@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { invoice, notification, order, table, user } from "@/db/schema";
 import { invoiceSchema } from "@/schemas";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, gte, lte, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -224,18 +224,65 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const payment_status = searchParams.get("payment_status");
     const tenant_id = searchParams.get("tenant_id");
-   
-    const page = parseInt(searchParams.get("page") || "0");   
+    const searchTerm = searchParams.get("searchTerm"); 
+    const dateFilter = searchParams.get("dateFilter"); 
+
+    const page = parseInt(searchParams.get("page") || "0");
     const limit = parseInt(searchParams.get("limit") || "10");
 
     const whereConditions = [];
 
-    if (status) whereConditions.push(eq(invoice.paymentStatus, status as "pending" | "paid" | "failed"));
-    if (payment_status) whereConditions.push(eq(invoice.paymentStatus, payment_status as "pending" | "paid" | "failed"));
-    if (tenant_id) whereConditions.push(eq(invoice.tenantId, tenant_id));
-    else if (tenantId && typeof tenantId === "string") whereConditions.push(eq(invoice.tenantId, tenantId));
+    if (status && status !== "all") {
+      whereConditions.push(eq(invoice.paymentStatus, status as "pending" | "paid" | "failed"));
+    }
+    if (payment_status) {
+      whereConditions.push(eq(invoice.paymentStatus, payment_status as "pending" | "paid" | "failed"));
+    }
+    if (tenant_id) {
+      whereConditions.push(eq(invoice.tenantId, tenant_id));
+    } else if (tenantId && typeof tenantId === "string") {
+      whereConditions.push(eq(invoice.tenantId, tenantId));
+    }
 
-    // ✅ Get total count
+    // Add searchTerm filter
+    if (searchTerm) {
+      whereConditions.push(
+        or(
+          sql`lower(${invoice.invoiceNumber}) LIKE ${`%${searchTerm.toLowerCase()}%`}`,
+          sql`lower(${invoice.customerName}) LIKE ${`%${searchTerm.toLowerCase()}%`}`,
+          sql`lower(${invoice.customerPhone}) LIKE ${`%${searchTerm.toLowerCase()}%`}`
+        )
+      );
+    }
+
+    // Add dateFilter
+     if (dateFilter && dateFilter !== "all") {
+      const now = new Date();
+      if (dateFilter === "today") {
+        whereConditions.push(sql`DATE(${invoice.createdAt}) = CURRENT_DATE`);
+      } else if (dateFilter === "lastWeek") {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(now.getDate() - 7);
+        whereConditions.push(
+          and(
+            gte(invoice.createdAt, oneWeekAgo),
+            lte(invoice.createdAt, now)
+          )
+        );
+      } else if (dateFilter === "lastMonth") {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(now.getMonth() - 1);
+        whereConditions.push(
+          and(
+            gte(invoice.createdAt, oneMonthAgo),
+            lte(invoice.createdAt, now)
+          )
+        );
+      }
+    }
+
+
+    // Get total count
     const totalResult = await db
       .select({ count: sql<number>`count(*)`.mapWith(Number) })
       .from(invoice)
@@ -243,15 +290,15 @@ export async function GET(request: NextRequest) {
 
     const total = totalResult[0]?.count || 0;
 
-    // ✅ Build base query without pagination
+    // Build base query without pagination
     const baseQuery = db
       .select()
       .from(invoice)
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
       .orderBy(desc(invoice.createdAt));
 
-    // ✅ Apply pagination and execute
-    const invoices = limit > 0 
+    // Apply pagination and execute
+    const invoices = limit > 0
       ? await baseQuery.limit(limit).offset(page * limit)
       : await baseQuery;
 
