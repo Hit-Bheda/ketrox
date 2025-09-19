@@ -21,6 +21,8 @@ export const tenants = pgTable('tenants', {
     enum: ["free", "monthly", "6-months", "yearly"]
   }).notNull().default("free"),
   status: text('status', { enum: ["active", "trial", "suspended", "expired"] }).notNull().default("active"),
+  start_date: timestamp('start_date', { withTimezone: true }),
+  end_date: timestamp('end_date', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
 });
@@ -93,7 +95,6 @@ export const accountPlainPassword = pgTable("account_plain_password", {
   plainPassword: text("plain_password").notNull(),
   createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
 });
-
 
 /* 4) NO FKs */
 export const verification = pgTable("verification", {

@@ -138,6 +138,8 @@ export default function Settings() {
         throw new Error("Failed to fetch hotel data");
       }
       const data = await res.json();
+      console.log("Fetched hotel data:", data);
+      
 
       return data.hotel || null;
     } catch (error) {
@@ -528,11 +530,50 @@ export default function Settings() {
 
       {/* Settings Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
           <TabsTrigger value="system">System</TabsTrigger>
+          <TabsTrigger value="plan">Plan</TabsTrigger>
         </TabsList>
+        {/* Plan Details Tab */}
+        <TabsContent value="plan" className="space-y-6">
+          {hotelsData && (
+            <div className="w-full flex justify-center mt-4">
+              <div className="w-full max-w-xl">
+                <Card className="shadow-md border border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Shield className="w-5 h-5 text-primary" />
+                      <span>Plan Details</span>
+                    </CardTitle>
+                    <CardDescription>
+                      View your current subscription plan and status
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Plan</Label>
+                      <div className="text-lg font-semibold">{hotelsData.plan ? hotelsData.plan.charAt(0).toUpperCase() + hotelsData.plan.slice(1) : "-"}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Status</Label>
+                      <div className="text-lg font-semibold capitalize">{hotelsData.status || "-"}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Start Date</Label>
+                      <div className="text-lg font-semibold">{hotelsData.start_date ? new Date(hotelsData.start_date).toLocaleDateString() : "-"}</div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">End Date</Label>
+                      <div className="text-lg font-semibold">{hotelsData.end_date ? new Date(hotelsData.end_date).toLocaleDateString() : "-"}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </TabsContent>
 
         {/* Profile Settings */}
         <TabsContent value="profile" className="space-y-6">
@@ -730,6 +771,7 @@ export default function Settings() {
         </TabsContent>
 
         {/* Restaurant Settings */}
+       
         <TabsContent value="restaurant" className="space-y-6">
           <Card>
             <CardHeader>
@@ -948,6 +990,7 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+          
         </TabsContent>
 
 

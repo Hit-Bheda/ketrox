@@ -32,6 +32,8 @@ export interface HotelType {
   created_at: string; 
   logo_url: string;
   email: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 export type StaffType = {

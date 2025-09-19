@@ -75,12 +75,22 @@ function HotelsContent() {
   }, []);
 
   const handleAddHotel = async (formData: z.infer<typeof hotelSchema>) => {
-    console.log("Adding hotel:", formData);
     try {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        logoUrl: formData.logoUrl,
+        ownerName: formData.ownerName,
+        ownerPhone: formData.ownerPhone,
+        address: formData.address,
+        plan: formData.plan,
+        password: formData.password,
+        phone: formData.ownerPhone,
+      };
       const res = await fetch("/api/super-admin/hotels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         throw new Error("Failed to add hotel");
@@ -95,16 +105,27 @@ function HotelsContent() {
   };
 
   const handleUpdateHotel = async (formData: z.infer<typeof hotelUpdateSchema>) => {
-  
     try {
+      const payload = {
+        id: formData.id,
+        name: formData.name,
+        email: formData.email,
+        logoUrl: formData.logoUrl,
+        ownerName: formData.ownerName,
+        ownerPhone: formData.ownerPhone,
+        address: formData.address,
+        plan: formData.plan,
+      };
       const res = await fetch("/api/super-admin/hotels", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         throw new Error("Failed to update hotel");
       }
+      console.log("Update response:", await res.json());
+      
       toast.success("Hotel updated successfully!");
       dispatch(toggleEditModal(false));
       getHotelsData().then(data => setHotelsData(data)); // Refresh data
