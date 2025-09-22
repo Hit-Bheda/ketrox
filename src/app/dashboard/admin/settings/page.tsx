@@ -10,7 +10,9 @@ import {
   Upload,
   Trash2,
   Database,
-  Download
+  Download,
+  CreditCard,
+  Calendar
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,8 +48,10 @@ import { betterFetch } from "@better-fetch/fetch";
 import { HotelType } from "@/types";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
+import { ExpiryMessage } from "@/components/hotel-plan/ExpiryMessage";
 
-
+type StatusType = "active" | "trial" | "suspended" | "expired";
+type PlanType = "free" | "monthly" | "6-months" | "yearly";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -61,6 +65,13 @@ export default function Settings() {
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  // Local status for plan expiry UI
+  const [localStatus, setLocalStatus] = useState<StatusType | undefined>(undefined);
+
+  // Keep localStatus in sync with hotelsData.status unless expired by timer
+  useEffect(() => {
+    if (hotelsData?.status) setLocalStatus(hotelsData.status as StatusType);
+  }, [hotelsData?.status]);
 
   const [profileForm, setProfileForm] = useState({
     name: "",
@@ -138,8 +149,6 @@ export default function Settings() {
         throw new Error("Failed to fetch hotel data");
       }
       const data = await res.json();
-      console.log("Fetched hotel data:", data);
-      
 
       return data.hotel || null;
     } catch (error) {
@@ -519,8 +528,29 @@ export default function Settings() {
     }
   };
 
-  return (
+  function getStatusBadge(status: StatusType) {
+    const badges: Record<StatusType, { text: string; bgColor: string; textColor: string }> = {
+      active: { text: "Active", bgColor: "bg-green-800", textColor: "text-white" },
+      trial: { text: "Trial", bgColor: "bg-blue-800", textColor: "text-white" },
+      suspended: { text: "Suspended", bgColor: "bg-yellow-800", textColor: "text-white" },
+      expired: { text: "Expired", bgColor: "bg-red-800", textColor: "text-white" },
+    };
 
+    return badges[status] || { text: "-", bgColor: "bg-gray-100", textColor: "text-gray-800" };
+  }
+
+function getPlanBadge(plan: PlanType) {
+  const badges: Record<PlanType, { text: string; bgColor: string; textColor: string }> = {
+    free: { text: "Free", bgColor: "bg-gray-800", textColor: "text-white" },
+    monthly: { text: "Monthly", bgColor: "bg-green-800", textColor: "text-white" },
+    "6-months": { text: "6 Months", bgColor: "bg-purple-800", textColor: "text-white" },
+    yearly: { text: "Yearly", bgColor: "bg-blue-800", textColor: "text-white" },
+  };
+
+  return badges[plan] || { text: "-", bgColor: "bg-gray-800", textColor: "text-white" };
+}
+
+  return (
     <div className="flex-1 space-y-6 p-6 animate-fadeIn">
       {/* Header */}
       <div>
@@ -533,40 +563,133 @@ export default function Settings() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
-          <TabsTrigger value="system">System</TabsTrigger>
           <TabsTrigger value="plan">Plan</TabsTrigger>
+          <TabsTrigger value="system">System</TabsTrigger>
         </TabsList>
+
         {/* Plan Details Tab */}
         <TabsContent value="plan" className="space-y-6">
           {hotelsData && (
             <div className="w-full flex justify-center mt-4">
-              <div className="w-full max-w-xl">
-                <Card className="shadow-md border border-primary/20">
+              <div className="w-full">
+                <Card className="shadow-lg border border-primary/30">
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Shield className="w-5 h-5 text-primary" />
-                      <span>Plan Details</span>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="w-6 h-6 text-primary" />
+                      <span className="text-lg font-bold">Plan Details</span>
                     </CardTitle>
                     <CardDescription>
-                      View your current subscription plan and status
+                      Monitor your subscription plan, status, and expiry in real-time
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Plan</Label>
-                      <div className="text-lg font-semibold">{hotelsData.plan ? hotelsData.plan.charAt(0).toUpperCase() + hotelsData.plan.slice(1) : "-"}</div>
+
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* Plan */}
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-primary" />
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Plan</Label>
+                        <div>
+                          {hotelsData.plan ? (
+                            <Badge
+                              className={`${getPlanBadge(hotelsData.plan as PlanType).bgColor} ${getPlanBadge(
+                                hotelsData.plan as PlanType
+                              ).textColor} px-2 py-1 text-sm`}
+                            >
+                              {getPlanBadge(hotelsData.plan as PlanType).text}
+                            </Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Status</Label>
-                      <div className="text-lg font-semibold capitalize">{hotelsData.status || "-"}</div>
+
+                    {/* Status (uses localStatus for immediate expiry) */}
+                    <div className="flex items-center gap-2">
+                      <User className="w-5 h-5 text-primary" />
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Status</Label>
+                        <div>
+                          <Badge
+                            className={`${getStatusBadge((localStatus ?? hotelsData.status) as StatusType).bgColor} ${getStatusBadge((localStatus ?? hotelsData.status) as StatusType).textColor} px-2 py-1 text-sm`}
+                          >
+                            {getStatusBadge((localStatus ?? hotelsData.status) as StatusType).text}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Start Date</Label>
-                      <div className="text-lg font-semibold">{hotelsData.start_date ? new Date(hotelsData.start_date).toLocaleDateString() : "-"}</div>
+
+                    {/* Start Date */}
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Start Date</Label>
+                        <div className="text-lg font-semibold">
+                          {hotelsData.start_date ? new Date(hotelsData.start_date).toLocaleDateString() : "-"}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">End Date</Label>
-                      <div className="text-lg font-semibold">{hotelsData.end_date ? new Date(hotelsData.end_date).toLocaleDateString() : "-"}</div>
+
+                    {/* End Date */}
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      <div>
+                        <Label className="text-xs text-muted-foreground">End Date</Label>
+                        <div className="text-lg font-semibold">
+                          {hotelsData.end_date ? new Date(hotelsData.end_date).toLocaleDateString() : "-"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expiry Timer (with onExpire to update local status) */}
+                    <div className="sm:col-span-2 flex items-center gap-6">
+                      <Label className="text-s text-muted-foreground">Expiry</Label>
+                      {hotelsData.end_date ? (
+                        <ExpiryMessage
+                          endDate={hotelsData.end_date}
+                          onExpire={() => setLocalStatus("expired")}
+                        />
+                      ) : "-"}
+                    </div>
+
+                    {/* Plan Info */}
+                    <div className="sm:col-span-2 p-4 bg-primary/10 rounded-lg border border-primary/20">
+                      <Label className="text-xs text-muted-foreground mb-2 block">Plan Info</Label>
+                      <div className="flex flex-col gap-2">
+                        {hotelsData.plan === "free" && (
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium text-muted-foreground">
+                              You are on the Free Plan. Limited features available.
+                            </span>
+                          </div>
+                        )}
+                        {hotelsData.plan === "monthly" && (
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium text-muted-foreground">
+                              You are on the Monthly Plan. Enjoy full access for 30 days.
+                            </span>
+                          </div>
+                        )}
+                        {hotelsData.plan === "6-months" && (
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium text-muted-foreground">
+                              You are on the 6-Months Plan. Best for half-yearly savings!
+                            </span>
+                          </div>
+                        )}
+                        {hotelsData.plan === "yearly" && (
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium text-muted-foreground">
+                              You are on the Yearly Plan. Maximum savings & uninterrupted access!
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -574,6 +697,7 @@ export default function Settings() {
             </div>
           )}
         </TabsContent>
+
 
         {/* Profile Settings */}
         <TabsContent value="profile" className="space-y-6">
@@ -771,7 +895,6 @@ export default function Settings() {
         </TabsContent>
 
         {/* Restaurant Settings */}
-       
         <TabsContent value="restaurant" className="space-y-6">
           <Card>
             <CardHeader>
@@ -787,7 +910,7 @@ export default function Settings() {
                 <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted overflow-hidden">
                   {(() => {
                     if (logoPreviewUrl) {
-                     
+
                       return (
                         <Image
                           src={logoPreviewUrl}
@@ -811,7 +934,7 @@ export default function Settings() {
                           alt={hotelsData?.name}
                           className="h-full w-full object-cover"
                           priority
-                           fetchPriority="high" 
+                          fetchPriority="high"
                         />
                       );
                     }
@@ -990,9 +1113,7 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
-          
         </TabsContent>
-
 
         {/* System Settings */}
         <TabsContent value="system" className="space-y-6">

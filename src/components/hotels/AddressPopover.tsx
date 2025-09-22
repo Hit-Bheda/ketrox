@@ -13,6 +13,10 @@ export function AddressPopover({ address }: { address: string }) {
   const isLong = words.length > limit;
   const shortText = isLong ? words.slice(0, limit).join(" ") + "..." : address;
 
+  if (address.length < 10) {
+    return <span>{address}</span>;
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>

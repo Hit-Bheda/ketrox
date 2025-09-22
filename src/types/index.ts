@@ -7,12 +7,6 @@ export enum HotelStatus {
   Expired = "expired"
 }
 
-export enum HotelPlan {
-  Free = "free",
-  Standard = "standard",
-  Pro = "pro"
-}
-
 export type StatusColorStyles = {
   [key: string]: string; 
 };

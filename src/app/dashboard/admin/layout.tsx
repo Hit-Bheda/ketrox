@@ -524,7 +524,7 @@ export default function Layout({ children }: LayoutProps) {
               const isActive = isActivePath(item.path);
               const dynamicBadge =
                 item.label === "Orders" ? unreadOrderCount :
-                item.label === "Messages" ? unreadChatCount : undefined;
+                  item.label === "Messages" ? unreadChatCount : undefined;
 
               return (
                 <Link
@@ -599,14 +599,15 @@ export default function Layout({ children }: LayoutProps) {
                     ) : (
                       <Bell className="w-4 h-4" />
                     )}
-                    {unreadCount > 0 && (
-                      <Badge className={`absolute -top-1 -right-1 w-5 h-5 text-xs ${urgentNotifications.length > 0
-                        ? 'bg-destructive text-destructive-foreground'
-                        : 'bg-primary text-primary-foreground'
-                        }`}>
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </Badge>
-                    )}
+
+                    <Badge
+                      className={`absolute -top-1 -right-1 w-5 h-5 text-xs ${urgentNotifications.length > 0
+                          ? "bg-destructive text-destructive-foreground"
+                          : "bg-primary text-primary-foreground"
+                        }`}
+                    >
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </Badge>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -670,8 +671,8 @@ export default function Layout({ children }: LayoutProps) {
                               <div
                                 key={notification.id}
                                 className={`p-3 rounded-md cursor-pointer transition-all duration-200 border-l-2 
-     ${!notification.read ? "hover:bg-accent hover:text-accent-foreground" : "bg-muted"} 
-    ${getNotificationClasses(notification)}`}
+                                  ${!notification.read ? "hover:bg-accent hover:text-accent-foreground" : "bg-muted"} 
+                                  ${getNotificationClasses(notification)}`}
                                 onClick={() => !notification.read && handleMarkRead(notification.id)}
                               >
                                 <div className="flex items-start space-x-3">

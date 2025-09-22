@@ -105,35 +105,49 @@ function HotelsContent() {
   };
 
   const handleUpdateHotel = async (formData: z.infer<typeof hotelUpdateSchema>) => {
-    try {
-      const payload = {
-        id: formData.id,
-        name: formData.name,
-        email: formData.email,
-        logoUrl: formData.logoUrl,
-        ownerName: formData.ownerName,
-        ownerPhone: formData.ownerPhone,
-        address: formData.address,
-        plan: formData.plan,
-      };
-      const res = await fetch("/api/super-admin/hotels", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        throw new Error("Failed to update hotel");
-      }
-      console.log("Update response:", await res.json());
-      
-      toast.success("Hotel updated successfully!");
-      dispatch(toggleEditModal(false));
-      getHotelsData().then(data => setHotelsData(data)); // Refresh data
-    } catch (error) {
-      console.error("Error updating hotel:", error);
-      toast.error("Failed to update hotel. Please try again.");
+  try {
+    const payload = {
+      id: formData.id,
+      name: formData.name,
+      email: formData.email,
+      logoUrl: formData.logoUrl,
+      ownerName: formData.ownerName,
+      ownerPhone: formData.ownerPhone,
+      address: formData.address,
+      plan: formData.plan,
+    };
+
+    const res = await fetch("/api/super-admin/hotels", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to update hotel");
     }
+
+    // Parse API response
+    const data = await res.json();
+
+        if (
+      data.message.includes("free trial has ended") || 
+      data.message.includes("cannot use free trial")
+    ) {
+      // Red toast for blocked trial
+      toast.error(data.message);
+    } else {
+      // Green toast for normal updates
+      toast.success(data.message);
+    }
+
+    dispatch(toggleEditModal(false));
+    getHotelsData().then((data) => setHotelsData(data));
+  } catch (error) {
+    console.error("Error updating hotel:", error);
+    toast.error("Failed to update hotel. Please try again.");
   }
+};
 
   const handleDeleteHotel = async (hotelId: string) => {
     // Add confirmation dialog in practice
@@ -163,7 +177,7 @@ function HotelsContent() {
     total: hotelsData.length,
     active: hotelsData.filter(h => h.status === "active").length,
     trial: hotelsData.filter(h => h.status === "trial").length,
-    suspended: hotelsData.filter(h => h.status === "suspended").length,
+    expired: hotelsData.filter(h => h.status === "expired").length,
   };
 
   const onOpenChange = (open: boolean) => {
