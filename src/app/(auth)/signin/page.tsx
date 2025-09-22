@@ -38,7 +38,7 @@ export default function LoginPage() {
 
             });
 
-            console.log("error in signin", error);
+            // console.log("error in signin", error);
 
             if (error) {
                 toast.error(error.message || "Login failed");
@@ -80,7 +80,7 @@ export default function LoginPage() {
                 {/* Login Form */}
                 <div className="w-full lg:w-1/2 flex items-center justify-center px-6">
                     <div className="w-full max-w-md">
-                        <Card className="bg-background/10 backdrop-blur-xl border-border/50 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto scrollbar-hide">
+                        <Card className="bg-background/10 backdrop-blur-xl border-border/50 shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
                             <CardHeader className="space-y-2 text-center pb-6">
                                 {/* Logo */}
                                 <div className="flex justify-center mb-6">
@@ -232,4 +232,3 @@ export default function LoginPage() {
         </div>
     );
 }
-
