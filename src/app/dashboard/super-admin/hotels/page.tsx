@@ -11,14 +11,13 @@ import HotelTable from "@/components/hotels/hotel-table";
 import HotelDetailsModal from "@/components/hotels/hotel-details-model";
 import AddHotelModal from "@/components/hotels/add-hotel-modal";
 import UpdateHotelModal from "@/components/hotels/edit-hotel-modal";
-import { HotelType } from "@/types"; // Define HotelType in a separate file
+import { HotelType } from "@/types"; 
 import { useSelector } from "react-redux";
-import { RootState } from "@/store/store"; // Adjust path to your store
+import { RootState } from "@/store/store"; 
 import { useDispatch } from "react-redux";
-import { toggleEditModal } from "@/store/slices/hotel-store"; // Adjust path to your hotel slice
+import { toggleEditModal } from "@/store/slices/hotel-store"; 
 import { useSearchParams } from "next/navigation";
 
-// Move these to a constants file or keep here if specific to this page
  const statusColorStyles: { [key: string]: string } = {
   active: "bg-green-500/10 text-green-700 border-green-500/20 dark:text-green-300",
   trial: "bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-300",
@@ -150,7 +149,6 @@ function HotelsContent() {
 };
 
   const handleDeleteHotel = async (hotelId: string) => {
-    // Add confirmation dialog in practice
     try {
       const res = await fetch("/api/super-admin/hotels", {
         method: "DELETE",
@@ -158,7 +156,7 @@ function HotelsContent() {
       });
       if (res.ok) {
         toast.success("Hotel deleted successfully");
-        await getHotelsData().then(data => setHotelsData(data)); // Refresh data
+        await getHotelsData().then(data => setHotelsData(data)); 
       } else {
         toast.error("Failed to delete hotel");
       }
