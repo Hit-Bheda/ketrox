@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
       prices: validatedData.prices,
       subtotal: validatedData.subtotal,
       totalAmount: validatedData.total_amount,
+      
       paymentMethod: validatedData.payment_method,
       paymentStatus: validatedData.payment_status,
       notes: validatedData.notes || null,
@@ -100,7 +101,6 @@ export async function POST(request: NextRequest) {
     if (validatedData.order_id && orderData) {
       await db.update(order)
         .set({ 
-          paymentStatus: "paid",
           status: "delivered",
           updatedAt: new Date() 
         })

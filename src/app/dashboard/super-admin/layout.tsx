@@ -278,8 +278,8 @@ export default function DashboardLayout({ children }: LayoutProps) {
                     className="h-full w-auto object-contain"
                   />
                 </div>
-                <Button variant="ghost" size="sm" className="xl:hidden" onClick={() => setSidebarOpen(false)}>
-                  <X className="w-4 h-4" />
+                <Button variant="ghost" size="sm" className="xl:hidden pb-20" onClick={() => setSidebarOpen(false)}>
+                  <X className="w-5 h-5 bg-[#f59f0a] rounded-full p-[2px]" />
                 </Button>
               </div>
             </div>

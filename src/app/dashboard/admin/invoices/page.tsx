@@ -15,8 +15,8 @@ import {
   XCircle,
   Clock,
   TrendingUp,
-  AlertTriangle,
   LoaderIcon,
+  BarChart,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -186,34 +186,34 @@ export default function Invoices() {
   };
 
   // Fetch existing invoices
-const fetchInvoices = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(
-          `/api/admin/invoices?page=${page}&limit=${limit}&searchTerm=${encodeURIComponent(
-            searchTerm
-          )}&status=${statusFilter}&dateFilter=${dateFilter}`,
-          {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            cache: "no-store",
-          }
-        );
-        const data = await response.json();
-
-        if (response.ok) {
-          setInvoices(data.invoices || []);
-          setTotal(data.pagination?.total || 0);
-        } else {
-          toast.error("Failed to fetch invoices");
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `/api/admin/invoices?page=${page}&limit=${limit}&searchTerm=${encodeURIComponent(
+          searchTerm
+        )}&status=${statusFilter}&dateFilter=${dateFilter}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
         }
-      } catch (error) {
-        console.error("Error fetching invoices:", error);
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        setInvoices(data.invoices || []);
+        setTotal(data.pagination?.total || 0);
+      } else {
         toast.error("Failed to fetch invoices");
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      toast.error("Failed to fetch invoices");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchInvoices();
@@ -247,7 +247,7 @@ const fetchInvoices = async () => {
         tax: tax.toString(),
         total_amount: totalAmount.toString(),
         payment_method: invoiceForm.paymentMethod,
-        payment_status: "paid",
+        payment_status: invoiceForm.paymentStatus,
         notes: invoiceForm.notes
       };
 
@@ -309,13 +309,9 @@ const fetchInvoices = async () => {
       case "paid":
         return <Badge className="bg-chart-3  text-white"><CheckCircle className="w-3 h-3 mr-1" />Paid</Badge>;
       case "pending":
-        return <Badge className="bg-chart-4 text-foreground"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
-      case "overdue":
-        return <Badge variant="destructive"><AlertTriangle className="w-3 h-3 mr-1" />Overdue</Badge>;
-      case "draft":
-        return <Badge variant="outline"><Edit className="w-3 h-3 mr-1" />Draft</Badge>;
-      case "cancelled":
-        return <Badge variant="secondary"><XCircle className="w-3 h-3 mr-1" />Cancelled</Badge>;
+        return <Badge className="bg-chart-4 text-white"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+      case "failed":
+        return <Badge className="bg-red-600 text-white"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -856,7 +852,7 @@ const fetchInvoices = async () => {
     return 0;
   };
 
-    const filteredInvoices = invoices.filter(invoice => {
+  const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch =
       invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -896,14 +892,17 @@ const fetchInvoices = async () => {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-    const stats = {
+  const stats = {
     totalInvoices: filteredInvoices.length,
-    paidInvoices: filteredInvoices.filter(
-      inv => inv.paymentStatus === "paid"
-    ).length,
+    paidInvoices: filteredInvoices.filter(inv => inv.paymentStatus === "paid").length,
     totalRevenue: filteredInvoices
       .filter(inv => inv.paymentStatus === "paid")
       .reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0),
+    avgInvoiceValue:
+      filteredInvoices.length > 0
+        ? filteredInvoices.reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0) /
+        filteredInvoices.length
+        : 0,
   };
 
   return (
@@ -951,6 +950,21 @@ const fetchInvoices = async () => {
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               Payment success rate
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all duration-300">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Invoice</CardTitle>
+            <BarChart className="h-4 w-4 text-chart-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-chart-4">
+              ${stats.avgInvoiceValue.toFixed(2)}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Across all invoices
             </div>
           </CardContent>
         </Card>
@@ -1227,9 +1241,9 @@ const fetchInvoices = async () => {
           )}
         </CardContent>
       </Card>
-  
-       {/* Pagination Controls */}
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-2">
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-2">
         <p className="text-sm text-muted-foreground">
           Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} invoices
         </p>
@@ -1278,7 +1292,7 @@ const fetchInvoices = async () => {
 
       {/* Edit Invoice Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] ">
           <DialogHeader>
             <DialogTitle>Edit Invoice</DialogTitle>
             <DialogDescription>
@@ -1383,7 +1397,7 @@ const fetchInvoices = async () => {
 
       {/* Invoice Detail Modal */}
       <Dialog open={showInvoiceModal} onOpenChange={setShowInvoiceModal}>
-        <DialogContent className="md:max-w-[750px] max-w-[95vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="md:max-w-[750px] max-w-[95vw] max-h-[95vh] overflow-y-auto scrollbar-hide p-4 sm:p-6">
           <DialogHeader className="text-left sm:text-center">
             <DialogTitle className="text-lg sm:text-xl">Invoice Details</DialogTitle>
             <DialogDescription className="text-sm">

@@ -15,7 +15,7 @@ import {
   MapPin,
   Calendar,
   Trash2,
-  Phone
+  Phone,
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -568,48 +568,50 @@ export default function Orders() {
           </div>
         </div>
 
-
-
         {/* Order Details Modal */}
         <Dialog open={showOrderDetails} onOpenChange={setShowOrderDetails}>
-          <DialogContent className="sm:max-w-[700px]">
+          <DialogContent className="max-w-[90vw] sm:max-w-[700px] p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle className="flex items-center space-x-3">
-                <Package className="w-5 h-5" />
-                <span>Order Details - {selectedOrder?.orderNumber}</span>
-                <Badge className={`${getStatusBadgeColor(selectedOrder?.status || "")} px-2 py-0 h-6 text-xs text-white`}>
-                  {selectedOrder && getStatusIcon(selectedOrder.status, 14)}
-                  <span className="ml-1 capitalize">{selectedOrder?.status}</span>
-                </Badge>
+              <DialogTitle className="flex flex-col sm:flex-row items-center justify-between w-full space-y-2 px-5 sm:space-y-0 ">
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-base sm:text-lg">Order Details - {selectedOrder?.orderNumber || 'N/A'}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge className={`${getStatusBadgeColor(selectedOrder?.status || "")} px-2 py-0 h-5 sm:h-6 text-xs sm:text-xs text-white flex items-center`}>
+                    {selectedOrder && getStatusIcon(selectedOrder.status, 14)}
+                    <span className="ml-1 capitalize">{selectedOrder?.status || 'Unknown'}</span>
+                  </Badge>
+                </div>
               </DialogTitle>
             </DialogHeader>
 
             {selectedOrder && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Customer & Table Info */}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
-                    <h4 className="font-medium mb-2">Customer Information</h4>
-                    <div className="space-y-2 text-sm">
+                    <h4 className="font-medium text-sm sm:text-base mb-2">Customer Information</h4>
+                    <div className="space-y-2 text-xs sm:text-sm">
                       <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
+                        <User className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                         <span>{selectedOrder.customerName}</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                         <span>{selectedOrder.customerPhone}</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                         <span>{selectedOrder.tableNumber}</span>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-medium mb-2">Order Timing</h4>
-                    <div className="space-y-2 text-sm">
+                    <h4 className="font-medium text-sm sm:text-base mb-2">Order Timing</h4>
+                    <div className="space-y-2 text-xs sm:text-sm">
                       <div className="flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                         <span>Ordered: {new Date(selectedOrder.createdAt).toLocaleString()}</span>
                       </div>
                     </div>
@@ -618,28 +620,27 @@ export default function Orders() {
                 <Separator />
                 {/* Order Items */}
                 <div>
-                  <h4 className="font-medium mb-3">Order Items</h4>
-                  <div className="space-y-3">
+                  <h4 className="font-medium text-sm sm:text-base mb-2 sm:mb-3">Order Items</h4>
+                  <div className="space-y-2 sm:space-y-3">
                     {selectedOrder.itemNames?.map((name, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-accent rounded-lg">
+                      <div key={i} className="flex items-center justify-between p-2 sm:p-3 bg-accent rounded-lg">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium">{selectedOrder.quantity?.[i]}x</span>
-                            <span>{name}</span>
+                            <span className="font-medium text-xs sm:text-sm">{selectedOrder.quantity?.[i]}x</span>
+                            <span className="text-xs sm:text-sm">{name}</span>
                           </div>
                         </div>
-
                       </div>
                     ))}
                   </div>
                 </div>
                 <Separator />
                 {/* Order Total */}
-                <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
+                <div className="flex items-center justify-between p-3 sm:p-4 bg-primary/10 rounded-lg">
                   <div>
-                    <p className="font-medium">Order Total</p>
+                    <p className="font-medium text-sm sm:text-base">Order Total</p>
                   </div>
-                  <p className="text-2xl font-bold text-primary">${Number(selectedOrder.totalPrice).toFixed(2)}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-primary">${Number(selectedOrder.totalPrice).toFixed(2)}</p>
                 </div>
               </div>
             )}
