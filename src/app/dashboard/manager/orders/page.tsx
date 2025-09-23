@@ -100,34 +100,6 @@ export default function Orders() {
     fetchUserData();
   }, []);
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch =
-      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerPhone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-
-    let matchesTime = true;
-    const orderTime = new Date(order.createdAt);
-
-    if (timeFilter === "today") {
-      matchesTime =
-        orderTime.getDate() === now.getDate() &&
-        orderTime.getMonth() === now.getMonth() &&
-        orderTime.getFullYear() === now.getFullYear();
-    } else if (timeFilter === "lastWeek") {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(now.getDate() - 7);
-      matchesTime = orderTime >= oneWeekAgo && orderTime <= now;
-    } else if (timeFilter === "lastMonth") {
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(now.getMonth() - 1);
-      matchesTime = orderTime >= oneMonthAgo && orderTime <= now;
-    }
-
-    return matchesSearch && matchesStatus && matchesTime;
-  });
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -190,18 +162,7 @@ export default function Orders() {
     setShowOrderDetails(true);
   };
 
-  const stats = {
-    total: filteredOrders.length,
-    pending: filteredOrders.filter(o => o.status === "pending").length,
-    preparing: filteredOrders.filter(o => o.status === "preparing").length,
-    delivered: filteredOrders.filter(o => o.status === "delivered").length,
-    totalValue: filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0),
-    avgOrderValue:
-      filteredOrders.length > 0
-        ? filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0) / filteredOrders.length
-        : 0,
-  };
-
+  
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -209,7 +170,7 @@ export default function Orders() {
         if (!managerId) return;
 
         const res = await fetch(
-          `/api/orders?managerId=${managerId}&page=${page}&limit=${limit}`,
+          `/api/orders?managerId=${managerId}&page=${page}&limit=${limit}&searchTerm=${encodeURIComponent(searchTerm)}&statusFilter=${statusFilter}&timeFilter=${timeFilter}`,
           {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -228,13 +189,55 @@ export default function Orders() {
     };
 
     fetchOrders();
-  }, [user, page, limit]);
+  }, [user, page, limit, searchTerm, statusFilter, timeFilter]);
+
+    const filteredOrders = orders.filter(order => {
+    const matchesSearch =
+      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customerPhone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+
+    let matchesTime = true;
+    const orderTime = new Date(order.createdAt);
+
+    if (timeFilter === "today") {
+      matchesTime =
+        orderTime.getDate() === now.getDate() &&
+        orderTime.getMonth() === now.getMonth() &&
+        orderTime.getFullYear() === now.getFullYear();
+    } else if (timeFilter === "lastWeek") {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(now.getDate() - 7);
+      matchesTime = orderTime >= oneWeekAgo && orderTime <= now;
+    } else if (timeFilter === "lastMonth") {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(now.getMonth() - 1);
+      matchesTime = orderTime >= oneMonthAgo && orderTime <= now;
+    }
+
+    return matchesSearch && matchesStatus && matchesTime;
+  });
+
+  const stats = {
+    total: filteredOrders.length,
+    pending: filteredOrders.filter(o => o.status === "pending").length,
+    preparing: filteredOrders.filter(o => o.status === "preparing").length,
+    delivered: filteredOrders.filter(o => o.status === "delivered").length,
+    totalValue: filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0),
+    avgOrderValue:
+      filteredOrders.length > 0
+        ? filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0) / filteredOrders.length
+        : 0,
+  };
 
   return (
 
     <div className="flex-1 space-y-6 p-6 animate-fadeIn">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
+
         <Card className="hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
@@ -523,41 +526,52 @@ export default function Orders() {
       </Card>
 
       {/* Pagination Controls */}
-      <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-muted-foreground">
-          Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} orders
-        </p>
-
-        <div className="flex gap-2 items-center">
-          <Button
-            variant="outline"
-            disabled={page === 0}
-            onClick={() => setPage((p) => Math.max(p - 1, 0))}
-          >
-            Prev
-          </Button>
-
-          {Array.from({ length: Math.ceil(total / limit) }, (_, i) => (
+       <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-2">
+          <p className="text-sm text-muted-foreground">
+            Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} orders
+          </p>
+          <div className="flex flex-wrap gap-2 items-center justify-center">
             <Button
-              key={i}
-              variant={page === i ? "default" : "outline"}
-              onClick={() => setPage(i)}
+              variant="outline"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(p - 1, 0))}
             >
-              {i + 1}
+              Prev
             </Button>
-          ))}
 
-          {/* Next Button */}
-          <Button
-            variant="outline"
-            disabled={(page + 1) * limit >= total}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
+            {Array.from({ length: Math.ceil(total / limit) }, (_, i) => {
+              if (
+                i === 0 ||
+                i === Math.ceil(total / limit) - 1 ||
+                (i >= page - 1 && i <= page + 1)
+              ) {
+                return (
+                  <Button
+                    key={i}
+                    variant={page === i ? "default" : "outline"}
+                    onClick={() => setPage(i)}
+                  >
+                    {i + 1}
+                  </Button>
+                );
+              } else if (
+                (i === page - 2 && page > 2) ||
+                (i === page + 2 && page < Math.ceil(total / limit) - 3)
+              ) {
+                return <span key={i} className="px-2">...</span>;
+              }
+              return null;
+            })}
+
+            <Button
+              variant="outline"
+              disabled={(page + 1) * limit >= total}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-      </div>
-
 
       {/* Order Details Modal */}
       <Dialog open={showOrderDetails} onOpenChange={setShowOrderDetails}>

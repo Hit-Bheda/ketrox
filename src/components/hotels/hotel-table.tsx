@@ -47,7 +47,7 @@ export default function HotelTable({ hotels, onView, onDelete, statusColorStyles
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground"> {/* Adjust colSpan if needed */}
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground"> 
                 <Building className="w-12 h-12 mx-auto mb-4" />
                 <p>No hotels found matching your criteria.</p>
               </TableCell>

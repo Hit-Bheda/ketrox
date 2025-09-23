@@ -15,7 +15,7 @@ import {
   MapPin,
   Calendar,
   Trash2,
-  Phone
+  Phone,
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,39 +69,12 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<OrderType | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orders, setOrders] = useState<OrderType[]>([]);
-  const [page, setPage] = useState(0);       // current page
+  const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
 
   const now = new Date();
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch =
-      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-
-    let matchesTime = true;
-    const orderTime = new Date(order.createdAt);
-
-    if (timeFilter === "today") {
-      matchesTime =
-        orderTime.getDate() === now.getDate() &&
-        orderTime.getMonth() === now.getMonth() &&
-        orderTime.getFullYear() === now.getFullYear();
-    } else if (timeFilter === "lastWeek") {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(now.getDate() - 7);
-      matchesTime = orderTime >= oneWeekAgo && orderTime <= now;
-    } else if (timeFilter === "lastMonth") {
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(now.getMonth() - 1);
-      matchesTime = orderTime >= oneMonthAgo && orderTime <= now;
-    }
-
-    return matchesSearch && matchesStatus && matchesTime;
-  });
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -163,48 +136,20 @@ export default function Orders() {
     setShowOrderDetails(true);
   };
 
-  const stats = {
-    total: filteredOrders.length,
-    pending: filteredOrders.filter(o => o.status === "pending").length,
-    preparing: filteredOrders.filter(o => o.status === "preparing").length,
-    delivered: filteredOrders.filter(o => o.status === "delivered").length,
-    totalValue: filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0),
-    avgOrderValue:
-      filteredOrders.length > 0
-        ? filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0) / filteredOrders.length
-        : 0,
-  };
-
-  // useEffect(() => {
-  //   const fetchOrders = async () => {
-  //     try {
-  //       const res = await fetch(
-  //         "/api/orders",
-  //         {
-  //           method: "GET",
-  //           headers: { "Content-Type": "application/json" },
-  //           cache: "no-store"
-  //         }
-  //       );
-  //       if (!res.ok) throw new Error("Failed to fetch orders");
-  //       const data = await res.json();
-  //       setOrders(data.orders || []);
-  //     } catch (error) {
-  //       console.error("Error fetching orders:", error);
-  //     }
-  //   };
-  //   fetchOrders();
-  // }, []);
-
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await fetch(`/api/orders?page=${page}&limit=${limit}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
-        });
+        const res = await fetch(
+          `/api/orders?page=${page}&limit=${limit}&searchTerm=${encodeURIComponent(
+            searchTerm
+          )}&status=${statusFilter}&timeFilter=${timeFilter}`,
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            cache: "no-store",
+          }
+        );
         if (!res.ok) throw new Error("Failed to fetch orders");
         const data = await res.json();
         setOrders(data.orders || []);
@@ -214,7 +159,36 @@ export default function Orders() {
       }
     };
     fetchOrders();
-  }, [page, limit]);
+  }, [page, limit, searchTerm, statusFilter, timeFilter]);
+
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+
+    let matchesTime = true;
+    const orderTime = new Date(order.createdAt);
+
+    if (timeFilter === "today") {
+      matchesTime =
+        orderTime.getDate() === now.getDate() &&
+        orderTime.getMonth() === now.getMonth() &&
+        orderTime.getFullYear() === now.getFullYear();
+    } else if (timeFilter === "lastWeek") {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(now.getDate() - 7);
+      matchesTime = orderTime >= oneWeekAgo && orderTime <= now;
+    } else if (timeFilter === "lastMonth") {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(now.getMonth() - 1);
+      matchesTime = orderTime >= oneMonthAgo && orderTime <= now;
+    }
+
+    return matchesSearch && matchesStatus && matchesTime;
+  });
+
 
   const deleteOrder = async (orderId: string) => {
     try {
@@ -236,11 +210,23 @@ export default function Orders() {
     }
   };
 
+  const stats = {
+    total: filteredOrders.length,
+    pending: filteredOrders.filter(o => o.status === "pending").length,
+    preparing: filteredOrders.filter(o => o.status === "preparing").length,
+    delivered: filteredOrders.filter(o => o.status === "delivered").length,
+    totalValue: filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0),
+    avgOrderValue:
+      filteredOrders.length > 0
+        ? filteredOrders.reduce((sum, order) => sum + Number(order.totalPrice), 0) / filteredOrders.length
+        : 0,
+  };
+
   return (
     <>
       <div className="flex-1 space-y-6 p-6 animate-fadeIn">
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
           <Card className="hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
@@ -535,13 +521,11 @@ export default function Orders() {
         </Card>
 
         {/* Pagination Controls */}
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-2">
           <p className="text-sm text-muted-foreground">
             Showing {page * limit + 1} - {Math.min((page + 1) * limit, total)} of {total} orders
           </p>
-
-          <div className="flex gap-2 items-center">
-            {/* Prev Button */}
+          <div className="flex flex-wrap gap-2 items-center justify-center">
             <Button
               variant="outline"
               disabled={page === 0}
@@ -550,18 +534,30 @@ export default function Orders() {
               Prev
             </Button>
 
-            {/* Page Numbers */}
-            {Array.from({ length: Math.ceil(total / limit) }, (_, i) => (
-              <Button
-                key={i}
-                variant={page === i ? "default" : "outline"} 
-                onClick={() => setPage(i)}
-              >
-                {i + 1}
-              </Button>
-            ))}
+            {Array.from({ length: Math.ceil(total / limit) }, (_, i) => {
+              if (
+                i === 0 ||
+                i === Math.ceil(total / limit) - 1 ||
+                (i >= page - 1 && i <= page + 1)
+              ) {
+                return (
+                  <Button
+                    key={i}
+                    variant={page === i ? "default" : "outline"}
+                    onClick={() => setPage(i)}
+                  >
+                    {i + 1}
+                  </Button>
+                );
+              } else if (
+                (i === page - 2 && page > 2) ||
+                (i === page + 2 && page < Math.ceil(total / limit) - 3)
+              ) {
+                return <span key={i} className="px-2">...</span>;
+              }
+              return null;
+            })}
 
-            {/* Next Button */}
             <Button
               variant="outline"
               disabled={(page + 1) * limit >= total}
@@ -572,47 +568,50 @@ export default function Orders() {
           </div>
         </div>
 
-
         {/* Order Details Modal */}
         <Dialog open={showOrderDetails} onOpenChange={setShowOrderDetails}>
-          <DialogContent className="sm:max-w-[700px]">
+          <DialogContent className="max-w-[90vw] sm:max-w-[700px] p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle className="flex items-center space-x-3">
-                <Package className="w-5 h-5" />
-                <span>Order Details - {selectedOrder?.orderNumber}</span>
-                <Badge className={`${getStatusBadgeColor(selectedOrder?.status || "")} px-2 py-0 h-6 text-xs text-white`}>
-                  {selectedOrder && getStatusIcon(selectedOrder.status, 14)}
-                  <span className="ml-1 capitalize">{selectedOrder?.status}</span>
-                </Badge>
+              <DialogTitle className="flex flex-col sm:flex-row items-center justify-between w-full space-y-2 px-5 sm:space-y-0 ">
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-base sm:text-lg">Order Details - {selectedOrder?.orderNumber || 'N/A'}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge className={`${getStatusBadgeColor(selectedOrder?.status || "")} px-2 py-0 h-5 sm:h-6 text-xs sm:text-xs text-white flex items-center`}>
+                    {selectedOrder && getStatusIcon(selectedOrder.status, 14)}
+                    <span className="ml-1 capitalize">{selectedOrder?.status || 'Unknown'}</span>
+                  </Badge>
+                </div>
               </DialogTitle>
             </DialogHeader>
 
             {selectedOrder && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Customer & Table Info */}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
-                    <h4 className="font-medium mb-2">Customer Information</h4>
-                    <div className="space-y-2 text-sm">
+                    <h4 className="font-medium text-sm sm:text-base mb-2">Customer Information</h4>
+                    <div className="space-y-2 text-xs sm:text-sm">
                       <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
+                        <User className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                         <span>{selectedOrder.customerName}</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                         <span>{selectedOrder.customerPhone}</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                         <span>{selectedOrder.tableNumber}</span>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-medium mb-2">Order Timing</h4>
-                    <div className="space-y-2 text-sm">
+                    <h4 className="font-medium text-sm sm:text-base mb-2">Order Timing</h4>
+                    <div className="space-y-2 text-xs sm:text-sm">
                       <div className="flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
                         <span>Ordered: {new Date(selectedOrder.createdAt).toLocaleString()}</span>
                       </div>
                     </div>
@@ -621,28 +620,27 @@ export default function Orders() {
                 <Separator />
                 {/* Order Items */}
                 <div>
-                  <h4 className="font-medium mb-3">Order Items</h4>
-                  <div className="space-y-3">
+                  <h4 className="font-medium text-sm sm:text-base mb-2 sm:mb-3">Order Items</h4>
+                  <div className="space-y-2 sm:space-y-3">
                     {selectedOrder.itemNames?.map((name, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-accent rounded-lg">
+                      <div key={i} className="flex items-center justify-between p-2 sm:p-3 bg-accent rounded-lg">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium">{selectedOrder.quantity?.[i]}x</span>
-                            <span>{name}</span>
+                            <span className="font-medium text-xs sm:text-sm">{selectedOrder.quantity?.[i]}x</span>
+                            <span className="text-xs sm:text-sm">{name}</span>
                           </div>
                         </div>
-
                       </div>
                     ))}
                   </div>
                 </div>
                 <Separator />
                 {/* Order Total */}
-                <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
+                <div className="flex items-center justify-between p-3 sm:p-4 bg-primary/10 rounded-lg">
                   <div>
-                    <p className="font-medium">Order Total</p>
+                    <p className="font-medium text-sm sm:text-base">Order Total</p>
                   </div>
-                  <p className="text-2xl font-bold text-primary">${Number(selectedOrder.totalPrice).toFixed(2)}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-primary">${Number(selectedOrder.totalPrice).toFixed(2)}</p>
                 </div>
               </div>
             )}

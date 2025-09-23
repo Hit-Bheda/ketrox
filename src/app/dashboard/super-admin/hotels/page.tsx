@@ -11,14 +11,13 @@ import HotelTable from "@/components/hotels/hotel-table";
 import HotelDetailsModal from "@/components/hotels/hotel-details-model";
 import AddHotelModal from "@/components/hotels/add-hotel-modal";
 import UpdateHotelModal from "@/components/hotels/edit-hotel-modal";
-import { HotelType } from "@/types"; // Define HotelType in a separate file
+import { HotelType } from "@/types"; 
 import { useSelector } from "react-redux";
-import { RootState } from "@/store/store"; // Adjust path to your store
+import { RootState } from "@/store/store"; 
 import { useDispatch } from "react-redux";
-import { toggleEditModal } from "@/store/slices/hotel-store"; // Adjust path to your hotel slice
+import { toggleEditModal } from "@/store/slices/hotel-store"; 
 import { useSearchParams } from "next/navigation";
 
-// Move these to a constants file or keep here if specific to this page
  const statusColorStyles: { [key: string]: string } = {
   active: "bg-green-500/10 text-green-700 border-green-500/20 dark:text-green-300",
   trial: "bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-300",
@@ -75,12 +74,22 @@ function HotelsContent() {
   }, []);
 
   const handleAddHotel = async (formData: z.infer<typeof hotelSchema>) => {
-    console.log("Adding hotel:", formData);
     try {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        logoUrl: formData.logoUrl,
+        ownerName: formData.ownerName,
+        ownerPhone: formData.ownerPhone,
+        address: formData.address,
+        plan: formData.plan,
+        password: formData.password,
+        phone: formData.ownerPhone,
+      };
       const res = await fetch("/api/super-admin/hotels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         throw new Error("Failed to add hotel");
@@ -95,27 +104,51 @@ function HotelsContent() {
   };
 
   const handleUpdateHotel = async (formData: z.infer<typeof hotelUpdateSchema>) => {
-  
-    try {
-      const res = await fetch("/api/super-admin/hotels", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      if (!res.ok) {
-        throw new Error("Failed to update hotel");
-      }
-      toast.success("Hotel updated successfully!");
-      dispatch(toggleEditModal(false));
-      getHotelsData().then(data => setHotelsData(data)); // Refresh data
-    } catch (error) {
-      console.error("Error updating hotel:", error);
-      toast.error("Failed to update hotel. Please try again.");
+  try {
+    const payload = {
+      id: formData.id,
+      name: formData.name,
+      email: formData.email,
+      logoUrl: formData.logoUrl,
+      ownerName: formData.ownerName,
+      ownerPhone: formData.ownerPhone,
+      address: formData.address,
+      plan: formData.plan,
+    };
+
+    const res = await fetch("/api/super-admin/hotels", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to update hotel");
     }
+
+    // Parse API response
+    const data = await res.json();
+
+        if (
+      data.message.includes("free trial has ended") || 
+      data.message.includes("cannot use free trial")
+    ) {
+      // Red toast for blocked trial
+      toast.error(data.message);
+    } else {
+      // Green toast for normal updates
+      toast.success(data.message);
+    }
+
+    dispatch(toggleEditModal(false));
+    getHotelsData().then((data) => setHotelsData(data));
+  } catch (error) {
+    console.error("Error updating hotel:", error);
+    toast.error("Failed to update hotel. Please try again.");
   }
+};
 
   const handleDeleteHotel = async (hotelId: string) => {
-    // Add confirmation dialog in practice
     try {
       const res = await fetch("/api/super-admin/hotels", {
         method: "DELETE",
@@ -123,7 +156,7 @@ function HotelsContent() {
       });
       if (res.ok) {
         toast.success("Hotel deleted successfully");
-        await getHotelsData().then(data => setHotelsData(data)); // Refresh data
+        await getHotelsData().then(data => setHotelsData(data)); 
       } else {
         toast.error("Failed to delete hotel");
       }
@@ -142,7 +175,7 @@ function HotelsContent() {
     total: hotelsData.length,
     active: hotelsData.filter(h => h.status === "active").length,
     trial: hotelsData.filter(h => h.status === "trial").length,
-    suspended: hotelsData.filter(h => h.status === "suspended").length,
+    expired: hotelsData.filter(h => h.status === "expired").length,
   };
 
   const onOpenChange = (open: boolean) => {
@@ -157,7 +190,7 @@ function HotelsContent() {
   }, [searchParams]);
 
   return (
-    <div className="bg-background text-foreground min-h-screen p-4 lg:p-6 space-y-6">
+    <div className="bg-background text-foreground min-h-screen space-y-6">
       <HotelStats stats={stats} />
       <Card>
         <HotelFiltersAndActions

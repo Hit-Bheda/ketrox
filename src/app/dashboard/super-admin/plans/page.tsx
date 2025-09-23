@@ -1,6 +1,5 @@
 "use client";
-import { useState } from "react";
-import { Crown, Zap, Star, TrendingUp, LucideIcon } from "lucide-react";
+import { Crown, Zap, Star, TrendingUp, LucideIcon, Users, DollarSign, LogOut } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,9 @@ import {
   Pie,
   Cell,
 } from "recharts";
-
+import { } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { HotelType } from "@/types";
 interface Plan {
   id: string;
   name: string;
@@ -47,7 +48,6 @@ interface PlanColorStyle {
   progress: string;
 }
 
-// Plans: Free, Monthly, 6 Months, Yearly (benefits removed)
 const plans: Plan[] = [
   {
     id: "free",
@@ -63,8 +63,8 @@ const plans: Plan[] = [
       support: "Email",
     },
     popular: false,
-    subscribers: 145,
-    revenue: 0,
+    subscribers: 0,
+    revenue: 0, 
   },
   {
     id: "monthly",
@@ -80,11 +80,11 @@ const plans: Plan[] = [
       support: "Priority Email",
     },
     popular: true,
-    subscribers: 287,
-    revenue: 14063,
+    subscribers: 0,
+    revenue: 0,
   },
   {
-    id: "six-months",
+    id: "6-months",
     name: "6 Months",
     price: { monthly: 99, yearly: 990 },
     description: "For professional hotel chains",
@@ -97,8 +97,8 @@ const plans: Plan[] = [
       support: "24/7 Phone & Email",
     },
     popular: false,
-    subscribers: 98,
-    revenue: 9702,
+    subscribers: 0, 
+    revenue: 0,     
   },
   {
     id: "yearly",
@@ -114,21 +114,12 @@ const plans: Plan[] = [
       support: "Dedicated Manager",
     },
     popular: false,
-    subscribers: 23,
-    revenue: 6877,
+    subscribers: 0, 
+    revenue: 0,    
   },
 ];
 
 // Chart data (keys updated to match new plans)
-const subscriptionTrends = [
-  { month: "Jan", Free: 120, Monthly: 200, "6 Months": 80, Yearly: 15 },
-  { month: "Feb", Free: 130, Monthly: 220, "6 Months": 85, Yearly: 18 },
-  { month: "Mar", Free: 125, Monthly: 240, "6 Months": 90, Yearly: 20 },
-  { month: "Apr", Free: 135, Monthly: 260, "6 Months": 95, Yearly: 21 },
-  { month: "May", Free: 140, Monthly: 275, "6 Months": 98, Yearly: 22 },
-  { month: "Jun", Free: 145, Monthly: 287, "6 Months": 98, Yearly: 23 },
-];
-
 const revenueTrends = [
   { month: "Jan", revenue: 25000 },
   { month: "Feb", revenue: 27500 },
@@ -136,13 +127,6 @@ const revenueTrends = [
   { month: "Apr", revenue: 30500 },
   { month: "May", revenue: 31200 },
   { month: "Jun", revenue: 30642 },
-];
-
-const planDistribution = [
-  { name: "Free", value: 145, color: "#6b7280" },
-  { name: "Monthly", value: 287, color: "#3b82f6" },
-  { name: "6 Months", value: 98, color: "#8b5cf6" },
-  { name: "Yearly", value: 23, color: "#f59e0b" },
 ];
 
 const planColorStyles: Record<string, PlanColorStyle> = {
@@ -184,73 +168,138 @@ const planColorStyles: Record<string, PlanColorStyle> = {
 };
 
 export default function Plans() {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [hotelsData, setHotelsData] = useState<HotelType[]>([]);
 
-  const totalSubscribers = plans.reduce((sum, plan) => sum + plan.subscribers, 0);
-  const totalRevenue = plans.reduce((sum, plan) => sum + plan.revenue, 0);
+  // Plan mappings needed for dynamic analytics
+  const planIdToName: Record<string, string> = {
+    "free": "Free",
+    "monthly": "Monthly",
+    "6-months": "6 Months",
+    "yearly": "Yearly",
+  };
+
+  const planIdToColor: Record<string, string> = {
+    "free": "#6b7280",
+    "monthly": "#3b82f6",
+    "6-months": "#8b5cf6",
+    "yearly": "#f59e0b",
+  };
+
+  const dynamicPlanDistribution = Object.entries(planIdToName).map(([id, name]) => ({
+    name,
+    value: hotelsData.filter(h => h.plan === id).length,
+    color: planIdToColor[id],
+  }));
+
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (5 - i));
+    return `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+  });
+
+  const dynamicSubscriptionTrends = months.map((label, i) => {
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setMonth(monthStart.getMonth() - (5 - i));
+    monthStart.setHours(0, 0, 0, 0);
+    const monthEnd = new Date(monthStart);
+    monthEnd.setMonth(monthEnd.getMonth() + 1);
+    return {
+      month: label,
+      ...Object.entries(planIdToName).reduce((acc, [id, name]) => {
+        acc[name] = hotelsData.filter(h =>
+          h.plan === id &&
+          h.start_date &&
+          new Date(h.start_date) >= monthStart &&
+          new Date(h.start_date) < monthEnd
+        ).length;
+        return acc;
+      }, {} as Record<string, number>),
+    };
+  });
+
+  const getHotelsData = async () => {
+    try {
+      const res = await fetch("/api/super-admin/hotels");
+      if (!res.ok) {
+        throw new Error("Failed to fetch hotels");
+      }
+      const data = await res.json();
+      return Array.isArray(data.hotels) ? data.hotels : [];
+    } catch (error) {
+      console.error("Error fetching hotels:", error);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    getHotelsData().then(data => setHotelsData(data));
+  }, []);
+
+
+  const dynamicPlans = plans.map(plan => {
+    const hotels = hotelsData.filter(h => h.plan === plan.id);
+    let revenue = 0;
+    if (plan.id === "monthly") revenue = hotels.length * plan.price.monthly;
+    else if (plan.id === "6-months") revenue = hotels.length * plan.price.monthly * 6;
+    else if (plan.id === "yearly") revenue = hotels.length * plan.price.yearly;
+    // free plan = 0
+    return {
+      ...plan,
+      subscribers: hotels.length,
+      revenue,
+    };
+  });
+  const totalSubscribers = dynamicPlans.reduce((sum, plan) => sum + plan.subscribers, 0);
+  const totalRevenue = dynamicPlans.reduce((sum, plan) => sum + plan.revenue, 0);
 
   return (
     <div className="min-h-screen dark:from-background dark:via-background dark:to-background">
-      <div className="container py-2 space-y-10">
-        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Subscription Plans</h1>
-            <p className="text-muted-foreground">Choose the perfect plan for your hotel business</p>
-          </div>
-          <div className="flex items-center gap-2 rounded-full border p-2 bg-background shadow-sm">
-            <Button
-              variant={billingCycle === "monthly" ? "default" : "ghost"}
-              size="sm"
-              className="text-xs px-3"
-              onClick={() => setBillingCycle("monthly")}
-            >
-              Monthly
-            </Button>
-            <Button
-              variant={billingCycle === "yearly" ? "default" : "ghost"}
-              size="sm"
-              className="text-xs px-3"
-              onClick={() => setBillingCycle("yearly")}
-            >
-              Yearly
-              <Badge className="ml-2" variant="secondary">
-                Save 16%
-              </Badge>
-            </Button>
-          </div>
-        </div>
+      <div className="py-2 space-y-10">
 
         {/* Overview Stats */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
-            <CardHeader>
-              <CardDescription>Total Subscribers</CardDescription>
-              <CardTitle className="text-3xl">{totalSubscribers.toLocaleString()}</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="p-4">
+                <CardDescription className="text-gray-500">Total Subscribers</CardDescription>
+                <CardTitle className="text-3xl text-blue-600">{totalSubscribers.toLocaleString()}</CardTitle>
+              </div>
+              <Users className="h-6 w-6 text-blue-600" />
             </CardHeader>
           </Card>
           <Card>
-            <CardHeader>
-              <CardDescription>Monthly Revenue</CardDescription>
-              <CardTitle className="text-3xl">${totalRevenue.toLocaleString()}</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="p-4">
+                <CardDescription className="text-gray-500">Monthly Revenue</CardDescription>
+                <CardTitle className="text-3xl text-green-600">${totalRevenue.toLocaleString()}</CardTitle>
+              </div>
+              <DollarSign className="h-6 w-6 text-green-600" />
             </CardHeader>
           </Card>
           <Card>
-            <CardHeader>
-              <CardDescription>Conversion Rate</CardDescription>
-              <CardTitle className="text-3xl">74.2%</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="p-4">
+                <CardDescription className="text-gray-500">Conversion Rate</CardDescription>
+                <CardTitle className="text-3xl text-purple-600">74.2%</CardTitle>
+              </div>
+              <TrendingUp className="h-6 w-6 text-purple-600" />
             </CardHeader>
           </Card>
           <Card>
-            <CardHeader>
-              <CardDescription>Churn Rate</CardDescription>
-              <CardTitle className="text-3xl">2.8%</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="p-4">
+                <CardDescription className="text-gray-500">Churn Rate</CardDescription>
+                <CardTitle className="text-3xl text-red-600">2.8%</CardTitle>
+              </div>
+              <LogOut className="h-6 w-6 text-red-600" />
             </CardHeader>
           </Card>
         </div>
 
         {/* Plan Cards (no benefits list) */}
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {plans.map((plan) => {
+          {dynamicPlans.map((plan) => {
             const colors = planColorStyles[plan.color] || planColorStyles.gray;
             const IconComponent = plan.icon;
 
@@ -268,8 +317,8 @@ export default function Plans() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-baseline gap-2">
-                    <span className={`text-3xl font-bold ${colors.text}`}>${plan.price[billingCycle]}</span>
-                    <span className="text-muted-foreground">/{billingCycle === "monthly" ? "month" : "year"}</span>
+                    <span className={`text-3xl font-bold ${colors.text}`}>${plan.price.yearly}</span>
+                    <span className="text-muted-foreground">/year</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="rounded-md border border-gray-300 p-3">
@@ -297,7 +346,7 @@ export default function Plans() {
             </CardHeader>
             <CardContent className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={subscriptionTrends} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
+                <LineChart data={dynamicSubscriptionTrends} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="month" tickMargin={8} stroke="currentColor" className="text-xs fill-muted-foreground" />
                   <YAxis stroke="currentColor" className="text-xs fill-muted-foreground" />
@@ -319,12 +368,12 @@ export default function Plans() {
               <CardDescription>Current subscriber breakdown</CardDescription>
             </CardHeader>
             <CardContent className="h-80">
-              <div className="grid grid-cols-2 gap-4 h-full">
+              <div className="flex flex-col gap-2 h-full">
                 <div className="h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={planDistribution} dataKey="value" nameKey="name" innerRadius={55} outerRadius={80} paddingAngle={2}>
-                        {planDistribution.map((entry, index) => (
+                      <Pie data={dynamicPlanDistribution} dataKey="value" nameKey="name" innerRadius={55} outerRadius={80} paddingAngle={2}>
+                        {dynamicPlanDistribution.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -338,8 +387,8 @@ export default function Plans() {
                   </ResponsiveContainer>
                 </div>
                 <div className="flex flex-col justify-center gap-3">
-                  {planDistribution.map((item) => (
-                    <div key={item.name} className="flex items-center justify-between">
+                  {dynamicPlanDistribution.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between px-2">
                       <div className="flex items-center gap-2">
                         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                         <span className="text-sm text-muted-foreground">{item.name}</span>
@@ -378,9 +427,9 @@ export default function Plans() {
               <CardDescription>Detailed breakdown of each subscription plan</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {plans.map((plan) => {
+              {dynamicPlans.map((plan) => {
                 const colors = planColorStyles[plan.color] || planColorStyles.gray;
-                const percentage = (plan.subscribers / totalSubscribers) * 100;
+                const percentage = totalSubscribers > 0 ? (plan.subscribers / totalSubscribers) * 100 : 0;
                 return (
                   <div key={plan.id} className="space-y-2">
                     <div className="flex items-center justify-between">

@@ -7,12 +7,6 @@ export enum HotelStatus {
   Expired = "expired"
 }
 
-export enum HotelPlan {
-  Free = "free",
-  Standard = "standard",
-  Pro = "pro"
-}
-
 export type StatusColorStyles = {
   [key: string]: string; 
 };
@@ -32,6 +26,8 @@ export interface HotelType {
   created_at: string; 
   logo_url: string;
   email: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 export type StaffType = {
@@ -145,3 +141,14 @@ export type UserType = {
   email: string;
   phone: string | null;
 };
+
+export interface SystemSettings {
+  timezone: string;
+  dateFormat: string;
+  timeFormat: string;
+  currency: string;
+  language: string;
+  autoBackup: boolean;
+  dataRetention: string;
+  maintenanceMode: boolean;
+}

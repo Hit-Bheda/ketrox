@@ -32,7 +32,10 @@ export function DescriptionPopover({ description }: { description: string }) {
       <PopoverContent
         side="top"
         align="end"
-        className="max-w-sm text-sm"
+       className="max-w-md text-sm bg-[#dee0e6] text-[#1f2937] 
+           border border-[#d1d5db] shadow-lg shadow-black/30 
+           rounded-lg p-3 transition-all duration-300 
+           hover:bg-[#e7e9ef] hover:shadow-2xl hover:-translate-y-1"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >

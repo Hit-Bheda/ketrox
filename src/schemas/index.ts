@@ -28,6 +28,8 @@ export const hotelSchema = z.object({
         .regex(/^[6-9]\d{9}$/, "Enter a valid Indian phone number"),
     address: z.string().min(1, "Hotel is required"),
     plan: z.enum(["free", "monthly", "6-months", "yearly"]),
+    start_date: z.string().optional(),
+    end_date: z.string().optional(),
     status: z.enum(["active", "trial", "suspended", "expired"])
 })
 
@@ -139,7 +141,6 @@ export const updateOrderStatusSchema = z.object({
     payment_status: z.enum(["unpaid", "paid", "refunded"]).optional(),
 });
 
-
 export const qrCodeSchema = z.object({
     tenantId: z.string().uuid("Invalid tenant ID").optional(),
     //   url: z.string().url("Provide a valid URL"),
@@ -161,8 +162,20 @@ export const ticketCreateSchema = z.object({
 
 export const ticketReplySchema = z.object({
     ticketId: z.string().min(1, "Ticket ID is required"),
-    content: z.string().min(1, "Message content is required"),
-
+    content: z.string().optional(),
+    attachments: z.array(z.object({
+        fileName: z.string(),
+        fileUrl: z.string().url(),
+        fileType: z.enum(["image", "video", "document"]),
+        fileSize: z.string(),
+        mimeType: z.string(),
+    })).optional(),
+}).refine((data) => {
+    // Either content or attachments must be provided
+    return (data.content && data.content.trim().length > 0) || (data.attachments && data.attachments.length > 0);
+}, {
+    message: "Either message content or attachments must be provided",
+    path: ["content"]
 });
 
 export const ticketUpdateSchema = z.object({
@@ -183,13 +196,25 @@ export const forgotPasswordSchema = z.object({
 export const betterAuthResetSchema = z.object({
     token: z.string().min(1, "Reset token is required"),
     newPassword: z.string().min(6, "Password must be at least 6 characters long"),
-  });
+});
 
 // Client-side form schema for reset password page
 export const resetPasswordFormSchema = z.object({
     newPassword: z.string().min(6, "Password must be at least 6 characters long"),
     confirmPassword: z.string().min(6, "Password must be at least 6 characters long"),
-  }).refine((data) => data.newPassword === data.confirmPassword, {
+}).refine((data) => data.newPassword === data.confirmPassword, {
     path: ["confirmPassword"],
     message: "Passwords do not match",
-  });
+});
+
+export const createNotificationSchema = z.object({
+    tenantId: z.string().uuid("Invalid tenant ID"),
+    userId: z.string().uuid("Invalid user ID"),
+    type: z.enum(["order", "status", "invoice", "chat"]),
+    title: z.string().min(1, "Title is required"),
+    message: z.string().optional(),
+    orderId: z.string().uuid("Invalid order ID").optional(),
+    invoiceId: z.string().uuid("Invalid invoice ID").optional(),
+    ticketMessageId: z.string().uuid("Invalid chat/ticket message ID").optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
+});

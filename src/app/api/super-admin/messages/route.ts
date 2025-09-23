@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { ticket, ticketMessage, tenants } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { ticket, ticketMessage, tenants, messageAttachment, notification, user } from "@/db/schema";
+import { eq, inArray, InferInsertModel } from "drizzle-orm";
 import { ticketReplySchema, ticketUpdateSchema } from "@/schemas";
 
 export async function GET() {
@@ -90,8 +90,61 @@ export async function PATCH(request: Request) {
       ticketId: parsed.data.ticketId,
       senderId: null,
       senderRole: "super-admin",
-      content: parsed.data.content,
+      content: parsed.data.content || "",
+      attachments: parsed.data.attachments?.map(att => att.fileUrl) || null,
     }).returning();
+
+    // Insert attachments if any
+    if (parsed.data.attachments && parsed.data.attachments.length > 0) {
+      const attachmentInserts = parsed.data.attachments.map(att => ({
+        id: crypto.randomUUID(),
+        messageId: id,
+        fileName: att.fileName,
+        fileUrl: att.fileUrl,
+        fileType: att.fileType,
+        fileSize: att.fileSize,
+        mimeType: att.mimeType,
+      }));
+      await db.insert(messageAttachment).values(attachmentInserts);
+    }
+
+    // Notify tenant admins about the super-admin reply
+    try {
+      // Resolve tenant for the ticket
+      const tRows = await db.select().from(ticket).where(eq(ticket.id, parsed.data.ticketId));
+      const t = tRows?.[0];
+      const tenantIdForNotif = t?.tenantId;
+      if (!tenantIdForNotif) {
+        console.warn("PATCH /super-admin/messages could not resolve tenantId for notification; skipping insert");
+      } else {
+        // All admin users for that tenant
+        const admins = await db.select().from(user).where(eq(user.tenant_id, tenantIdForNotif));
+        const tenantAdmins = admins.filter((u) => u.role === "admin");
+        if (tenantAdmins.length > 0) {
+          const notifTitle = "New message from Super Admin";
+          const notifMessage = (parsed.data.content && parsed.data.content.trim().length > 0)
+            ? parsed.data.content
+            : "📎 File attachment";
+          type NotificationInsert = InferInsertModel<typeof notification>;
+          const notifRows: NotificationInsert[] = tenantAdmins.map((adm) => ({
+            id: crypto.randomUUID(),
+            tenantId: tenantIdForNotif,
+            userId: adm.id,
+            type: "chat",
+            title: notifTitle,
+            message: notifMessage,
+            ticketMessageId: id,
+            metadata: { ticketId: parsed.data.ticketId },
+            read: false,
+          }));
+          await db.insert(notification).values(notifRows);
+        }
+      }
+    } catch (e) {
+      console.error("PATCH /super-admin/messages notification insert failed", e);
+      // ignore notification errors
+    }
+
     return Response.json({ message: inserted[0] }, { status: 201 });
   } catch (err) {
     console.error("PATCH /super-admin/messages error", err);

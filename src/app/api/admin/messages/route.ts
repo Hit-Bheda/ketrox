@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { ticket, ticketMessage, tenants } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { ticket, ticketMessage, tenants, messageAttachment, notification, user } from "@/db/schema";
+import { eq, inArray, InferInsertModel } from "drizzle-orm";
 import { ticketCreateSchema, ticketReplySchema, ticketUpdateSchema } from "@/schemas";
 
 export async function GET(request: Request) {
@@ -99,6 +99,31 @@ export async function POST(request: Request) {
       updatedAt: now,
     });
 
+    // Create chat notifications for all super-admin users
+    try {
+      const superAdmins = await db.select().from(user).where(eq(user.role, "super-admin"));
+      if (superAdmins && superAdmins.length > 0) {
+        const notifTitle = `New ticket: ${parsed.data.subject}`;
+        const notifMessage = parsed.data.message;
+        type NotificationInsert = InferInsertModel<typeof notification>;
+        const notifRows: NotificationInsert[] = superAdmins.map((sa) => ({
+          id: crypto.randomUUID(),
+          tenantId,
+          userId: sa.id,
+          type: "chat",
+          title: notifTitle,
+          message: notifMessage,
+          ticketMessageId: msgId,
+          metadata: { ticketId: id, priority: parsed.data.priority },
+          read: false,
+        }));
+        await db.insert(notification).values(notifRows);
+      }
+    } catch (e) {
+      console.error("POST /admin/messages notification insert failed", e);
+      // do not fail the request because of notification errors
+    }
+
     return Response.json({ ticket: created[0] }, { status: 201 });
   } catch (err) {
     console.error("POST /admin/messages error", err);
@@ -135,8 +160,59 @@ export async function PATCH(request: Request) {
       ticketId: parsed.data.ticketId,
       senderId: null,
       senderRole: "admin",
-      content: parsed.data.content,
+      content: parsed.data.content || "",
+      attachments: parsed.data.attachments?.map(att => att.fileUrl) || null,
     }).returning();
+
+    // Insert attachments if any
+    if (parsed.data.attachments && parsed.data.attachments.length > 0) {
+      const attachmentInserts = parsed.data.attachments.map(att => ({
+        id: crypto.randomUUID(),
+        messageId: id,
+        fileName: att.fileName,
+        fileUrl: att.fileUrl,
+        fileType: att.fileType,
+        fileSize: att.fileSize,
+        mimeType: att.mimeType,
+      }));
+      await db.insert(messageAttachment).values(attachmentInserts);
+    }
+
+    // Notify all super-admin users about the admin reply
+    try {
+      // Resolve tenantId via the ticket
+      const tRows = await db.select().from(ticket).where(eq(ticket.id, parsed.data.ticketId));
+      const t = tRows?.[0];
+      const tenantIdForNotif = t?.tenantId;
+      if (!tenantIdForNotif) {
+        console.warn("PATCH /admin/messages could not resolve tenantId for notification; skipping insert");
+      } else {
+        const superAdmins = await db.select().from(user).where(eq(user.role, "super-admin"));
+        if (superAdmins && superAdmins.length > 0) {
+          const notifTitle = "New message from Admin";
+          const notifMessage = (parsed.data.content && parsed.data.content.trim().length > 0)
+            ? parsed.data.content
+            : "📎 File attachment";
+          type NotificationInsert = InferInsertModel<typeof notification>;
+          const notifRows: NotificationInsert[] = superAdmins.map((sa) => ({
+            id: crypto.randomUUID(),
+            tenantId: tenantIdForNotif,
+            userId: sa.id,
+            type: "chat",
+            title: notifTitle,
+            message: notifMessage,
+            ticketMessageId: id,
+            metadata: { ticketId: parsed.data.ticketId },
+            read: false,
+          }));
+          await db.insert(notification).values(notifRows);
+        }
+      }
+    } catch (e) {
+      console.error("PATCH /admin/messages notification insert failed", e);
+      // do not fail the request because of notification errors
+    }
+
     return Response.json({ message: inserted[0] }, { status: 201 });
   } catch (err) {
     console.error("PATCH /admin/messages error", err);

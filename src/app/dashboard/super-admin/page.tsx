@@ -122,6 +122,11 @@ const recentActivity = [
   { id: 3, action: "Payment failed", user: "John Doe", time: "3 hours ago", avatar: "JD", type: "warning" },
   { id: 4, action: "Payment received", user: "Mountain Lodge", time: "5 hours ago", avatar: "ML", type: "success" },
   { id: 5, action: "Support ticket resolved", user: "City Center Inn", time: "1 day ago", avatar: "CC", type: "info" },
+    { id: 6, action: "Payment received", user: "Mountain Lodge", time: "5 hours ago", avatar: "ML", type: "success" },
+  { id: 7, action: "Support ticket resolved", user: "City Center Inn", time: "1 day ago", avatar: "CC", type: "info" },
+      { id: 8, action: "Payment received", user: "Mountain Lodge", time: "5 hours ago", avatar: "ML", type: "success" },
+  { id: 9, action: "Support ticket resolved", user: "City Center Inn", time: "1 day ago", avatar: "CC", type: "info" },
+  { id: 10, action: "New hotel registered", user: "Grand Plaza Hotel", time: "2 minutes ago", avatar: "GP", type: "success" },
 ];
 
 
@@ -209,7 +214,6 @@ const getPlanBadgeStyle = (plan?: string) => {
       return "bg-gray-100 text-gray-800 border border-gray-300";
   }
 };
-
 
 
   const getActivityTypeColor = (type: string) => {
@@ -311,7 +315,7 @@ const getPlanBadgeStyle = (plan?: string) => {
 
         <TabsContent value={selectedPeriod} className="space-y-8">
           {/* KPI Cards */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2 ">
             <Card className="border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-semibold text-[var(--color-primary)]">Total Revenue</CardTitle>
@@ -427,9 +431,10 @@ const getPlanBadgeStyle = (plan?: string) => {
 
           {/* Hotels and Activity */}
           <div className="grid gap-8 grid-cols-1 md:grid-cols-7">
+
+            {/*  Hotels Table */}
             <Card className="col-span-4 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
-              {/* ...existing hotels table code, update badge and button classes for rounded/contrast... */}
-              <CardHeader>
+              <CardHeader className="max-h-80 overflow-y-auto scrollbar-hide">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg font-semibold text-[var(--color-primary)]">Recent Hotels</CardTitle>
@@ -453,6 +458,7 @@ const getPlanBadgeStyle = (plan?: string) => {
                 </div>
               </CardHeader>
               <CardContent>
+                
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -468,7 +474,7 @@ const getPlanBadgeStyle = (plan?: string) => {
                       filteredHotels.slice(0, 5).map((hotel) => (
                         <TableRow key={hotel.id}>
                           <TableCell>
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-3 overflow-y-auto scrollbar-hide">
                               <Avatar className="h-8 w-8 rounded-lg">
                                 <AvatarFallback className="text-xs font-medium">
                                   {(hotel.name || "")
@@ -548,16 +554,17 @@ const getPlanBadgeStyle = (plan?: string) => {
               onOpenChange={(open) => dispatch(toggleEditModal(open))}
               onSubmit={handleUpdateHotel}
             />
+
+            {/* recent activity */}
             <Card className="col-span-3 max-md:col-span-4 border-0 shadow-lg rounded-xl bg-[var(--color-card)]">
-              {/* ...existing activity code, update icon and text classes for color/contrast... */}
               <CardHeader>
                 <CardTitle className="text-lg font-semibold text-[var(--color-primary)]">Recent Activity</CardTitle>
                 <CardDescription className="text-[var(--color-muted-foreground)]">Latest system events</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="max-h-80 overflow-y-auto scrollbar-hide">
                 <div className="space-y-4">
                   {recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-start space-x-3">
+                    <div key={activity.id} className="flex items-start space-x-3 ">
                       <Avatar className="h-8 w-8 rounded-lg">
                         <AvatarFallback className="text-xs font-medium">{activity.avatar}</AvatarFallback>
                       </Avatar>

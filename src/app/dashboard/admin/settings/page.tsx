@@ -10,7 +10,9 @@ import {
   Upload,
   Trash2,
   Database,
-  Download
+  Download,
+  CreditCard,
+  Calendar
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,11 +45,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { betterFetch } from "@better-fetch/fetch";
-import { HotelType } from "@/types";
+import { HotelType, SystemSettings } from "@/types";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
+import { ExpiryMessage } from "@/components/hotel-plan/ExpiryMessage";
 
-
+type StatusType = "active" | "trial" | "suspended" | "expired";
+type PlanType = "free" | "monthly" | "6-months" | "yearly";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -61,6 +65,13 @@ export default function Settings() {
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  // Local status for plan expiry UI
+  const [localStatus, setLocalStatus] = useState<StatusType | undefined>(undefined);
+
+  // Keep localStatus in sync with hotelsData.status unless expired by timer
+  useEffect(() => {
+    if (hotelsData?.status) setLocalStatus(hotelsData.status as StatusType);
+  }, [hotelsData?.status]);
 
   const [profileForm, setProfileForm] = useState({
     name: "",
@@ -77,20 +88,19 @@ export default function Settings() {
     address: "",
     owner_phone: "",
   });
-  const [systemSettings, setSystemSettings] = useState({
-    timezone: "Asia/Kolkata",
-    dateFormat: "MM/DD/YYYY",
-    timeFormat: "12hour",
-    currency: "INR",
-    language: "en",
-    autoBackup: true,
-    dataRetention: "365",
-    maintenanceMode: false
-  });
-
+const [systemSettings, setSystemSettings] = useState<SystemSettings>({
+  timezone: "Asia/Kolkata",
+  dateFormat: "MM/DD/YYYY",
+  timeFormat: "12hour",
+  currency: "INR",
+  language: "en",
+  autoBackup: true,
+  dataRetention: "365",
+  maintenanceMode: false
+});
   const handleSaveSystem = () => {
     console.log("Saving system settings:", systemSettings);
-    // In a real app, this would save to backend
+    toast.success("System settings saved");
   };
 
   const exportData = () => {
@@ -517,8 +527,29 @@ export default function Settings() {
     }
   };
 
-  return (
+  function getStatusBadge(status: StatusType) {
+    const badges: Record<StatusType, { text: string; bgColor: string; textColor: string }> = {
+      active: { text: "Active", bgColor: "bg-green-800", textColor: "text-white" },
+      trial: { text: "Trial", bgColor: "bg-blue-800", textColor: "text-white" },
+      suspended: { text: "Suspended", bgColor: "bg-yellow-800", textColor: "text-white" },
+      expired: { text: "Expired", bgColor: "bg-red-800", textColor: "text-white" },
+    };
 
+    return badges[status] || { text: "-", bgColor: "bg-gray-100", textColor: "text-gray-800" };
+  }
+
+  function getPlanBadge(plan: PlanType) {
+    const badges: Record<PlanType, { text: string; bgColor: string; textColor: string }> = {
+      free: { text: "Free", bgColor: "bg-gray-800", textColor: "text-white" },
+      monthly: { text: "Monthly", bgColor: "bg-green-800", textColor: "text-white" },
+      "6-months": { text: "6 Months", bgColor: "bg-purple-800", textColor: "text-white" },
+      yearly: { text: "Yearly", bgColor: "bg-blue-800", textColor: "text-white" },
+    };
+
+    return badges[plan] || { text: "-", bgColor: "bg-gray-800", textColor: "text-white" };
+  }
+
+  return (
     <div className="flex-1 space-y-6 p-6 animate-fadeIn">
       {/* Header */}
       <div>
@@ -528,11 +559,146 @@ export default function Settings() {
 
       {/* Settings Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="flex w-full justify-around  rounded-lg">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
+          <TabsTrigger value="plan">Plan</TabsTrigger>
           <TabsTrigger value="system">System</TabsTrigger>
         </TabsList>
+
+        {/* Plan Details Tab */}
+        <TabsContent value="plan" className="space-y-6">
+          {hotelsData && (
+            <div className="w-full flex justify-center mt-4">
+              <div className="w-full "> 
+                <Card className="shadow-lg border border-primary/30">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="w-6 h-6 text-primary" />
+                      <span className="text-lg font-bold">Plan Details</span>
+                    </CardTitle>
+                    <CardDescription>
+                      Monitor your subscription plan, status, and expiry in real-time
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    {/* Plan */}
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-primary" />
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Plan</Label>
+                        <div>
+                          {hotelsData.plan ? (
+                            <Badge
+                              className={`${getPlanBadge(hotelsData.plan as PlanType).bgColor} ${getPlanBadge(
+                                hotelsData.plan as PlanType
+                              ).textColor} px-2 py-1 text-sm`}
+                            >
+                              {getPlanBadge(hotelsData.plan as PlanType).text}
+                            </Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status (uses localStatus for immediate expiry) */}
+                    <div className="flex items-center gap-2">
+                      <User className="w-5 h-5 text-primary" />
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Status</Label>
+                        <div>
+                          <Badge
+                            className={`${getStatusBadge((localStatus ?? hotelsData.status) as StatusType).bgColor} ${getStatusBadge((localStatus ?? hotelsData.status) as StatusType).textColor} px-2 py-1 text-sm`}
+                          >
+                            {getStatusBadge((localStatus ?? hotelsData.status) as StatusType).text}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Start Date */}
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Start Date</Label>
+                        <div className="text-lg font-semibold">
+                          {hotelsData.start_date ? new Date(hotelsData.start_date).toLocaleDateString() : "-"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* End Date */}
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      <div>
+                        <Label className="text-xs text-muted-foreground">End Date</Label>
+                        <div className="text-lg font-semibold">
+                          {hotelsData.end_date ? new Date(hotelsData.end_date).toLocaleDateString() : "-"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expiry Timer (spans full width on small screens) */}
+                    <div className="sm:col-span-2 flex flex-col items-start gap-4">
+                      <Label className="text-sm text-muted-foreground">Expiry</Label>
+                      {hotelsData.end_date ? (
+                        <ExpiryMessage
+                          endDate={hotelsData.end_date}
+                          onExpire={() => setLocalStatus("expired")}
+                        />
+                      ) : (
+                        "-"
+                      )}
+                    </div>
+
+                    {/* Plan Info (spans full width on small screens) */}
+                    <div className="sm:col-span-2 p-4 bg-primary/10 rounded-lg border border-primary/20">
+                      <Label className="text-xs text-muted-foreground mb-2 block">Plan Info</Label>
+                      <div className="flex flex-col gap-2">
+                        {hotelsData.plan === "free" && (
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-5 h-5 text-primary" />
+                            <span className="text-sm font-medium text-muted-foreground">
+                              You are on the Free Plan. Limited features available.
+                            </span>
+                          </div>
+                        )}
+                        {hotelsData.plan === "monthly" && (
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-5 h-5 text-primary" /> {/* Increased size to w-5 h-5 */}
+                            <span className="text-sm font-medium text-muted-foreground">
+                              You are on the Monthly Plan. Enjoy full access for 30 days.
+                            </span>
+                          </div>
+                        )}
+                        {hotelsData.plan === "6-months" && (
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-5 h-5 text-primary" /> {/* Increased size to w-5 h-5 */}
+                            <span className="text-sm font-medium text-muted-foreground">
+                              You are on the 6-Months Plan. Best for half-yearly savings!
+                            </span>
+                          </div>
+                        )}
+                        {hotelsData.plan === "yearly" && (
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-5 h-5 text-primary" /> {/* Increased size to w-5 h-5 */}
+                            <span className="text-sm font-medium text-muted-foreground">
+                              You are on the Yearly Plan. Maximum savings & uninterrupted access!
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </TabsContent>
+
 
         {/* Profile Settings */}
         <TabsContent value="profile" className="space-y-6">
@@ -745,7 +911,7 @@ export default function Settings() {
                 <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-muted overflow-hidden">
                   {(() => {
                     if (logoPreviewUrl) {
-                     
+
                       return (
                         <Image
                           src={logoPreviewUrl}
@@ -769,7 +935,7 @@ export default function Settings() {
                           alt={hotelsData?.name}
                           className="h-full w-full object-cover"
                           priority
-                           fetchPriority="high" 
+                          fetchPriority="high"
                         />
                       );
                     }
@@ -950,7 +1116,6 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-
         {/* System Settings */}
         <TabsContent value="system" className="space-y-6">
           <Card>
@@ -962,11 +1127,11 @@ export default function Settings() {
               <CardDescription>Configure system settings and data management</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2 justify-center item-center">
                 <div>
                   <Label htmlFor="timezone" className="mb-2">Timezone</Label>
                   <Select value={systemSettings.timezone} onValueChange={(value) => setSystemSettings({ ...systemSettings, timezone: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-[250px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -982,11 +1147,11 @@ export default function Settings() {
                 <div>
                   <Label htmlFor="currency" className="mb-2">Currency</Label>
                   <Select value={systemSettings.currency} onValueChange={(value) => setSystemSettings({ ...systemSettings, currency: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-[250px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                      <SelectItem value="INR">INR - Indian Rupee</SelectItem> 
                       <SelectItem value="USD">USD ($)</SelectItem>
                       <SelectItem value="EUR">EUR (€)</SelectItem>
                       <SelectItem value="GBP">GBP (£)</SelectItem>
@@ -997,7 +1162,7 @@ export default function Settings() {
                 <div>
                   <Label htmlFor="date-format" className="mb-2">Date Format</Label>
                   <Select value={systemSettings.dateFormat} onValueChange={(value) => setSystemSettings({ ...systemSettings, dateFormat: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-[250px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1010,7 +1175,7 @@ export default function Settings() {
                 <div>
                   <Label htmlFor="time-format" className="mb-2">Time Format</Label>
                   <Select value={systemSettings.timeFormat} onValueChange={(value) => setSystemSettings({ ...systemSettings, timeFormat: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-[250px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1050,7 +1215,7 @@ export default function Settings() {
 
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Data Management</h3>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-3 justify-center sm:justify-normal">
                   <Button variant="outline" onClick={exportData}>
                     <Download className="w-4 h-4 mr-2" />
                     Export Data

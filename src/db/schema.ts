@@ -5,6 +5,7 @@ import {
   timestamp,
   boolean,
   varchar,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 /* 1) PARENT FIRST */
@@ -16,10 +17,12 @@ export const tenants = pgTable('tenants', {
   owner_name: varchar('owner_name', { length: 255 }).notNull(),
   owner_phone: varchar('phone', { length: 256 }).notNull(),
   address: text('address'),
-  plan: text('plan', {            
+  plan: text('plan', {
     enum: ["free", "monthly", "6-months", "yearly"]
   }).notNull().default("free"),
   status: text('status', { enum: ["active", "trial", "suspended", "expired"] }).notNull().default("active"),
+  start_date: timestamp('start_date', { withTimezone: true }),
+  end_date: timestamp('end_date', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow().$onUpdateFn(() => new Date()),
 });
@@ -92,7 +95,6 @@ export const accountPlainPassword = pgTable("account_plain_password", {
   plainPassword: text("plain_password").notNull(),
   createdAt: timestamp("created_at").notNull().$defaultFn(() => new Date()),
 });
-
 
 /* 4) NO FKs */
 export const verification = pgTable("verification", {
@@ -216,7 +218,44 @@ export const ticketMessage = pgTable("ticket_message", {
   senderId: text("sender_id").references(() => user.id),
   senderRole: text("sender_role", { enum: ["super-admin", "admin", "manager", "waiter", "customer", "support"] }),
   content: text("content").notNull(),
+  attachments: text("attachments").array(),
   createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
   updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
 });
 
+export const messageAttachment = pgTable("message_attachment", {
+  id: text("id").primaryKey(),
+  messageId: text("message_id").notNull().references(() => ticketMessage.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileType: text("file_type").notNull(), // image, video, document
+  fileSize: text("file_size").notNull(),
+  mimeType: text("mime_type").notNull(),
+  createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+});
+
+export const notification = pgTable("notification", {
+  id: text("id").primaryKey(),
+
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+
+  userId: text("user_id").notNull().references(() => user.id),
+
+  type: text("type", {
+    enum: ["order", "status", "invoice", "chat"],
+  }).notNull(),
+
+  title: text("title").notNull(),
+  message: text("message"),
+
+  read: boolean("read").notNull().default(false),
+
+  orderId: text("order_id").references(() => order.id),
+  invoiceId: text("invoice_id").references(() => invoice.id),
+  ticketMessageId: text("ticket_message_id").references(() => ticketMessage.id),
+
+  metadata: jsonb("metadata"),
+
+  createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+  updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+});

@@ -1,9 +1,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { order, table, user, menu } from "@/db/schema";
+import { order, table, user, menu, notification } from "@/db/schema";
 import { orderSchema } from "@/schemas";
-import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, desc, inArray, sql, or, gte, lte } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = orderSchema.parse(body);
 
-    // Generate sequential order number
+    
     const lastOrder = await db.select({ orderNumber: order.orderNumber })
       .from(order)
       .where(eq(order.tenantId, session.user.tenant_id || validatedData.tenant_id!))
@@ -67,6 +67,34 @@ export async function POST(request: NextRequest) {
     await db.update(table)
       .set({ available: false, updatedAt: new Date() })
       .where(eq(table.id, validatedData.table_id!));
+
+
+    // create a notification for the admins of this tenant
+    const adminUsers = await db
+      .select()
+      .from(user)
+      .where(
+        and(
+          eq(user.tenant_id, session.user.tenant_id || validatedData.tenant_id!),
+          inArray(user.role, ["admin"])
+        )
+      );
+
+    for (const admin of adminUsers) {
+      await db.insert(notification).values({
+        id: crypto.randomUUID(),
+        tenantId: session.user.tenant_id || validatedData.tenant_id!,
+        userId: admin.id,
+        type: "order",
+        title: `New Order: ${orderNumber}`,
+        message: `A new order has been placed by ${validatedData.customer_name}`,
+        orderId: newOrder[0].id,
+        read: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+
 
     return NextResponse.json({
       message: "Order created successfully",
@@ -189,10 +217,12 @@ export async function GET(request: NextRequest) {
     const customer_phone = searchParams.get("customer_phone");
     const manager_id = searchParams.get("managerId");
     const table_id = searchParams.get("tableId");
+    const searchTerm = searchParams.get("searchTerm"); // New: search term
+    const timeFilter = searchParams.get("timeFilter"); // New: time filter
 
-    // ✅ pagination params
-    const page = parseInt(searchParams.get("page") || "0");   
-    const limit = parseInt(searchParams.get("limit") || "0"); 
+    // Pagination params
+    const page = parseInt(searchParams.get("page") || "0");
+    const limit = parseInt(searchParams.get("limit") || "0");
 
     const whereConditions = [];
     whereConditions.push(eq(order.tenantId, session.user.tenant_id || tenant_id || ""));
@@ -201,14 +231,63 @@ export async function GET(request: NextRequest) {
       whereConditions.push(eq(order.managerId, manager_id));
     }
 
-    if (status) whereConditions.push(eq(order.status, status as "pending" | "preparing" | "delivered" | "cancelled"));
-    if (payment_status) whereConditions.push(eq(order.paymentStatus, payment_status as "unpaid" | "paid" | "refunded"));
-    if (customer_name) whereConditions.push(eq(order.customerName, customer_name));
-    if (customer_phone) whereConditions.push(eq(order.customerPhone, customer_phone));
-    if (manager_id) whereConditions.push(eq(order.managerId, manager_id));
-    if (table_id) whereConditions.push(eq(order.tableId, table_id));
+    if (status && status !== "all") {
+      whereConditions.push(eq(order.status, status as "pending" | "preparing" | "delivered" | "cancelled"));
+    }
+    if (payment_status) {
+      whereConditions.push(eq(order.paymentStatus, payment_status as "unpaid" | "paid" | "refunded"));
+    }
+    if (customer_name) {
+      whereConditions.push(eq(order.customerName, customer_name));
+    }
+    if (customer_phone) {
+      whereConditions.push(eq(order.customerPhone, customer_phone));
+    }
+    if (manager_id) {
+      whereConditions.push(eq(order.managerId, manager_id));
+    }
+    if (table_id) {
+      whereConditions.push(eq(order.tableId, table_id));
+    }
 
-    // ✅ Build base query
+    // Add searchTerm filter
+    if (searchTerm) {
+      whereConditions.push(
+        or(
+          sql`lower(${order.orderNumber}) LIKE ${`%${searchTerm.toLowerCase()}%`}`,
+          sql`lower(${order.customerName}) LIKE ${`%${searchTerm.toLowerCase()}%`}`,
+          sql`lower(${table.number}) LIKE ${`%${searchTerm.toLowerCase()}%`}`
+        )
+      );
+    }
+
+    // Add timeFilter
+    if (timeFilter && timeFilter !== "all") {
+      const now = new Date();
+      if (timeFilter === "today") {
+        whereConditions.push(sql`DATE(${order.createdAt}) = CURRENT_DATE`);
+      } else if (timeFilter === "lastWeek") {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(now.getDate() - 7);
+        whereConditions.push(
+          and(
+            gte(order.createdAt, oneWeekAgo),
+            lte(order.createdAt, now)
+          )
+        );
+      } else if (timeFilter === "lastMonth") {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(now.getMonth() - 1);
+        whereConditions.push(
+          and(
+            gte(order.createdAt, oneMonthAgo),
+            lte(order.createdAt, now)
+          )
+        );
+      }
+    }
+
+    // Build base query
     const baseQuery = db
       .select({
         id: order.id,
@@ -235,46 +314,44 @@ export async function GET(request: NextRequest) {
       .leftJoin(table, eq(order.tableId, table.id))
       .leftJoin(user, eq(order.managerId, user.id))
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(desc(order.createdAt));
+      .orderBy(sql`${order.createdAt} DESC`);
 
-    // ✅ Apply pagination and execute
-    const orders = limit > 0 
+    // Apply pagination and execute
+    const orders = limit > 0
       ? await baseQuery.limit(limit).offset(page * limit)
       : await baseQuery;
 
     // Get menu items for item names
-    const allItemIds = Array.from(new Set(orders.flatMap(o => o.items)));
+    const allItemIds = Array.from(new Set(orders.flatMap((o) => o.items)));
     let menuItems: { id: string; item_name: string }[] = [];
 
     if (allItemIds.length > 0) {
       menuItems = await db.select().from(menu).where(inArray(menu.id, allItemIds));
     }
 
-    const menuMap = Object.fromEntries(menuItems.map(item => [item.id, item.item_name]));
+    const menuMap = Object.fromEntries(menuItems.map((item) => [item.id, item.item_name]));
 
-    const ordersWithItemNames = orders.map(order => ({
+    const ordersWithItemNames = orders.map((order) => ({
       ...order,
-      itemNames: order.items.map((id: string) => menuMap[id] || id)
+      itemNames: order.items.map((id: string) => menuMap[id] || id),
     }));
 
+    // Calculate total count with filters
     const totalResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(order)
+      .leftJoin(table, eq(order.tableId, table.id))
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
 
     const total = totalResult[0]?.count || 0;
 
     return NextResponse.json({
       orders: ordersWithItemNames,
-      pagination: limit > 0 ? { page, limit, total } : { total }
+      pagination: limit > 0 ? { page, limit, total } : { total },
     }, { status: 200 });
-
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch orders" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
   }
 }
 
@@ -360,6 +437,7 @@ export async function PUT(request: NextRequest) {
         .set({ available: true, updatedAt: new Date() })
         .where(eq(table.id, updatedOrder[0].tableId));
     }
+    
 
     return NextResponse.json({
       message: "Order updated successfully",

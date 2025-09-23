@@ -6,7 +6,7 @@ type StatsProps = {
     total: number;
     active: number;
     trial: number;
-    suspended: number;
+    expired: number;
   };
 };
 
@@ -50,19 +50,19 @@ export default function HotelStats({ stats }: StatsProps) {
           </div>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Issues</p>
-              <p className="text-2xl font-bold text-[hsl(var(--warning))]">{stats.suspended}</p>
-            </div>
-            <div className="w-8 h-8 bg-yellow-500/10 rounded-full flex items-center justify-center">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <Card>
+  <CardContent className="p-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-muted-foreground">Expired</p>
+        <p className="text-2xl font-bold text-red-500">{stats.expired}</p>
+      </div>
+      <div className="w-8 h-8 bg-red-500/10 rounded-full flex items-center justify-center">
+        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+      </div>
+    </div>
+  </CardContent>
+</Card>
     </div>
   );
 }

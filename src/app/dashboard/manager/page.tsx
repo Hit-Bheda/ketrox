@@ -557,7 +557,7 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
               {liveOrders.map((order) => (
                 <div
                   key={order.id}
@@ -633,7 +633,7 @@ export default function Dashboard() {
             <CardDescription>Latest manager activities and updates</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div className="space-y-4 max-h-96 overflow-y-auto scrollbar-hide">
               {recentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-3 hover:bg-accent p-2 rounded-lg transition-colors">
                   <div className="mt-1">

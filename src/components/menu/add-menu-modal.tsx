@@ -210,7 +210,7 @@ export default function AddMenuModal({
   return (
 
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto scrollbar-hide">
         <form onSubmit={AddMenu}>
           <DialogHeader>
             <DialogTitle>Add New Menu Item</DialogTitle>

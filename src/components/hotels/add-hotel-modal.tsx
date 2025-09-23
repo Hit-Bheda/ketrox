@@ -9,8 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { hotelSchema } from "@/schemas";
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase/client"; // Ensure this is a configured Supabase client instance
+import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import Image from "next/image";
 import { LoaderIcon } from "lucide-react";
@@ -62,7 +62,6 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
 
       const { data, error: signedUrlError } = await supabaseClient.storage.from("mybucket").createSignedUrl(filePath, 1577880000);
       if (signedUrlError || !data) throw signedUrlError || new Error("Failed to create signed URL");
-      console.log("File uploaded successfully:", data);
       return data.signedUrl;
     } catch (err) {
       console.error("Upload error:", err);
@@ -94,7 +93,6 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
     }
   };
 
-
   // Reset form and file when modal is closed
   useEffect(() => {
     if (!open) {
@@ -104,9 +102,10 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
     }
   }, [open, form]);
 
+  const inputRef = useRef<HTMLInputElement>(null);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] ">
         <DialogHeader>
           <DialogTitle>Add New Hotel</DialogTitle>
           <DialogDescription>Create a new hotel registration in the system.</DialogDescription>
@@ -124,6 +123,7 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
                     <Input
                       type="file"
                       accept="image/*"
+                      ref={inputRef}
                       onChange={(e) => {
                         const selectedFile = e.target.files?.[0] || null;
                         setFile(selectedFile);
@@ -137,44 +137,69 @@ export default function AddHotelModal({ open, onOpenChange, onSubmit }: AddHotel
                     <p className="text-sm text-muted-foreground mt-1">{file.name}</p>
                   )}
 
-                  {/* Show preview */}
-                  {file && (
-                    <div className="mt-2">
+                  {field.value && typeof field.value === "string" && field.value.startsWith("http") ? (
+                    <div className="mt-2 relative w-24 h-24">
                       <Image
-                        src={URL.createObjectURL(file)}
+                        src={field.value}
                         alt="Logo preview"
                         width={100}
                         height={100}
                         priority
-                           fetchPriority="high" 
+                        fetchPriority="high"
                         className="w-24 h-24 object-cover rounded-md border"
                       />
+                      <button
+                        type="button"
+                        className="absolute top-0 right-0 bg-white bg-opacity-80 rounded-full p-1 shadow hover:bg-red-100"
+                        onClick={() => {
+                          field.onChange("");
+                            if (inputRef.current) inputRef.current.value = ""; 
+                          setFile(null);
+                        }}
+                        aria-label="Remove logo"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
                     </div>
-                  )}
-
-                  {/* Upload button */}
-                  {file && (
-                    <Button
-                      type="button"
-                      onClick={async () => {
-                        const uploadedUrl = await handleFileUpload();
-                        if (uploadedUrl) {
-                          field.onChange(uploadedUrl);
-                          toast.success("Logo uploaded successfully!");
-                        }
-                      }}
-                      className="mt-2"
-                      disabled={uploadingLogo}
-                    >
-                      {uploadingLogo ? (
-                        <span className="flex items-center gap-2">
-                          <LoaderIcon className="w-4 h-4 animate-spin text-gray-100" />
-                          Uploading...
-                        </span>
-                      ) : (
-                        "Upload Logo"
+                  ) : (
+                    <>
+                      {file && (
+                        <div className="mt-2">
+                          <Image
+                            src={URL.createObjectURL(file)}
+                            alt="Logo preview"
+                            width={100}
+                            height={100}
+                            priority
+                            fetchPriority="high"
+                            className="w-24 h-24 object-cover rounded-md border"
+                          />
+                        </div>
                       )}
-                    </Button>
+                      {file && (
+                        <Button
+                          type="button"
+                          onClick={async () => {
+                            const uploadedUrl = await handleFileUpload();
+                            if (uploadedUrl) {
+                              field.onChange(uploadedUrl);
+                              toast.success("Logo uploaded successfully!");
+                            }
+                          }}
+                          className="mt-2"
+                          disabled={uploadingLogo}
+                        >
+                          {uploadingLogo ? (
+                            <span className="flex items-center gap-2">
+                              <LoaderIcon className="w-4 h-4 animate-spin text-gray-100" />
+                              Uploading...
+                            </span>
+                          ) : (
+                            "Upload Logo"
+                          )}
+                        </Button>
+                      )}
+                    </>
                   )}
 
                   {uploadError && (

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { invoice, order, table } from "@/db/schema";
+import { invoice, notification, order, table, user } from "@/db/schema";
 import { invoiceSchema } from "@/schemas";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, gte, lte, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -88,10 +88,12 @@ export async function POST(request: NextRequest) {
       prices: validatedData.prices,
       subtotal: validatedData.subtotal,
       totalAmount: validatedData.total_amount,
+      
       paymentMethod: validatedData.payment_method,
       paymentStatus: validatedData.payment_status,
       notes: validatedData.notes || null,
     }).returning({
+      id: invoice.id,
       invoiceNumber: invoice.invoiceNumber 
     })
 
@@ -99,7 +101,6 @@ export async function POST(request: NextRequest) {
     if (validatedData.order_id && orderData) {
       await db.update(order)
         .set({ 
-          paymentStatus: "paid",
           status: "delivered",
           updatedAt: new Date() 
         })
@@ -129,6 +130,30 @@ export async function POST(request: NextRequest) {
       } else {
         console.error("Table not found with number:", validatedData.table_number);
       }
+    }
+
+     const adminUsers = await db
+      .select()
+      .from(user)
+      .where(
+        and(
+          eq(user.tenant_id, session.user.tenant_id || validatedData.tenant_id!),
+          inArray(user.role, ["admin"])
+        )
+      );
+    for (const admin of adminUsers) {
+      await db.insert(notification).values({
+        id: crypto.randomUUID(),
+        tenantId: session.user.tenant_id || validatedData.tenant_id!,
+        userId: admin.id,
+        type: "invoice",
+        title: `Invoice ${invoiceNumber} Generated`,
+        message: `Invoice for ${validatedData.customer_name || "Customer"} has been created. Total: $${Number(validatedData.total_amount).toFixed(2)}`,
+        invoiceId: newInvoice[0].id,
+        read: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
     }
 
     return NextResponse.json({
@@ -199,18 +224,65 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const payment_status = searchParams.get("payment_status");
     const tenant_id = searchParams.get("tenant_id");
-   
-    const page = parseInt(searchParams.get("page") || "0");   
+    const searchTerm = searchParams.get("searchTerm"); 
+    const dateFilter = searchParams.get("dateFilter"); 
+
+    const page = parseInt(searchParams.get("page") || "0");
     const limit = parseInt(searchParams.get("limit") || "10");
 
     const whereConditions = [];
 
-    if (status) whereConditions.push(eq(invoice.paymentStatus, status as "pending" | "paid" | "failed"));
-    if (payment_status) whereConditions.push(eq(invoice.paymentStatus, payment_status as "pending" | "paid" | "failed"));
-    if (tenant_id) whereConditions.push(eq(invoice.tenantId, tenant_id));
-    else if (tenantId && typeof tenantId === "string") whereConditions.push(eq(invoice.tenantId, tenantId));
+    if (status && status !== "all") {
+      whereConditions.push(eq(invoice.paymentStatus, status as "pending" | "paid" | "failed"));
+    }
+    if (payment_status) {
+      whereConditions.push(eq(invoice.paymentStatus, payment_status as "pending" | "paid" | "failed"));
+    }
+    if (tenant_id) {
+      whereConditions.push(eq(invoice.tenantId, tenant_id));
+    } else if (tenantId && typeof tenantId === "string") {
+      whereConditions.push(eq(invoice.tenantId, tenantId));
+    }
 
-    // ✅ Get total count
+    // Add searchTerm filter
+    if (searchTerm) {
+      whereConditions.push(
+        or(
+          sql`lower(${invoice.invoiceNumber}) LIKE ${`%${searchTerm.toLowerCase()}%`}`,
+          sql`lower(${invoice.customerName}) LIKE ${`%${searchTerm.toLowerCase()}%`}`,
+          sql`lower(${invoice.customerPhone}) LIKE ${`%${searchTerm.toLowerCase()}%`}`
+        )
+      );
+    }
+
+    // Add dateFilter
+     if (dateFilter && dateFilter !== "all") {
+      const now = new Date();
+      if (dateFilter === "today") {
+        whereConditions.push(sql`DATE(${invoice.createdAt}) = CURRENT_DATE`);
+      } else if (dateFilter === "lastWeek") {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(now.getDate() - 7);
+        whereConditions.push(
+          and(
+            gte(invoice.createdAt, oneWeekAgo),
+            lte(invoice.createdAt, now)
+          )
+        );
+      } else if (dateFilter === "lastMonth") {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(now.getMonth() - 1);
+        whereConditions.push(
+          and(
+            gte(invoice.createdAt, oneMonthAgo),
+            lte(invoice.createdAt, now)
+          )
+        );
+      }
+    }
+
+
+    // Get total count
     const totalResult = await db
       .select({ count: sql<number>`count(*)`.mapWith(Number) })
       .from(invoice)
@@ -218,15 +290,15 @@ export async function GET(request: NextRequest) {
 
     const total = totalResult[0]?.count || 0;
 
-    // ✅ Build base query without pagination
+    // Build base query without pagination
     const baseQuery = db
       .select()
       .from(invoice)
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
       .orderBy(desc(invoice.createdAt));
 
-    // ✅ Apply pagination and execute
-    const invoices = limit > 0 
+    // Apply pagination and execute
+    const invoices = limit > 0
       ? await baseQuery.limit(limit).offset(page * limit)
       : await baseQuery;
 
