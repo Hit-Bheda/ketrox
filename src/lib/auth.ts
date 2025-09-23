@@ -17,6 +17,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  session:{
+    expiresIn: 60 * 60 * 24, 
+  },
   user: {
     additionalFields: {
       role: {
@@ -81,5 +84,18 @@ export const auth = betterAuth({
       }
     }
   }),
+ async afterSignOut() {
+    return {
+      cookies: [
+        {
+          name: "tenantId",
+          value: "",
+          path: "/",
+          httpOnly: false,
+          expires: new Date(0),
+        },
+      ],
+    };
+  },
 },
 });

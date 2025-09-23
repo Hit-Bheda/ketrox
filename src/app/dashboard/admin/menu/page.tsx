@@ -394,7 +394,8 @@ export default function Menu() {
     await navigator.clipboard.writeText(qrCodeUrl);
     toast.success("QR link copied to clipboard");
   };
-
+  
+  
   return (
     <>
       <div className="flex-1 space-y-6 p-6 animate-fadeIn">
@@ -554,7 +555,6 @@ export default function Menu() {
               </div>
             </CardContent>
           </Card>
-
 
           <Card className="hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

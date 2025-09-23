@@ -378,7 +378,7 @@ useEffect(() => {
                               value={field.value || "USD"}
                             >
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="w-[210px]">
                                   <SelectValue placeholder="Select currency" />
                                 </SelectTrigger>
                               </FormControl>
@@ -402,7 +402,7 @@ useEffect(() => {
                             <FormLabel>Timezone</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="w-[210px]">
                                   <SelectValue placeholder="Select timezone" />
                                 </SelectTrigger>
                               </FormControl>
@@ -428,7 +428,7 @@ useEffect(() => {
                             <FormLabel>Language</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="w-[210px]">
                                   <SelectValue placeholder="Select language" />
                                 </SelectTrigger>
                               </FormControl>
@@ -511,10 +511,10 @@ useEffect(() => {
                         Recommended: 256x256px, PNG or SVG format
                       </p>
                     </div>
-                    <Button type="submit" disabled={isUploading}>
+                    <Button type="submit" className="w-full sm:w-auto" disabled={isUploading}>
                       {isUploading ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2  border-white mr-2"></div>
                           Saving changes...
                         </>
                       ) : (
@@ -887,7 +887,7 @@ useEffect(() => {
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" disabled={isUploading}>
+                    <Button type="submit" className="w-full sm:w-auto" disabled={isUploading}>
                       {isUploading ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

@@ -14,9 +14,13 @@ export function AddressPopover({ address }: { address: string }) {
   const shortText = isLong ? words.slice(0, limit).join(" ") + "..." : address;
 
   if (address.length < 10) {
-    return <span>{address}</span>;
-  }
-
+  return (
+    <span className="flex items-center gap-1">
+      <MapPin className="w-4 h-4 text-muted-foreground" />
+      <span>{address}</span>
+    </span>
+  );
+}
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>

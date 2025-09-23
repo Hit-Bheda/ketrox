@@ -35,7 +35,8 @@ export default function Home() {
   const handleLogout = () => {
     // Replace with real logout logic
     console.log("Logging out...");
-    authClient.signOut(); // Call the sign-out method from authClient
+    authClient.signOut();
+     
     window.location.href = "/"; // Redirect to the home page after logout
   };
 

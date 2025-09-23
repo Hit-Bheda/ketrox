@@ -131,7 +131,7 @@ export default function EditMenuModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto scrollbar-hide">
         <form onSubmit={handleEditMenu}>
           <DialogHeader>
             <DialogTitle>Edit Menu Item</DialogTitle>

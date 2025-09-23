@@ -142,3 +142,13 @@ export type UserType = {
   phone: string | null;
 };
 
+export interface SystemSettings {
+  timezone: string;
+  dateFormat: string;
+  timeFormat: string;
+  currency: string;
+  language: string;
+  autoBackup: boolean;
+  dataRetention: string;
+  maintenanceMode: boolean;
+}

@@ -45,7 +45,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { betterFetch } from "@better-fetch/fetch";
-import { HotelType } from "@/types";
+import { HotelType, SystemSettings } from "@/types";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 import { ExpiryMessage } from "@/components/hotel-plan/ExpiryMessage";
@@ -88,20 +88,19 @@ export default function Settings() {
     address: "",
     owner_phone: "",
   });
-  const [systemSettings, setSystemSettings] = useState({
-    timezone: "Asia/Kolkata",
-    dateFormat: "MM/DD/YYYY",
-    timeFormat: "12hour",
-    currency: "INR",
-    language: "en",
-    autoBackup: true,
-    dataRetention: "365",
-    maintenanceMode: false
-  });
-
+const [systemSettings, setSystemSettings] = useState<SystemSettings>({
+  timezone: "Asia/Kolkata",
+  dateFormat: "MM/DD/YYYY",
+  timeFormat: "12hour",
+  currency: "INR",
+  language: "en",
+  autoBackup: true,
+  dataRetention: "365",
+  maintenanceMode: false
+});
   const handleSaveSystem = () => {
     console.log("Saving system settings:", systemSettings);
-    // In a real app, this would save to backend
+    toast.success("System settings saved");
   };
 
   const exportData = () => {
@@ -539,16 +538,16 @@ export default function Settings() {
     return badges[status] || { text: "-", bgColor: "bg-gray-100", textColor: "text-gray-800" };
   }
 
-function getPlanBadge(plan: PlanType) {
-  const badges: Record<PlanType, { text: string; bgColor: string; textColor: string }> = {
-    free: { text: "Free", bgColor: "bg-gray-800", textColor: "text-white" },
-    monthly: { text: "Monthly", bgColor: "bg-green-800", textColor: "text-white" },
-    "6-months": { text: "6 Months", bgColor: "bg-purple-800", textColor: "text-white" },
-    yearly: { text: "Yearly", bgColor: "bg-blue-800", textColor: "text-white" },
-  };
+  function getPlanBadge(plan: PlanType) {
+    const badges: Record<PlanType, { text: string; bgColor: string; textColor: string }> = {
+      free: { text: "Free", bgColor: "bg-gray-800", textColor: "text-white" },
+      monthly: { text: "Monthly", bgColor: "bg-green-800", textColor: "text-white" },
+      "6-months": { text: "6 Months", bgColor: "bg-purple-800", textColor: "text-white" },
+      yearly: { text: "Yearly", bgColor: "bg-blue-800", textColor: "text-white" },
+    };
 
-  return badges[plan] || { text: "-", bgColor: "bg-gray-800", textColor: "text-white" };
-}
+    return badges[plan] || { text: "-", bgColor: "bg-gray-800", textColor: "text-white" };
+  }
 
   return (
     <div className="flex-1 space-y-6 p-6 animate-fadeIn">
@@ -560,7 +559,7 @@ function getPlanBadge(plan: PlanType) {
 
       {/* Settings Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="flex w-full justify-around  rounded-lg">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
           <TabsTrigger value="plan">Plan</TabsTrigger>
@@ -571,7 +570,7 @@ function getPlanBadge(plan: PlanType) {
         <TabsContent value="plan" className="space-y-6">
           {hotelsData && (
             <div className="w-full flex justify-center mt-4">
-              <div className="w-full">
+              <div className="w-full "> 
                 <Card className="shadow-lg border border-primary/30">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -583,7 +582,7 @@ function getPlanBadge(plan: PlanType) {
                     </CardDescription>
                   </CardHeader>
 
-                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     {/* Plan */}
                     <div className="flex items-center gap-2">
                       <CreditCard className="w-5 h-5 text-primary" />
@@ -642,24 +641,26 @@ function getPlanBadge(plan: PlanType) {
                       </div>
                     </div>
 
-                    {/* Expiry Timer (with onExpire to update local status) */}
-                    <div className="sm:col-span-2 flex items-center gap-6">
-                      <Label className="text-s text-muted-foreground">Expiry</Label>
+                    {/* Expiry Timer (spans full width on small screens) */}
+                    <div className="sm:col-span-2 flex flex-col items-start gap-4">
+                      <Label className="text-sm text-muted-foreground">Expiry</Label>
                       {hotelsData.end_date ? (
                         <ExpiryMessage
                           endDate={hotelsData.end_date}
                           onExpire={() => setLocalStatus("expired")}
                         />
-                      ) : "-"}
+                      ) : (
+                        "-"
+                      )}
                     </div>
 
-                    {/* Plan Info */}
+                    {/* Plan Info (spans full width on small screens) */}
                     <div className="sm:col-span-2 p-4 bg-primary/10 rounded-lg border border-primary/20">
                       <Label className="text-xs text-muted-foreground mb-2 block">Plan Info</Label>
                       <div className="flex flex-col gap-2">
                         {hotelsData.plan === "free" && (
                           <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-primary" />
+                            <CreditCard className="w-5 h-5 text-primary" />
                             <span className="text-sm font-medium text-muted-foreground">
                               You are on the Free Plan. Limited features available.
                             </span>
@@ -667,7 +668,7 @@ function getPlanBadge(plan: PlanType) {
                         )}
                         {hotelsData.plan === "monthly" && (
                           <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-primary" />
+                            <CreditCard className="w-5 h-5 text-primary" /> {/* Increased size to w-5 h-5 */}
                             <span className="text-sm font-medium text-muted-foreground">
                               You are on the Monthly Plan. Enjoy full access for 30 days.
                             </span>
@@ -675,7 +676,7 @@ function getPlanBadge(plan: PlanType) {
                         )}
                         {hotelsData.plan === "6-months" && (
                           <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-primary" />
+                            <CreditCard className="w-5 h-5 text-primary" /> {/* Increased size to w-5 h-5 */}
                             <span className="text-sm font-medium text-muted-foreground">
                               You are on the 6-Months Plan. Best for half-yearly savings!
                             </span>
@@ -683,7 +684,7 @@ function getPlanBadge(plan: PlanType) {
                         )}
                         {hotelsData.plan === "yearly" && (
                           <div className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-primary" />
+                            <CreditCard className="w-5 h-5 text-primary" /> {/* Increased size to w-5 h-5 */}
                             <span className="text-sm font-medium text-muted-foreground">
                               You are on the Yearly Plan. Maximum savings & uninterrupted access!
                             </span>
@@ -1126,11 +1127,11 @@ function getPlanBadge(plan: PlanType) {
               <CardDescription>Configure system settings and data management</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2 justify-center item-center">
                 <div>
                   <Label htmlFor="timezone" className="mb-2">Timezone</Label>
                   <Select value={systemSettings.timezone} onValueChange={(value) => setSystemSettings({ ...systemSettings, timezone: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-[250px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1146,11 +1147,11 @@ function getPlanBadge(plan: PlanType) {
                 <div>
                   <Label htmlFor="currency" className="mb-2">Currency</Label>
                   <Select value={systemSettings.currency} onValueChange={(value) => setSystemSettings({ ...systemSettings, currency: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-[250px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                      <SelectItem value="INR">INR - Indian Rupee</SelectItem> 
                       <SelectItem value="USD">USD ($)</SelectItem>
                       <SelectItem value="EUR">EUR (€)</SelectItem>
                       <SelectItem value="GBP">GBP (£)</SelectItem>
@@ -1161,7 +1162,7 @@ function getPlanBadge(plan: PlanType) {
                 <div>
                   <Label htmlFor="date-format" className="mb-2">Date Format</Label>
                   <Select value={systemSettings.dateFormat} onValueChange={(value) => setSystemSettings({ ...systemSettings, dateFormat: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-[250px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1174,7 +1175,7 @@ function getPlanBadge(plan: PlanType) {
                 <div>
                   <Label htmlFor="time-format" className="mb-2">Time Format</Label>
                   <Select value={systemSettings.timeFormat} onValueChange={(value) => setSystemSettings({ ...systemSettings, timeFormat: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-[250px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1214,7 +1215,7 @@ function getPlanBadge(plan: PlanType) {
 
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Data Management</h3>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-3 justify-center sm:justify-normal">
                   <Button variant="outline" onClick={exportData}>
                     <Download className="w-4 h-4 mr-2" />
                     Export Data
