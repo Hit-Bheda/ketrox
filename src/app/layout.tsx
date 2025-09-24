@@ -24,7 +24,7 @@ const sourceCodePro = Source_Code_Pro({
 
 export const metadata: Metadata = {
   title: "Ketrox",
-  description: "Hotel Manegment System",
+  description: "Hotel Management System",
 };
 
 export default function RootLayout({

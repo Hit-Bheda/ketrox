@@ -26,18 +26,18 @@ export default function Home() {
     window.location.href = "/signin"; 
   };
 
-  const handleSignup = () => {
-    // Replace with real sign-up logic
-    console.log("Redirecting to sign-up...");
-    window.location.href = "/signup"; // Redirect to the sign-up page
-  };
+  // const handleSignup = () => {
+  //   // Replace with real sign-up logic
+  //   console.log("Redirecting to sign-up...");
+  //   window.location.href = "/signup"; 
+  // };
 
   const handleLogout = () => {
     // Replace with real logout logic
     console.log("Logging out...");
     authClient.signOut();
      
-    window.location.href = "/"; // Redirect to the home page after logout
+    window.location.href = "/signin"; 
   };
 
   return (
@@ -51,7 +51,7 @@ export default function Home() {
           {!session ? (
             <>
               <Button onClick={handleLogin}>Login</Button>
-              <Button onClick={handleSignup}>Sign Up</Button>
+              {/* <Button onClick={handleSignup}>Sign Up</Button> */}
             </>
           ) : (
             <Button onClick={handleLogout}>Logout</Button>
